@@ -4,6 +4,8 @@
 #include "Timer.h"
 #include "enet/enet.h"
 
+#include <atomic>
+#include <mutex>
 #include <string>
 #include <queue>
 
@@ -19,11 +21,11 @@ public:
 	virtual void OnUpdate(GameConnection& game) override;
 
 	bool IsRequestingHostConnection() const;
-	inline bool IsHost() const { return m_NetServer != nullptr; }
-	inline u16 GetPort() const { return m_Port; }
+	inline bool IsHost() const { return m_NetServer.load(std::memory_order_relaxed) != nullptr; }
+	inline u16 GetPort() const { return m_Port.load(std::memory_order_relaxed); }
 
-	bool IsAwaitingAddress() const { return !m_HasAttemptedConnection; }
-	bool IsConnected() const { return m_ConnState >= ConnectionState::Connected; }
+	bool IsAwaitingAddress() const { return !m_HasAttemptedConnection.load(std::memory_order_acquire); }
+	bool IsConnected() const { return m_ConnState.load(std::memory_order_relaxed) >= ConnectionState::Connected; }
 	std::string SanitiseConnectionAddress(std::string const& address);
 	void ProvideConnectionAddress(std::string const& address);
 
@@ -71,15 +73,21 @@ private:
 
 	void SendMultiplayerConfirmationToGame(GameConnection& game);
 
-	u16 m_Port;
-	ConnectionState m_ConnState;
+	// PrimaryUI::Render reads these from the window thread while OnUpdate mutates
+	// them on the connection thread, and ProvideConnectionAddress is a straight
+	// cross-thread write from the window thread.
+	std::atomic<u16> m_Port;
+	std::atomic<ConnectionState> m_ConnState;
+
+	mutable std::mutex m_ConnectionAddressMutex;
 	std::string m_ConnectionAddressRaw;
-	bool m_HasAttemptedConnection;
 
-	u8 m_RequestFlags;
+	std::atomic<bool> m_HasAttemptedConnection;
+	std::atomic<u8> m_RequestFlags;
+	std::atomic<ENetHost*> m_NetServer;
+
+	// Connection thread only
 	u8 m_PlayerId;
-	ENetHost* m_NetServer;
-
 	ENetHost* m_NetClient;
 	ENetPeer* m_NetPeer;
 
