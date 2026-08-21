@@ -267,6 +267,7 @@
     <ClCompile Include="Src\GameConnectionManager.cpp" />
     <ClCompile Include="Src\GameConnectionRPCs.cpp" />
     <ClCompile Include="Src\GameData.cpp" />
+    <ClCompile Include="Src\Log.cpp" />
     <ClCompile Include="Src\LuaMain.cpp" />
     <ClCompile Include="Src\Main.cpp" />
     <ClCompile Include="Src\ObservedGameMemory.cpp" />

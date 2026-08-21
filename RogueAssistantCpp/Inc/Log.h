@@ -5,23 +5,25 @@
 #define _ASSERTS
 #endif
 
-#ifdef _DEBUG
+// Logging is deliberately enabled in Release as well.
+//
+// This DLL runs inside the emulator process, so when something goes wrong the
+// emulator simply disappears - no dialog, no dump, nothing in the event log.
+// Previously LOG_* and ASSERT_* were compiled out entirely for Release, which
+// meant every packet-size and bounds check in the shipping build was a no-op and
+// there was no trail at all. Output goes to stderr, the debugger, and
+// RogueAssistant.log in the working directory.
+void RogueLog_Write(char const* level, char const* format, ...);
 
-#define LOG_INFO(format, ...) printf("[INFO]: " ## format ## "\n", __VA_ARGS__)
-#define LOG_WARN(format, ...) printf("[WARNING]: " ## format  ## "\n", __VA_ARGS__)
-#define LOG_ERROR(format, ...) printf("[ERROR]: " ## format  ## "\n", __VA_ARGS__)
-#else
-
-#define LOG_INFO(format, ...)
-#define LOG_WARN(format, ...)
-#define LOG_ERROR(format, ...)
-#endif
-
+#define LOG_INFO(...)  RogueLog_Write("INFO", __VA_ARGS__)
+#define LOG_WARN(...)  RogueLog_Write("WARN", __VA_ARGS__)
+#define LOG_ERROR(...) RogueLog_Write("ERROR", __VA_ARGS__)
 
 #ifdef _ASSERTS
-#define ASSERT_MSG(condition, ...) if(!(condition)) { LOG_ERROR(__VA_ARGS__); __debugbreak(); } (void*)0
+#define ASSERT_MSG(condition, ...) do { if(!(condition)) { LOG_ERROR(__VA_ARGS__); __debugbreak(); } } while(0)
 #else
-#define ASSERT_MSG(condition, ...)
+// Still evaluated and still logged - just doesn't break into the debugger.
+#define ASSERT_MSG(condition, ...) do { if(!(condition)) { LOG_ERROR(__VA_ARGS__); } } while(0)
 #endif
 
 #define ASSERT_FAIL(...) ASSERT_MSG(false, __VA_ARGS__)
