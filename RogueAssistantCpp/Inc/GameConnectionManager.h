@@ -23,7 +23,7 @@ struct ActiveGameConnection
 // Threading model
 // ---------------
 // Three threads touch this class:
-//   * the window thread      (RogueAssistant_MainLoop) - owns m_ActiveConnections / m_RecentError
+//   * the window thread      (RogueAssistant_MainLoop) - owns m_ActiveConnections
 //   * a per-connection thread(BackgroundUpdate)        - produces data requests
 //   * the emulator Lua thread(rogue_next_data_request) - consumes data requests
 //
@@ -58,13 +58,30 @@ public:
 
 	inline ActiveGameConnection& GetGameConnectionAt(int index) { return m_ActiveConnections[index]; }
 
-	inline void PushError(std::string const& error) { m_RecentError = error; }
-	inline void ClearRecentError() { m_RecentError = ""; }
-	inline std::string const& GetRecentError() const { return m_RecentError; }
+	// m_RecentError is written from a connection thread (CommonBehaviour's compat
+	// check) and read by the window thread when drawing, so it needs guarding too.
+	// Returned by value: handing out a reference to a string another thread may be
+	// reassigning is a use-after-free waiting to happen.
+	inline void PushError(std::string const& error)
+	{
+		std::lock_guard<std::mutex> lock(m_RecentErrorMutex);
+		m_RecentError = error;
+	}
+	inline void ClearRecentError()
+	{
+		std::lock_guard<std::mutex> lock(m_RecentErrorMutex);
+		m_RecentError.clear();
+	}
+	inline std::string GetRecentError() const
+	{
+		std::lock_guard<std::mutex> lock(m_RecentErrorMutex);
+		return m_RecentError;
+	}
 
 private:
 	void BackgroundUpdate(GameConnectionRef game);
 
+	mutable std::mutex m_RecentErrorMutex;
 	std::string m_RecentError;
 
 	std::mutex m_PendingDataRequestsMutex;
