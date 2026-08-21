@@ -6,22 +6,28 @@
 
 //#include <WinSock2.h>
 
+#include <atomic>
 #include <SFML/Network.hpp>
 
 static std::unique_ptr<GameConnectionManager> s_Manager;
+static std::once_flag s_ManagerOnce;
+static std::atomic<bool> s_ManagerReady{ false };
 
 GameConnectionManager& GameConnectionManager::Instance()
 {
-	if (s_Manager == nullptr)
-	{
-		s_Manager = std::make_unique<GameConnectionManager>();
-	}
+	// Instance() is reached from the window thread, the connection threads and the
+	// emulator Lua thread, so construction has to happen exactly once.
+	std::call_once(s_ManagerOnce, []()
+		{
+			s_Manager = std::make_unique<GameConnectionManager>();
+			s_ManagerReady.store(true, std::memory_order_release);
+		});
 	return *s_Manager;
 }
 
 bool GameConnectionManager::IsValid()
 {
-	return s_Manager != nullptr;
+	return s_ManagerReady.load(std::memory_order_acquire);
 }
 
 void GameConnectionManager::OpenListener()
@@ -73,19 +79,69 @@ void GameConnectionManager::UpdateConnections()
 
 void GameConnectionManager::EnqueueGameDataRequest(GameDataRequest const& request)
 {
+	std::lock_guard<std::mutex> lock(m_PendingDataRequestsMutex);
 	m_PendingDataRequests.push(request);
 }
 
 bool GameConnectionManager::TryPopDataRequest(GameDataRequest& target)
 {
+	std::lock_guard<std::mutex> lock(m_PendingDataRequestsMutex);
+
 	if (!m_PendingDataRequests.empty())
 	{
-		target = m_PendingDataRequests.front();
+		target = std::move(m_PendingDataRequests.front());
 		m_PendingDataRequests.pop();
 		return true;
 	}
 
 	return false;
+}
+
+void GameConnectionManager::PushCompletedDataRequest(GameDataRequest&& request)
+{
+	std::lock_guard<std::mutex> lock(m_CompletedDataRequestsMutex);
+	m_CompletedDataRequests.push(std::move(request));
+}
+
+void GameConnectionManager::DispatchCompletedDataRequests(GameConnection& owner)
+{
+	std::queue<GameDataRequest> mine;
+
+	{
+		std::lock_guard<std::mutex> lock(m_CompletedDataRequestsMutex);
+
+		std::queue<GameDataRequest> others;
+		while (!m_CompletedDataRequests.empty())
+		{
+			GameDataRequest& front = m_CompletedDataRequests.front();
+			GameConnectionRef ownerRef = front.m_Owner.lock();
+
+			if (ownerRef == nullptr)
+			{
+				// Issuing connection has gone away; running the callback would touch
+				// a destroyed GameConnection, so drop it.
+			}
+			else if (ownerRef.get() == &owner)
+				mine.push(std::move(front));
+			else
+				others.push(std::move(front));
+
+			m_CompletedDataRequests.pop();
+		}
+
+		m_CompletedDataRequests = std::move(others);
+	}
+
+	// Run outside the lock: callbacks re-enter EnqueueGameDataRequest
+	while (!mine.empty())
+	{
+		GameDataRequest& request = mine.front();
+
+		if (request.m_Callback)
+			request.m_Callback(request.m_Response);
+
+		mine.pop();
+	}
 }
 
 void GameConnectionManager::BackgroundUpdate(GameConnectionRef game)

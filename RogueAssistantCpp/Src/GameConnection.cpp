@@ -23,6 +23,12 @@ GameConnection::~GameConnection()
 
 void GameConnection::Update()
 {
+	// Run the callbacks for any requests the emulator thread has finished servicing.
+	// These used to fire on the Lua thread, which meant ObservedGameMemory and the
+	// behaviours were mutated from two threads at once. Dispatching here keeps all
+	// of that on this connection's own thread.
+	GameConnectionManager::Instance().DispatchCompletedDataRequests(*this);
+
 	int frame = m_UpdateFrame++;
 
 	switch (m_State)
@@ -45,7 +51,11 @@ void GameConnection::Update()
 		}
 
 		// Make a copy, so behaviours can add new ones for next frame
-		std::vector<GameConnectionBehaviourRef> behavioursToUpdate = m_Behaviours;
+		std::vector<GameConnectionBehaviourRef> behavioursToUpdate;
+		{
+			std::lock_guard<std::mutex> lock(m_BehavioursMutex);
+			behavioursToUpdate = m_Behaviours;
+		}
 
 		for (auto behaviour : behavioursToUpdate)
 		{
@@ -65,7 +75,13 @@ void GameConnection::Update()
 
 void GameConnection::Disconnect()
 {
-	for (auto behaviour : m_Behaviours)
+	std::vector<GameConnectionBehaviourRef> behaviours;
+	{
+		std::lock_guard<std::mutex> lock(m_BehavioursMutex);
+		behaviours = m_Behaviours;
+	}
+
+	for (auto behaviour : behaviours)
 		behaviour->OnDetach(*this);
 
 	m_State = GameConnectionState::Disconnected;
@@ -78,11 +94,18 @@ void GameConnection::AddDefaultBehaviours()
 
 void GameConnection::AddBehaviour(IGameConnectionBehaviour* behaviour)
 {
+	GameConnectionBehaviourRef ref = behaviour->shared_from_this();
+
+	{
+		std::lock_guard<std::mutex> lock(m_BehavioursMutex);
 #ifdef _ASSERTS
-	auto findIt = std::find(m_Behaviours.begin(), m_Behaviours.end(), behaviour->shared_from_this());
-	ASSERT_MSG(findIt == m_Behaviours.end(), "Behaviour already added");
+		auto findIt = std::find(m_Behaviours.begin(), m_Behaviours.end(), ref);
+		ASSERT_MSG(findIt == m_Behaviours.end(), "Behaviour already added");
 #endif
-	m_Behaviours.push_back(behaviour->shared_from_this());
+		m_Behaviours.push_back(ref);
+	}
+
+	// Deliberately outside the lock - OnAttach runs user code
 	behaviour->OnAttach(*this);
 }
 
@@ -93,16 +116,26 @@ void GameConnection::RemoveBehaviour(IGameConnectionBehaviour* behaviour)
 
 bool GameConnection::RemoveBehaviourInternal(IGameConnectionBehaviour* behaviour)
 {
-	auto findIt = std::find(m_Behaviours.begin(), m_Behaviours.end(), behaviour->shared_from_this());
+	GameConnectionBehaviourRef ref = behaviour->shared_from_this();
+	bool found = false;
 
-	if (findIt != m_Behaviours.end())
 	{
-		behaviour->OnDetach(*this);
-		m_Behaviours.erase(findIt);
-		return true;
+		std::lock_guard<std::mutex> lock(m_BehavioursMutex);
+		auto findIt = std::find(m_Behaviours.begin(), m_Behaviours.end(), ref);
+
+		if (findIt != m_Behaviours.end())
+		{
+			m_Behaviours.erase(findIt);
+			found = true;
+		}
 	}
 
-	return false;
+	// Deliberately outside the lock - OnDetach runs user code. `ref` keeps the
+	// behaviour alive until we're done with it.
+	if (found)
+		behaviour->OnDetach(*this);
+
+	return found;
 }
 
 ObservedGameMemory& GameConnection::GetObservedGameMemory()
@@ -249,6 +282,7 @@ void GameConnection::WriteRequest(GameMessageID messageId, size_t addr, void con
 	req.m_Data.resize(size);
 	memcpy_s(req.m_Data.data(), req.m_Data.size(), data, size);
 
+	req.m_Owner = weak_from_this();
 	GameConnectionManager::Instance().EnqueueGameDataRequest(req);
 }
 
@@ -266,5 +300,6 @@ void GameConnection::ReadRequest(GameMessageID messageId, size_t addr, size_t si
 				OnRecieveMessage(messageId, data.data(), data.size());
 		};
 
+	req.m_Owner = weak_from_this();
 	GameConnectionManager::Instance().EnqueueGameDataRequest(req);
 }

@@ -78,8 +78,10 @@ public:
 	GameStructures::RogueAssistantState const& GetAssistantState() const { return m_AssistantState.Get(); }
 	GameAddress GetMultiplayerStatePtr() const { return m_MultiplayerStatePtr.Get(); }
 	u8 const* GetMultiplayerStateBlob() const { return m_MultiplayerState.GetData(); }
+	size_t GetMultiplayerStateBlobSize() const { return m_MultiplayerState.GetSize(); }
 	GameAddress GetHomeBoxStatePtr() const { return m_HomeBoxStatePtr.Get(); }
 	u8 const* GetHomeBoxStateBlob() const { return m_HomeBoxState.GetData(); }
+	size_t GetHomeBoxStateBlobSize() const { return m_HomeBoxState.GetSize(); }
 
 	GameAddress GetPokemonStoragePtr() const;
 	bool RequestPokemonStorageData(u32 boxId);

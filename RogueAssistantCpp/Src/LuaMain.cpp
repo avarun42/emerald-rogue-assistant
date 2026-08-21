@@ -45,65 +45,93 @@ extern "C"
     //    lua_pop(lua, 1);
     //}
 
+    // Owned by the emulator (Lua) thread only.
     GameDataRequest s_RecentReq;
-    std::vector<u8> s_Response;
+    bool s_HasRequest = false;
     size_t s_WriteIndex = 0;
 
     int rogue_next_data_request(lua_State* lua)
     {
-        if (GameConnectionManager::IsValid() && GameConnectionManager::Instance().TryPopDataRequest(s_RecentReq))
+        try
         {
-            s_Response.clear();
-            s_WriteIndex = 0;
-            lua_pushboolean(lua, true);
-            return 1;
+            if (s_HasRequest)
+            {
+                // Previous request was never completed by the script; complete it now
+                // so its callback isn't silently dropped.
+                GameConnectionManager::Instance().PushCompletedDataRequest(std::move(s_RecentReq));
+                s_HasRequest = false;
+            }
+
+            if (GameConnectionManager::IsValid() && GameConnectionManager::Instance().TryPopDataRequest(s_RecentReq))
+            {
+                s_RecentReq.m_Response.clear();
+                s_WriteIndex = 0;
+                s_HasRequest = true;
+                lua_pushboolean(lua, true);
+                return 1;
+            }
         }
-        else
+        catch (...)
         {
-            lua_pushboolean(lua, false);
-            return 1;
+            // Never let a C++ exception unwind into Lua - that terminates the emulator.
+            LOG_ERROR("rogue_next_data_request: exception");
+            s_HasRequest = false;
         }
+
+        lua_pushboolean(lua, false);
+        return 1;
     }
 
     int rogue_data_request_is_read(lua_State* lua)
     {
-        lua_pushboolean(lua, s_RecentReq.m_Type == GameDataRequest::REQUEST_READ);
+        lua_pushboolean(lua, s_HasRequest && s_RecentReq.m_Type == GameDataRequest::REQUEST_READ);
         return 1;
     }
 
     int rogue_data_request_get_read(lua_State* lua)
     {
-        lua_pushnumber(lua, (int)s_RecentReq.m_Address);
-        lua_pushnumber(lua, (int)s_RecentReq.m_Size);
+        lua_pushnumber(lua, s_HasRequest ? (int)s_RecentReq.m_Address : 0);
+        lua_pushnumber(lua, s_HasRequest ? (int)s_RecentReq.m_Size : 0);
         return 2;
     }
 
     int rogue_data_request_get_write(lua_State* lua)
     {
-        if (s_WriteIndex < s_RecentReq.m_Data.size())
+        if (s_HasRequest && s_WriteIndex < s_RecentReq.m_Data.size())
         {
-            lua_pushnumber(lua, (int)(s_RecentReq.m_Address + s_WriteIndex));
+            size_t const address = s_RecentReq.m_Address + s_WriteIndex;
+            size_t const remainingBytes = s_RecentReq.m_Data.size() - s_WriteIndex;
 
-            size_t remainingBytes = s_RecentReq.m_Data.size() - s_WriteIndex;
+            // The GBA forces 16/32 bit writes onto their natural boundary, so an
+            // unaligned emu:write32 silently lands at (addr & ~3) and corrupts the
+            // preceding bytes. Only widen when the *address* allows it.
+            size_t width = 1;
+            if (remainingBytes >= 4 && (address % 4) == 0)
+                width = 4;
+            else if (remainingBytes >= 2 && (address % 2) == 0)
+                width = 2;
 
-            if (remainingBytes >= 4)
+            lua_pushnumber(lua, (int)address);
+            lua_pushnumber(lua, (int)width);
+
+            if (width == 4)
             {
-                lua_pushnumber(lua, (int)4);
-                lua_pushnumber(lua, *((s32*)&s_RecentReq.m_Data[s_WriteIndex]));
-                s_WriteIndex += 4;
+                s32 value;
+                memcpy(&value, &s_RecentReq.m_Data[s_WriteIndex], sizeof(value));
+                lua_pushnumber(lua, value);
             }
-            else if(remainingBytes >= 2)
+            else if (width == 2)
             {
-                lua_pushnumber(lua, (int)2);
-                lua_pushnumber(lua, *((s16*)&s_RecentReq.m_Data[s_WriteIndex]));
-                s_WriteIndex += 2;
+                s16 value;
+                memcpy(&value, &s_RecentReq.m_Data[s_WriteIndex], sizeof(value));
+                lua_pushnumber(lua, value);
             }
             else
             {
-                lua_pushnumber(lua, (int)1);
                 lua_pushnumber(lua, s_RecentReq.m_Data[s_WriteIndex]);
-                s_WriteIndex += 1;
             }
+
+            s_WriteIndex += width;
         }
         else
         {
@@ -116,16 +144,42 @@ extern "C"
 
     int rogue_data_request_provide_result(lua_State* lua)
     {
-        if (s_RecentReq.m_Type == GameDataRequest::REQUEST_READ)
+        if (!s_HasRequest)
+            return 0;
+
+        try
         {
-            u8 const* data = (u8 const* )lua_tostring(lua, 1);
+            if (s_RecentReq.m_Type == GameDataRequest::REQUEST_READ)
+            {
+                size_t resultLength = 0;
+                char const* data = lua_tolstring(lua, 1, &resultLength);
 
-            s_Response.resize(s_RecentReq.m_Size);
+                if (data == nullptr || resultLength < s_RecentReq.m_Size)
+                {
+                    // emu:readRange couldn't service the whole range (bad pointer in
+                    // the game struct, unmapped address, ...). Drop it rather than
+                    // reading past the end of the Lua string.
+                    LOG_ERROR("Read of 0x%zx (%zu bytes) returned %zu bytes", s_RecentReq.m_Address, s_RecentReq.m_Size, resultLength);
+                    s_RecentReq.m_Callback = nullptr;
+                }
+                else
+                {
+                    s_RecentReq.m_Response.resize(s_RecentReq.m_Size);
+                    if (s_RecentReq.m_Size != 0)
+                        memcpy(s_RecentReq.m_Response.data(), data, s_RecentReq.m_Size);
+                }
+            }
 
-            memcpy_s(s_Response.data(), s_Response.size(), data, s_RecentReq.m_Size);
+            // Hand the result back to the connection thread; the callback runs there,
+            // not here, so ObservedGameMemory stays single-threaded.
+            GameConnectionManager::Instance().PushCompletedDataRequest(std::move(s_RecentReq));
+        }
+        catch (...)
+        {
+            LOG_ERROR("rogue_data_request_provide_result: exception");
         }
 
-        s_RecentReq.m_Callback(s_Response);
+        s_HasRequest = false;
         return 0;
     }
 
@@ -138,20 +192,27 @@ extern "C"
         lua_register(lua, "rogue_data_request_get_write", rogue_data_request_get_write);
         lua_register(lua, "rogue_data_request_provide_result", rogue_data_request_provide_result);
 
-        std::vector<std::string> args;
-        RogueAssistant_Main(false, args);
+        try
+        {
+            std::vector<std::string> args;
+            RogueAssistant_Main(false, args);
+        }
+        catch (...)
+        {
+            LOG_ERROR("rogue_attach: exception");
+        }
         return 0;
     }
 
     int rogue_frame(lua_State* lua)
     {
-        RogueAssistant_Frame();
+        try { RogueAssistant_Frame(); } catch (...) { LOG_ERROR("rogue_frame: exception"); }
         return 0;
     }
 
     int rogue_shutdown(lua_State* lua)
     {
-        RogueAssistant_Shutdown();
+        try { RogueAssistant_Shutdown(); } catch (...) { LOG_ERROR("rogue_shutdown: exception"); }
         return 0;
     }
 
