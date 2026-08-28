@@ -260,8 +260,10 @@ void PrimaryUI::Render(Window& window)
 		PageUI newPage = PageUI::Awaiting;
 		bool initialLoad = false;
 
-		MultiplayerBehaviour* multiplayer = game.m_Game->FindBehaviour<MultiplayerBehaviour>();
-		HomeBoxBehaviour* homebox = game.m_Game->FindBehaviour<HomeBoxBehaviour>();
+		// Strong refs: the connection thread may remove either behaviour while
+		// we're still drawing with it.
+		std::shared_ptr<MultiplayerBehaviour> multiplayer = game.m_Game->FindBehaviour<MultiplayerBehaviour>();
+		std::shared_ptr<HomeBoxBehaviour> homebox = game.m_Game->FindBehaviour<HomeBoxBehaviour>();
 
 		if (homebox != nullptr)
 		{
@@ -284,11 +286,11 @@ void PrimaryUI::Render(Window& window)
 		switch (m_CurrentPage)
 		{
 		case PrimaryUI::PageUI::Multiplayer:
-			RenderMultiplayerPage(window, multiplayer, initialLoad);
+			RenderMultiplayerPage(window, multiplayer.get(), initialLoad);
 			break;
 
 		case PrimaryUI::PageUI::HomeBox:
-			RenderHomeBoxPage(window, homebox, initialLoad);
+			RenderHomeBoxPage(window, homebox.get(), initialLoad);
 			break;
 
 		default:

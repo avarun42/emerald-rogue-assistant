@@ -10,6 +10,7 @@
 
 #include <functional>
 #include <memory>
+#include <mutex>
 
 class GameConnectionManager;
 class IGameConnectionTask;
@@ -24,7 +25,7 @@ enum class GameConnectionState
 	Disconnected
 };
 
-class GameConnection
+class GameConnection : public std::enable_shared_from_this<GameConnection>
 {
 	friend GameConnectionManager;
 public:
@@ -41,7 +42,7 @@ public:
 	std::shared_ptr<T> AddBehaviour();
 
 	template<typename T>
-	T* FindBehaviour();
+	std::shared_ptr<T> FindBehaviour();
 
 	inline bool IsReady() const { return m_State == GameConnectionState::Connected; }
 	inline bool HasDisconnected() const { return m_State == GameConnectionState::Disconnected; }
@@ -79,6 +80,10 @@ private:
 	RPCQueue m_GameRPCs;
 	std::unique_ptr<ObservedGameMemory> m_ObservedGameMemory;
 
+	// m_Behaviours is read from the window thread (PrimaryUI::Render -> FindBehaviour)
+	// while the connection thread adds/removes entries, so it needs a lock.
+	// m_BehavioursToRemove is only ever touched on the connection thread.
+	std::mutex m_BehavioursMutex;
 	std::vector<GameConnectionBehaviourRef> m_Behaviours;
 	std::vector<GameConnectionBehaviourRef> m_BehavioursToRemove;
 };
@@ -94,11 +99,15 @@ std::shared_ptr<T> GameConnection::AddBehaviour()
 }
 
 template<typename T>
-T* GameConnection::FindBehaviour()
+std::shared_ptr<T> GameConnection::FindBehaviour()
 {
+	// Returns a strong ref: the caller may be on the window thread, and the
+	// connection thread is free to remove the behaviour at any point.
+	std::lock_guard<std::mutex> lock(m_BehavioursMutex);
+
 	for (auto& ref : m_Behaviours)
 	{
-		T* result = dynamic_cast<T*>(ref.get());
+		std::shared_ptr<T> result = std::dynamic_pointer_cast<T>(ref);
 		if (result != nullptr)
 			return result;
 	}
