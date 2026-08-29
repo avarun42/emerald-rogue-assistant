@@ -1,6 +1,7 @@
 require "RogueAssistant"
 
 console:log("Launching Rogue Assistant...")
+console:log("(Rogue Assistant will remain attached until the emulator closes)")
 rogue_attach()
 
 function onFrame()

@@ -8,7 +8,7 @@
 
 // Make sure to change the same value in the Game if this ever changes
 // (These numbers must match in order to connect)
-#define ROGUE_ASSISTANT_COMPAT_VERSION 2
+#define ROGUE_ASSISTANT_COMPAT_VERSION 3
 
 void CommonBehaviour::OnAttach(GameConnection & game)
 {
