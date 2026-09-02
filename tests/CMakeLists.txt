@@ -1,0 +1,14 @@
+add_executable(
+    rogue_tests
+    CharacterizationTests.cpp
+)
+
+target_link_libraries(
+    rogue_tests
+    PRIVATE
+        rogue_core
+        Catch2::Catch2WithMain
+)
+
+include(Catch)
+catch_discover_tests(rogue_tests)
