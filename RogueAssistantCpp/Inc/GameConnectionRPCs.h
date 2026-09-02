@@ -27,9 +27,6 @@ private:
 	template<typename T>
 	void PushSendData(T const& value) { PushSendBufferData(&value, sizeof(T)); }
 
-	GameConnection& m_Game;
-	u16 m_Counter;
-
 	size_t m_SendBufferSize;
 	u8 m_SendBuffer[16];
 	//std::queue<WriteDataCallback> m_RPCQueue;

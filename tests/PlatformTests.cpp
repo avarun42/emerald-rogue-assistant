@@ -1,5 +1,6 @@
 #include "Log.h"
 #include "Platform/AppPaths.h"
+#include "Platform/BridgeScript.h"
 #include "Platform/Configuration.h"
 #include "Platform/ResourceLocator.h"
 #include "Platform/Utf8.h"
@@ -210,6 +211,25 @@ TEST_CASE("resource lookup maps logical assets into the installed resource direc
 		== fs::path("/opt/rogue-assistant/resources/WobbuffetImage.png"));
 	REQUIRE(resources.Resolve(Resource::BridgeScript)
 		== fs::path("/opt/rogue-assistant/resources/RogueAssistant_mGBA.lua"));
+}
+
+TEST_CASE("bridge script export substitutes only the configured port and writes atomically", "[platform][resources]")
+{
+	TemporaryDirectory temporary;
+	fs::path const source = temporary.Path() / "resources" / "RogueAssistant_mGBA.lua";
+	WriteText(source, "local BRIDGE_PORT = 30125 -- ROGUE_ASSISTANT_BRIDGE_PORT\n"
+					  "local payload = '30125 stays unchanged'\n");
+
+	auto exported = ExportBridgeScript(source, temporary.Path() / "data" / "scripts", 41234);
+	REQUIRE(exported.Succeeded());
+	REQUIRE(exported.path == temporary.Path() / "data" / "scripts" / "RogueAssistant_mGBA.lua");
+	REQUIRE(ReadText(exported.path) == "local BRIDGE_PORT = 41234 -- ROGUE_ASSISTANT_BRIDGE_PORT\n"
+									   "local payload = '30125 stays unchanged'\n");
+
+	exported = ExportBridgeScript(source, temporary.Path() / "data" / "scripts", 0);
+	REQUIRE_FALSE(exported.Succeeded());
+	REQUIRE(ReadText(temporary.Path() / "data" / "scripts" / "RogueAssistant_mGBA.lua").find("41234") !=
+			std::string::npos);
 }
 
 TEST_CASE("portable logging writes UTF-8 diagnostics to the configured data path", "[platform][logging]")

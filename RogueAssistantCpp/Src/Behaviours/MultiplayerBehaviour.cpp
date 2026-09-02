@@ -217,6 +217,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 			}
 
 			size_t value = playerId;
+			// NOLINTNEXTLINE(performance-no-int-to-ptr): ENet reserves this pointer for application data.
 			m_ServerState.m_PendingHandshake->data = reinterpret_cast<void*>(value);
 
 			ENetPacket* packet = enet_packet_create(
@@ -584,6 +585,7 @@ void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent
 					m_PlayerId = playerId;
 
 					size_t value = m_PlayerId;
+					// NOLINTNEXTLINE(performance-no-int-to-ptr): ENet reserves this pointer for application data.
 					netEvent.peer->data = reinterpret_cast<void*>(value);
 
 					// Client recieved handshake response so confirm connection

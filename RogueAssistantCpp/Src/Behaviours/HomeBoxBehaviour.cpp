@@ -9,6 +9,7 @@
 
 void HomeBoxBehaviour::OnAttach(GameConnection& game)
 {
+	(void)game;
 	m_State = State::First;
 	m_ActiveBoxData.clear();
 }
@@ -202,8 +203,7 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 void HomeBoxBehaviour::InitaliseLocalBoxData(GameConnection& game, u32 boxId)
 {
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
-	u8 const* homeBoxState = game.GetObservedGameMemory().GetHomeBoxStateBlob();
-	
+
 	BoxData& targetBox = m_ActiveBoxData[boxId];
 
 	if (boxId < rogueHeader.homeLocalBoxCount)
@@ -255,7 +255,7 @@ void HomeBoxBehaviour::BeginWriteMonBox(GameConnection& game, u32 boxId, u8 cons
 	boxWriteRequest.m_Offset = 0;
 	boxWriteRequest.m_BytesRemaining = rogueHeader.homeDestMonSize;
 
-	m_BoxWriteRequest.push(std::move(boxWriteRequest));
+	m_BoxWriteRequest.push(boxWriteRequest);
 }
 
 bool HomeBoxBehaviour::PumpWriteMonBox(GameConnection& game)
@@ -274,7 +274,8 @@ bool HomeBoxBehaviour::PumpWriteMonBox(GameConnection& game)
 
 			game.WriteRequest(
 				CreateAnonymousMessageId(),
-				writeAddress + rogueHeader.homeDestMonSize * boxWriteRequest.m_BoxId + boxWriteRequest.m_Offset,
+				writeAddress + rogueHeader.homeDestMonSize * boxWriteRequest.m_BoxId +
+					static_cast<GameAddress>(boxWriteRequest.m_Offset),
 				boxWriteRequest.m_Data + boxWriteRequest.m_Offset,
 				writeSize
 			);
@@ -306,8 +307,6 @@ u8 const* HomeBoxBehaviour::GetMonBoxPtr(GameConnection& game, u32 boxId)
 
 void HomeBoxBehaviour::HandlePendingFileWrite(GameConnection& game)
 {
-	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
-
 	if (m_WriteFilePath.empty())
 		return;
 
