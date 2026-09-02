@@ -1,4 +1,5 @@
 #pragma once
+#include "Bridge/NativeLuaTransport.h"
 #include "Defines.h"
 #include "SFML/Network.hpp"
 #include "GameDataRequest.h"
@@ -79,6 +80,8 @@ public:
 	}
 
 private:
+	bool SubmitNativeRequest(std::weak_ptr<GameConnection> owner, MemoryRequest request,
+		NativeLuaTransport::NativeCompletion completion);
 	void BackgroundUpdate(GameConnectionRef game);
 
 	mutable std::mutex m_RecentErrorMutex;

@@ -2,12 +2,13 @@ add_executable(
     rogue_tests
     CharacterizationTests.cpp
     PlatformTests.cpp
+    TransportTests.cpp
 )
 
 target_link_libraries(
     rogue_tests
     PRIVATE
-        rogue_core
+        rogue_bridge
         rogue_project_warnings
         Catch2::Catch2WithMain
 )

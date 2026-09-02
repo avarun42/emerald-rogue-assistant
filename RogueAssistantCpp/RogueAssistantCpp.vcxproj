@@ -262,6 +262,9 @@
     <ClCompile Include="Src\Behaviours\CommonBehaviour.cpp" />
     <ClCompile Include="Src\Behaviours\HomeBoxBehaviour.cpp" />
     <ClCompile Include="Src\Behaviours\MultiplayerBehaviour.cpp" />
+    <ClCompile Include="Src\Bridge\GameMemoryTransport.cpp" />
+    <ClCompile Include="Src\Bridge\GameSession.cpp" />
+    <ClCompile Include="Src\Bridge\NativeLuaTransport.cpp" />
     <ClCompile Include="Src\DataStream.cpp" />
     <ClCompile Include="Src\GameConnection.cpp" />
     <ClCompile Include="Src\GameConnectionManager.cpp" />
@@ -296,6 +299,9 @@
     <ClInclude Include="External\imgui\imstb_rectpack.h" />
     <ClInclude Include="External\imgui\imstb_textedit.h" />
     <ClInclude Include="External\imgui\imstb_truetype.h" />
+    <ClInclude Include="Inc\Bridge\GameMemoryTransport.h" />
+    <ClInclude Include="Inc\Bridge\GameSession.h" />
+    <ClInclude Include="Inc\Bridge\NativeLuaTransport.h" />
     <ClInclude Include="External\SFML\include\SFML\Audio.hpp" />
     <ClInclude Include="External\SFML\include\SFML\Audio\AlResource.hpp" />
     <ClInclude Include="External\SFML\include\SFML\Audio\Export.hpp" />

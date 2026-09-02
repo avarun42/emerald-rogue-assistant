@@ -95,6 +95,25 @@ target_link_libraries(
 )
 rogue_enable_clang_tidy(rogue_core)
 
+add_library(
+    rogue_bridge
+    STATIC
+        RogueAssistantCpp/Src/Bridge/GameMemoryTransport.cpp
+        RogueAssistantCpp/Src/Bridge/GameSession.cpp
+        RogueAssistantCpp/Src/Bridge/NativeLuaTransport.cpp
+)
+target_include_directories(rogue_bridge PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc)
+target_link_libraries(
+    rogue_bridge
+    PUBLIC
+        rogue_core
+        rogue_project_options
+        rogue_sanitizers
+    PRIVATE
+        rogue_project_warnings
+)
+rogue_enable_clang_tidy(rogue_bridge)
+
 set(
     ROGUE_RESOURCE_FILES
     RogueAssistantCpp/Assets/WobbuffetImage.png

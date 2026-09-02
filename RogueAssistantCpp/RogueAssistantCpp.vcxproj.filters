@@ -61,6 +61,15 @@
     <ClCompile Include="Src\Behaviours\HomeBoxBehaviour.cpp">
       <Filter>Src\Behaviours</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Bridge\GameMemoryTransport.cpp">
+      <Filter>Src\Bridge</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Bridge\GameSession.cpp">
+      <Filter>Src\Bridge</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Bridge\NativeLuaTransport.cpp">
+      <Filter>Src\Bridge</Filter>
+    </ClCompile>
     <ClCompile Include="Src\UserData.cpp">
       <Filter>Src</Filter>
     </ClCompile>
@@ -165,6 +174,15 @@
     </ClInclude>
     <ClInclude Include="Inc\DataStream.h">
       <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Bridge\GameMemoryTransport.h">
+      <Filter>Inc\Bridge</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Bridge\GameSession.h">
+      <Filter>Inc\Bridge</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Bridge\NativeLuaTransport.h">
+      <Filter>Inc\Bridge</Filter>
     </ClInclude>
     <ClInclude Include="External\glew-2.1.0\include\GL\eglew.h" />
     <ClInclude Include="External\glew-2.1.0\include\GL\glew.h" />
@@ -307,6 +325,12 @@
     </Filter>
     <Filter Include="Src\Behaviours">
       <UniqueIdentifier>{b1977417-dc41-456e-9ceb-c30e9975a76b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Bridge">
+      <UniqueIdentifier>{35B3D9EA-F8B0-4C7C-9227-6EE77A2939CF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Bridge">
+      <UniqueIdentifier>{29EBD0CD-1244-4241-90A3-CC83D75DD8B5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Inc\UI">
       <UniqueIdentifier>{85c1db9b-57d9-4640-8e88-d07189f2c068}</UniqueIdentifier>

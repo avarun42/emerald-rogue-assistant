@@ -41,3 +41,5 @@ changes, and behavior changes are separate review units.
 
 Filesystem roots, strict settings behavior, resource lookup, and the Windows
 legacy import policy are documented in [platform-services.md](platform-services.md).
+The bounded request model and temporary Windows adapter are documented in
+[game-memory-transport.md](game-memory-transport.md).

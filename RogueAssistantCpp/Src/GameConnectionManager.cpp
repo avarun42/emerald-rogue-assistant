@@ -7,6 +7,8 @@
 //#include <WinSock2.h>
 
 #include <atomic>
+#include <cstring>
+#include <utility>
 #include <SFML/Network.hpp>
 
 static std::unique_ptr<GameConnectionManager> s_Manager;
@@ -46,7 +48,15 @@ void GameConnectionManager::UpdateConnections()
 {
 	// Accept any incoming connections
 	if (m_AcceptingConnection == nullptr)
+	{
 		m_AcceptingConnection = std::make_shared<GameConnection>();
+		std::weak_ptr<GameConnection> const owner = m_AcceptingConnection;
+		auto transport = std::make_shared<NativeLuaTransport>(
+			[this, owner](MemoryRequest request, NativeLuaTransport::NativeCompletion completion) {
+				return SubmitNativeRequest(owner, std::move(request), std::move(completion));
+			});
+		m_AcceptingConnection->SetMemoryTransport(std::move(transport));
+	}
 
 	if (m_ListeningForConnections && m_ActiveConnections.empty())
 	{
@@ -75,6 +85,48 @@ void GameConnectionManager::UpdateConnections()
 		else
 			++i;
 	}
+}
+
+bool GameConnectionManager::SubmitNativeRequest(std::weak_ptr<GameConnection> owner, MemoryRequest request,
+	NativeLuaTransport::NativeCompletion completion)
+{
+	if (owner.expired())
+		return false;
+
+	GameDataRequest legacy;
+	legacy.m_Type = request.operation == MemoryRequest::Operation::Read
+		? GameDataRequest::REQUEST_READ
+		: GameDataRequest::REQUEST_WRITE;
+	legacy.m_Address = request.address;
+	legacy.m_Size = request.operation == MemoryRequest::Operation::Read ? request.readSize : request.data.size();
+	legacy.m_Data.resize(request.data.size());
+	if (!request.data.empty())
+		std::memcpy(legacy.m_Data.data(), request.data.data(), request.data.size());
+	legacy.m_Owner = std::move(owner);
+
+	MemoryRequestId const id = request.id;
+	MemoryRequest::Operation const operation = request.operation;
+	std::size_t const expectedSize = legacy.m_Size;
+	legacy.m_Callback = [id, operation, expectedSize, completion = std::move(completion)](
+		std::vector<u8> const& data) mutable {
+		MemoryResult result;
+		result.id = id;
+		if (operation == MemoryRequest::Operation::Read && data.size() != expectedSize)
+		{
+			result.status = MemoryResult::Status::InvalidSize;
+		}
+		else
+		{
+			result.status = MemoryResult::Status::Ok;
+			result.data.resize(data.size());
+			if (!data.empty())
+				std::memcpy(result.data.data(), data.data(), data.size());
+		}
+		completion(std::move(result));
+	};
+
+	EnqueueGameDataRequest(legacy);
+	return true;
 }
 
 void GameConnectionManager::EnqueueGameDataRequest(GameDataRequest const& request)

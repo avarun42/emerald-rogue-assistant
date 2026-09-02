@@ -1,4 +1,5 @@
 #include "Defines.h"
+#include "Endian.h"
 #include "Log.h"
 #include <vector>
 #include <string>
@@ -99,7 +100,7 @@ extern "C"
     {
         if (s_HasRequest && s_WriteIndex < s_RecentReq.m_Data.size())
         {
-            size_t const address = s_RecentReq.m_Address + s_WriteIndex;
+            GameAddress const address = s_RecentReq.m_Address + static_cast<GameAddress>(s_WriteIndex);
             size_t const remainingBytes = s_RecentReq.m_Data.size() - s_WriteIndex;
 
             // The GBA forces 16/32 bit writes onto their natural boundary, so an
@@ -116,14 +117,14 @@ extern "C"
 
             if (width == 4)
             {
-                s32 value;
-                memcpy(&value, &s_RecentReq.m_Data[s_WriteIndex], sizeof(value));
+                s32 value = 0;
+                rogue::endian::ReadLittle<s32>(s_RecentReq.m_Data, s_WriteIndex, value);
                 lua_pushnumber(lua, value);
             }
             else if (width == 2)
             {
-                s16 value;
-                memcpy(&value, &s_RecentReq.m_Data[s_WriteIndex], sizeof(value));
+                s16 value = 0;
+                rogue::endian::ReadLittle<s16>(s_RecentReq.m_Data, s_WriteIndex, value);
                 lua_pushnumber(lua, value);
             }
             else
@@ -159,8 +160,8 @@ extern "C"
                     // emu:readRange couldn't service the whole range (bad pointer in
                     // the game struct, unmapped address, ...). Drop it rather than
                     // reading past the end of the Lua string.
-                    LOG_ERROR("Read of 0x%zx (%zu bytes) returned %zu bytes", s_RecentReq.m_Address, s_RecentReq.m_Size, resultLength);
-                    s_RecentReq.m_Callback = nullptr;
+                    LOG_ERROR("Read of 0x%08X (%zu bytes) returned %zu bytes",
+                        static_cast<unsigned>(s_RecentReq.m_Address), s_RecentReq.m_Size, resultLength);
                 }
                 else
                 {

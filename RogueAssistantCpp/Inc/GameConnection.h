@@ -1,4 +1,6 @@
 #pragma once
+#include "Bridge/GameMemoryTransport.h"
+#include "Bridge/GameSession.h"
 #include "Defines.h"
 #include "GameData.h"
 #include "GameConnectionBehaviour.h"
@@ -62,11 +64,13 @@ public:
 	//inline void ReadValue(size_t addr);
 
 private:
+	void SetMemoryTransport(std::shared_ptr<IGameMemoryTransport> transport);
 	void AddDefaultBehaviours();
 	bool RemoveBehaviourInternal(IGameConnectionBehaviour* behaviour);
 
 	void OnRecieveData(u8* data, size_t size);
 	void OnRecieveMessage(GameMessageID messageId, u8 const* data, size_t size);
+	void OnMemoryResult(GameMessageID messageId, MemoryResult result);
 
 	bool HandleExpectedHandshake(std::string const& expectedHandshake, u8* data, size_t size);
 
@@ -75,9 +79,9 @@ private:
 
 	GameConnectionState m_State;
 	UpdateTimer m_UpdateTimer;
-	int m_UpdateFrame;
 
 	RPCQueue m_GameRPCs;
+	std::unique_ptr<GameSession> m_GameSession;
 	std::unique_ptr<ObservedGameMemory> m_ObservedGameMemory;
 
 	// m_Behaviours is read from the window thread (PrimaryUI::Render -> FindBehaviour)
