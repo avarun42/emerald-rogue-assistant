@@ -443,7 +443,7 @@ void PrimaryUI::RenderHomeBoxPage(Window& window, HomeBoxBehaviour* homebox, boo
 	// Print state
 	m_Assets->DrawCenteredText(
 		gfx,
-		"Transferring Pokémon Boxes",
+		"Transferring PokÃ©mon Boxes",
 		c_CentreOffset + sf::Vector2f(0, -55),
 		16,
 		m_Assets->m_LightFontColour
