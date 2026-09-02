@@ -1,6 +1,7 @@
 add_executable(
     rogue_tests
     CharacterizationTests.cpp
+    PlatformTests.cpp
 )
 
 target_link_libraries(
