@@ -45,3 +45,5 @@ The bounded request model and temporary Windows adapter are documented in
 [game-memory-transport.md](game-memory-transport.md).
 Thread ownership, value-only UI boundaries, and deterministic shutdown are
 documented in [lifecycle.md](lifecycle.md).
+The frozen loopback wire format is documented in
+[bridge-protocol.md](bridge-protocol.md).
