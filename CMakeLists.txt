@@ -102,6 +102,7 @@ rogue_enable_clang_tidy(rogue_core)
 add_library(
     rogue_bridge
     STATIC
+        RogueAssistantCpp/Src/Bridge/BridgeProtocol.cpp
         RogueAssistantCpp/Src/Bridge/GameMemoryTransport.cpp
         RogueAssistantCpp/Src/Bridge/GameSession.cpp
         RogueAssistantCpp/Src/Bridge/NativeLuaTransport.cpp
