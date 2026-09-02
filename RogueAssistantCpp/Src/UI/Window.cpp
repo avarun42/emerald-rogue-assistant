@@ -1,11 +1,6 @@
 #include "UI/Window.h"
-
-#ifndef ROGUE_STANDALONE_RESOURCES
-#include "Assets.h"
-#endif
 #include "Defines.h"
 #include "Log.h"
-#include "Platform/FileSystem.h"
 #include "Platform/ResourceLocator.h"
 
 #include <SFML/Graphics.hpp>
@@ -14,7 +9,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <vector>
 
 namespace
 {
@@ -23,22 +17,9 @@ bool LoadWindowIcon(sf::Image& icon, std::filesystem::path const& resourceDirect
 	if (!resourceDirectory.empty())
 	{
 		rogue::platform::ResourceLocator const resources(resourceDirectory);
-		std::vector<std::byte> bytes;
-		std::string error;
-		if (rogue::platform::ReadFile(resources.Resolve(rogue::platform::Resource::Icon), 16U * 1024U * 1024U, bytes,
-									  error) &&
-			icon.loadFromMemory(bytes.data(), bytes.size()))
-		{
-			return true;
-		}
+		return icon.loadFromFile(resources.Resolve(rogue::platform::Resource::Icon));
 	}
-
-#ifndef ROGUE_STANDALONE_RESOURCES
-	auto const& embedded = bin2cpp::getWobbuffetImagePngFile();
-	return icon.loadFromMemory(embedded.getBuffer(), embedded.getSize());
-#else
 	return false;
-#endif
 }
 } // namespace
 
@@ -53,20 +34,22 @@ Window::~Window()
 
 bool Window::Create()
 {
-	LOG_INFO("Creating Window");
+	LOG_INFO("Creating window");
 	unsigned int style = sf::Style::Titlebar | sf::Style::Close;
 	if (m_Config.resizable)
 		style |= sf::Style::Resize;
 
 	m_WindowHandle = std::make_unique<sf::RenderWindow>();
-	m_WindowHandle->create(sf::VideoMode(m_Config.width, m_Config.height), m_Config.title, style);
+	m_WindowHandle->create(
+		sf::VideoMode({static_cast<unsigned int>(m_Config.width), static_cast<unsigned int>(m_Config.height)}),
+		m_Config.title, style);
 	m_WindowHandle->setVerticalSyncEnabled(true);
 
 	sf::Image icon;
 	if (LoadWindowIcon(icon, m_Config.resourceDirectory))
-		m_WindowHandle->setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
+		m_WindowHandle->setIcon(icon);
 	else
-		LOG_WARN("Cannot load the Rogue Assistant window icon");
+		LOG_WARN("Cannot load the Emerald Rogue Assistant window icon");
 	return m_WindowHandle->isOpen();
 }
 
@@ -93,38 +76,44 @@ void Window::EnterMainLoop(WindowCallback const& callback, void* userData)
 	{
 		m_PreviousKeyStates = m_CurrentKeyStates;
 
-		sf::Event event{};
-		while (m_WindowHandle->pollEvent(event))
+		while (auto const event = m_WindowHandle->pollEvent())
 		{
-			if (event.type == sf::Event::KeyPressed && event.key.code != sf::Keyboard::Unknown)
-				m_CurrentKeyStates.set(static_cast<std::size_t>(event.key.code), true);
-			if (event.type == sf::Event::KeyReleased && event.key.code != sf::Keyboard::Unknown)
-				m_CurrentKeyStates.set(static_cast<std::size_t>(event.key.code), false);
-
-			if (event.type == sf::Event::TextEntered && event.text.unicode < 128)
+			if (auto const* keyPressed = event->getIf<sf::Event::KeyPressed>();
+				keyPressed != nullptr && keyPressed->code != sf::Keyboard::Key::Unknown)
 			{
-				if (event.text.unicode == 8)
+				m_CurrentKeyStates.set(static_cast<std::size_t>(keyPressed->code), true);
+			}
+			if (auto const* keyReleased = event->getIf<sf::Event::KeyReleased>();
+				keyReleased != nullptr && keyReleased->code != sf::Keyboard::Key::Unknown)
+			{
+				m_CurrentKeyStates.set(static_cast<std::size_t>(keyReleased->code), false);
+			}
+
+			if (auto const* textEntered = event->getIf<sf::Event::TextEntered>();
+				textEntered != nullptr && textEntered->unicode < 128)
+			{
+				if (textEntered->unicode == 8)
 				{
 					if (!m_TextEntered.empty())
 						m_TextEntered.pop_back();
 				}
-				else if (event.text.unicode == 22)
+				else if (textEntered->unicode == 22)
 				{
 					std::string const clipboard = sf::Clipboard::getString().toAnsiString();
 					std::size_t const available = 256U - std::min<std::size_t>(m_TextEntered.size(), 256U);
 					m_TextEntered.append(clipboard, 0, std::min(clipboard.size(), available));
 				}
-				else if (event.text.unicode == 1)
+				else if (textEntered->unicode == 1)
 				{
 					m_TextEntered.clear();
 				}
-				else if (event.text.unicode >= 0x20)
+				else if (textEntered->unicode >= 0x20)
 				{
-					m_TextEntered += static_cast<char>(event.text.unicode);
+					m_TextEntered += static_cast<char>(textEntered->unicode);
 				}
 			}
 
-			if (event.type == sf::Event::Closed && m_Config.canBeDestroyed)
+			if (event->is<sf::Event::Closed>() && m_Config.canBeDestroyed)
 				continueLoop = false;
 		}
 
