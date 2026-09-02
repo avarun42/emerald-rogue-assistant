@@ -231,8 +231,7 @@ void GameConnectionManager::UpdateConnections()
 		// GameSession exists. Results left by a retired session are deliberately
 		// discarded here because that session already completed its callbacks.
 		(void)m_Transport->PollResults();
-		if (m_Transport->State() != TransportState::Connected
-			&& m_Transport->State() != TransportState::Stopped)
+		if (m_Transport->State() != TransportState::Connected && m_Transport->State() != TransportState::Stopped)
 		{
 			m_ListeningForConnections = true;
 		}
@@ -241,8 +240,7 @@ void GameConnectionManager::UpdateConnections()
 	if (m_ListeningForConnections && m_AcceptingConnection == nullptr &&
 		m_Transport->State() == TransportState::Connected)
 	{
-		m_AcceptingConnection = std::make_shared<GameConnection>(*this);
-		m_AcceptingConnection->SetMemoryTransport(m_Transport);
+		m_AcceptingConnection = std::make_shared<GameConnection>(*this, m_Transport);
 	}
 
 	if (m_ListeningForConnections && m_ActiveConnections.empty() && m_AcceptingConnection)
@@ -262,8 +260,8 @@ void GameConnectionManager::UpdateConnections()
 		{
 			LOG_INFO("Game: Connection disconnected");
 			active = m_ActiveConnections.erase(active);
-			if (m_ActiveConnections.empty() && m_Transport->State() != TransportState::Connected
-				&& m_Transport->State() != TransportState::Stopped)
+			if (m_ActiveConnections.empty() && m_Transport->State() != TransportState::Connected &&
+				m_Transport->State() != TransportState::Stopped)
 			{
 				m_ListeningForConnections = true;
 			}

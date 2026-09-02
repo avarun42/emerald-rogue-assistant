@@ -6,6 +6,8 @@
 #include "Log.h"
 #include "RomCompatibility.h"
 
+#include <limits>
+
 void CommonBehaviour::OnAttach(GameConnection&)
 {
 }
@@ -28,8 +30,18 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 		return;
 	}
 
-	// Notify game that connected, by constantly spamming 0 into the confirm address
-	//
+	// Notify the game that the assistant is connected by repeatedly writing zero
+	// to the ROM-provided confirmation field. The field is scalar in API 3; do
+	// not trust malformed ROM metadata to read beyond this local value or wrap
+	// the destination address before transport validation sees it.
+	if (rogueHeader.assistantConfirmSize == 0 || rogueHeader.assistantConfirmSize > sizeof(u32) ||
+		rogueHeader.assistantState > std::numeric_limits<GameAddress>::max() - rogueHeader.assistantConfirmOffset)
+	{
+		game.ReportError("Cannot connect: invalid ROM assistant confirmation layout.");
+		game.Disconnect();
+		return;
+	}
+
 	u32 value = 0;
 	game.WriteRequest(CreateAnonymousMessageId(), rogueHeader.assistantState + rogueHeader.assistantConfirmOffset,
 					  &value, rogueHeader.assistantConfirmSize);

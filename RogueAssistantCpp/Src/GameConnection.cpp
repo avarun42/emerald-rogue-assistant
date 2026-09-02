@@ -1,23 +1,31 @@
 #include "GameConnection.h"
+#include "Behaviours/CommonBehaviour.h"
 #include "GameConnectionManager.h"
 #include "GameData.h"
 #include "Log.h"
-#include "Behaviours/CommonBehaviour.h"
 
 #include <cstring>
 #include <limits>
+#include <stdexcept>
 #include <utility>
 
 std::string const GameConnection::c_FirstHandshake = "3to8UEaoManH7wB4lKlLRgywSHHKmI0g";
 std::string const GameConnection::c_SecondHandshake = "Em68TrzBAFlyhBCOm4XQIjGWbdNhuplY";
 
-GameConnection::GameConnection(GameConnectionManager& manager)
-	: m_Manager(manager)
-	, m_State(GameConnectionState::AwaitingFirstHandshake)
-	, m_UpdateTimer(UpdateTimer::c_10UPS) // todo - give option? 10ups is less laggy emu but smoother mp
-	, m_GameRPCs(*this)
+GameConnection::GameConnection(GameConnectionManager& manager, TimeDurationNS updateInterval)
+	: m_Manager(manager), m_State(GameConnectionState::AwaitingFirstHandshake), m_UpdateTimer(updateInterval),
+	  m_GameRPCs(*this)
 {
 	m_ObservedGameMemory = std::make_unique<ObservedGameMemory>(*this);
+}
+
+GameConnection::GameConnection(GameConnectionManager& manager, std::shared_ptr<IGameMemoryTransport> transport,
+							   TimeDurationNS updateInterval)
+	: GameConnection(manager, updateInterval)
+{
+	if (!transport)
+		throw std::invalid_argument("GameConnection requires a memory transport");
+	m_GameSession = std::make_unique<GameSession>(std::move(transport));
 }
 
 GameConnection::~GameConnection()
@@ -45,13 +53,12 @@ void GameConnection::Update()
 		break;
 	}
 
-
 	if (m_UpdateTimer.Update())
 	{
 		if (IsReady() && m_GameSession && m_GameSession->CanSubmit())
 		{
 			m_ObservedGameMemory->Update();
-			//m_GameRPCs.Update();
+			// m_GameRPCs.Update();
 		}
 
 		// Make a copy, so behaviours can add new ones for next frame
@@ -61,10 +68,11 @@ void GameConnection::Update()
 		{
 			if (HasDisconnected())
 				break;
-			// Only update, if not in the remove queue 
-			auto findIt = std::find(m_BehavioursToRemove.begin(), m_BehavioursToRemove.end(), behaviour->shared_from_this());
+			// Only update, if not in the remove queue
+			auto findIt =
+				std::find(m_BehavioursToRemove.begin(), m_BehavioursToRemove.end(), behaviour->shared_from_this());
 
-			if(findIt == m_BehavioursToRemove.end())
+			if (findIt == m_BehavioursToRemove.end())
 				behaviour->OnUpdate(*this);
 		}
 
@@ -90,11 +98,6 @@ void GameConnection::Disconnect()
 
 	if (m_GameSession)
 		m_GameSession->Stop();
-}
-
-void GameConnection::SetMemoryTransport(std::shared_ptr<IGameMemoryTransport> transport)
-{
-	m_GameSession = std::make_unique<GameSession>(std::move(transport));
 }
 
 void GameConnection::ReportError(std::string error)
@@ -159,22 +162,22 @@ ObservedGameMemory const& GameConnection::GetObservedGameMemory() const
 }
 
 // helper todo - should move
-template<typename T>
-bool str2num(T& i, char const* s, int base = 0)
+template <typename T> bool str2num(T& i, char const* s, int base = 0)
 {
 	char* end;
-	long  l;
+	long l;
 	errno = 0;
 	l = strtol(s, &end, base);
-	if ((errno == ERANGE && l == LONG_MAX))// || l > (long)std::numeric_limits<T>::max()) 
+	if ((errno == ERANGE && l == LONG_MAX)) // || l > (long)std::numeric_limits<T>::max())
 	{
 		return false;
 	}
-	if ((errno == ERANGE && l == LONG_MIN))// || l < (long)std::numeric_limits<T>::min()) 
+	if ((errno == ERANGE && l == LONG_MIN)) // || l < (long)std::numeric_limits<T>::min())
 	{
 		return false;
 	}
-	if (*s == '\0' || *end != '\0') {
+	if (*s == '\0' || *end != '\0')
+	{
 		return false;
 	}
 	i = (T)l;
@@ -220,7 +223,7 @@ void GameConnection::OnRecieveData(u8* data, size_t size)
 
 					offset += blockSize;
 
-					// Clear for next 
+					// Clear for next
 					readId.clear();
 					readSize.clear();
 					readMode = 0;
@@ -228,7 +231,7 @@ void GameConnection::OnRecieveData(u8* data, size_t size)
 				else
 					++readMode;
 			}
-			else if(readMode == 0)
+			else if (readMode == 0)
 				readId += data[offset];
 			else
 				readSize += data[offset];
@@ -258,7 +261,7 @@ void GameConnection::OnMemoryResult(GameMessageID messageId, MemoryResult result
 	if (result.status != MemoryResult::Status::Ok)
 	{
 		LOG_ERROR("Game memory request %u failed with status %u", static_cast<unsigned>(result.id),
-			static_cast<unsigned>(result.status));
+				  static_cast<unsigned>(result.status));
 		ReportError("Lost access to mGBA game memory.");
 		Disconnect();
 		return;
@@ -293,7 +296,6 @@ bool GameConnection::HandleExpectedHandshake(std::string const& expectedHandshak
 	return false;
 }
 
-
 void GameConnection::WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size)
 {
 	ASSERT_MSG(IsReady(), "Attempting to write data, but not ready");
@@ -306,8 +308,8 @@ void GameConnection::WriteRequest(GameMessageID messageId, GameAddress addr, voi
 
 	auto const* bytes = static_cast<std::byte const*>(data);
 	std::span<std::byte const> const payload(bytes, size);
-	(void)m_GameSession->Write(addr, payload,
-		[this, messageId](MemoryResult result) { OnMemoryResult(messageId, std::move(result)); });
+	(void)m_GameSession->Write(
+		addr, payload, [this, messageId](MemoryResult result) { OnMemoryResult(messageId, std::move(result)); });
 }
 
 void GameConnection::ReadRequest(GameMessageID messageId, GameAddress addr, size_t size)
@@ -321,5 +323,5 @@ void GameConnection::ReadRequest(GameMessageID messageId, GameAddress addr, size
 	}
 
 	(void)m_GameSession->Read(addr, static_cast<std::uint32_t>(size),
-		[this, messageId](MemoryResult result) { OnMemoryResult(messageId, std::move(result)); });
+							  [this, messageId](MemoryResult result) { OnMemoryResult(messageId, std::move(result)); });
 }

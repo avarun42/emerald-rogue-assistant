@@ -1,5 +1,7 @@
 # Development
 
+The required release-validation matrix is documented in [parity-gate.md](parity-gate.md).
+
 Rogue Assistant uses CMake 3.25 or newer and C++20. The checked-in presets keep
 local and continuous-integration builds aligned.
 

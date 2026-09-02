@@ -113,4 +113,31 @@ assert(not Bridge.shouldReconnect(reconnect, 100.9))
 assert(Bridge.shouldReconnect(reconnect, 101))
 assert(Bridge.shouldReconnect(reconnect, 99))
 
+Bridge.stop(reconnect)
+assert(reconnect.stopped)
+assert(not Bridge.shouldReconnect(reconnect, 102))
+Bridge.restart(reconnect)
+assert(not reconnect.stopped)
+assert(reconnect.lastConnectSecond == nil)
+assert(Bridge.shouldReconnect(reconnect, 102))
+
+-- mGBA 0.10.5 does not discard top-level script results before dispatching
+-- callbacks. The production script must therefore return no values even though
+-- test mode returns the Bridge table above.
+ROGUE_ASSISTANT_TEST = nil
+local registeredCallbacks = {}
+callbacks = {
+    add = function(_, name, callback)
+        registeredCallbacks[name] = callback
+        return name
+    end,
+}
+assert(dofile(scriptPath) == nil)
+for _, name in ipairs({"frame", "start", "reset", "shutdown", "stop"}) do
+    assert(type(registeredCallbacks[name]) == "function")
+end
+registeredCallbacks.stop()
+registeredCallbacks.start()
+registeredCallbacks.reset()
+
 print("Rogue Assistant Lua bridge tests passed")

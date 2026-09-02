@@ -612,6 +612,26 @@ local function stop(state)
     closeSocket(state)
 end
 
+local function restart(state)
+    closeSocket(state)
+    state.stopped = false
+    state.lastConnectSecond = nil
+    state.lastConnectionError = nil
+end
+
+local function guardCallback(state, name, callback)
+    return function(...)
+        local arguments = table.pack(...)
+        local ok, diagnostic = xpcall(function()
+            callback(table.unpack(arguments, 1, arguments.n))
+        end, debug.traceback)
+        if not ok then
+            console:error("Rogue Assistant " .. name .. " callback failed:\n" .. tostring(diagnostic))
+            stop(state)
+        end
+    end
+end
+
 Bridge.host = BRIDGE_HOST
 Bridge.port = BRIDGE_PORT
 Bridge.message = MESSAGE
@@ -630,6 +650,8 @@ Bridge.flushOutgoing = flushOutgoing
 Bridge.writeAligned = writeAligned
 Bridge.shouldReconnect = shouldReconnect
 Bridge.isRangeAllowed = isRangeAllowed
+Bridge.restart = restart
+Bridge.stop = stop
 Bridge.readableRanges = READABLE_RANGES
 Bridge.writableRanges = WRITABLE_RANGES
 
@@ -639,9 +661,8 @@ end
 
 local state = newState()
 console:log("Rogue Assistant bridge script 1 is running.")
-callbacks:add("frame", function() onFrame(state) end)
-callbacks:add("reset", function() closeSocket(state) end)
-callbacks:add("shutdown", function() stop(state) end)
-callbacks:add("stop", function() stop(state) end)
-
-return Bridge
+callbacks:add("frame", guardCallback(state, "frame", function() onFrame(state) end))
+callbacks:add("start", guardCallback(state, "start", function() restart(state) end))
+callbacks:add("reset", guardCallback(state, "reset", function() restart(state) end))
+callbacks:add("shutdown", guardCallback(state, "shutdown", function() stop(state) end))
+callbacks:add("stop", guardCallback(state, "stop", function() stop(state) end))
