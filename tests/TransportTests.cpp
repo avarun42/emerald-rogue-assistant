@@ -170,22 +170,17 @@ TEST_CASE("invalid requests complete locally without reaching the transport", "[
 TEST_CASE("NativeLuaTransport adapts callback queues without cross-thread completion", "[transport][native]")
 {
 	MemoryRequest captured;
-	NativeLuaTransport::NativeCompletion nativeCompletion;
-	auto transport = std::make_shared<NativeLuaTransport>(
-		[&](MemoryRequest request, NativeLuaTransport::NativeCompletion completion) {
-			captured = std::move(request);
-			nativeCompletion = std::move(completion);
-			return true;
-		});
+	auto transport = std::make_shared<NativeLuaTransport>();
 	GameSession session(transport);
 	bool completed = false;
 	REQUIRE(session.Read(0x02000000, 2, [&](MemoryResult result) {
 		completed = true;
 		REQUIRE(result.data == Bytes({7, 8}));
 	}));
+	REQUIRE(transport->TryPopRequest(captured));
 	REQUIRE(captured.id != 0);
 
-	nativeCompletion(MemoryResult{captured.id, MemoryResult::Status::Ok, Bytes({7, 8})});
+	transport->Complete(MemoryResult{captured.id, MemoryResult::Status::Ok, Bytes({7, 8})});
 	REQUIRE_FALSE(completed);
 	session.Poll();
 	REQUIRE(completed);

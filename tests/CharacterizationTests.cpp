@@ -6,6 +6,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <cstddef>
 #include <sstream>
 #include <string>
@@ -52,6 +53,12 @@ TEST_CASE("little-endian integers have stable byte encodings", "[primitives][end
 	REQUIRE(decoded == 0x89ABCDEF);
 	REQUIRE_FALSE(rogue::endian::ReadLittle<u32>(bytes, 3, decoded));
 	REQUIRE(decoded == 0);
+
+	std::array<std::byte, 4> transportBytes{};
+	REQUIRE(rogue::endian::WriteLittle<u32>(transportBytes, 0, 0x12345678));
+	REQUIRE(transportBytes == std::array{std::byte{0x78}, std::byte{0x56}, std::byte{0x34}, std::byte{0x12}});
+	REQUIRE(rogue::endian::ReadLittle<u32>(transportBytes, 0, decoded));
+	REQUIRE(decoded == 0x12345678);
 }
 
 TEST_CASE("DataStream does not append an EOF byte and serializes little-endian values", "[primitives][stream]")
@@ -62,8 +69,8 @@ TEST_CASE("DataStream does not append an EOF byte and serializes little-endian v
 	REQUIRE(output.Serialize(first));
 	REQUIRE(output.Serialize(second));
 	REQUIRE(output.GetSize() == 6);
-	REQUIRE(std::vector<u8>(output.GetData(), output.GetData() + output.GetSize())
-		== std::vector<u8>{0x34, 0x12, 0xEF, 0xCD, 0xAB, 0x89});
+	REQUIRE(std::vector<u8>(output.GetData(), output.GetData() + output.GetSize()) ==
+			std::vector<u8>{0x34, 0x12, 0xEF, 0xCD, 0xAB, 0x89});
 
 	std::string const raw(reinterpret_cast<char const*>(output.GetData()), output.GetSize());
 	std::istringstream input(raw);

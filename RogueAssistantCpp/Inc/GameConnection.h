@@ -7,12 +7,10 @@
 #include "GameConnectionMessage.h"
 #include "GameConnectionRPCs.h"
 #include "ObservedGameMemory.h"
-#include "SFML/Network.hpp"
 #include "Timer.h"
 
 #include <functional>
 #include <memory>
-#include <mutex>
 
 class GameConnectionManager;
 class IGameConnectionTask;
@@ -31,7 +29,7 @@ class GameConnection : public std::enable_shared_from_this<GameConnection>
 {
 	friend GameConnectionManager;
 public:
-	GameConnection();
+	explicit GameConnection(GameConnectionManager& manager);
 	~GameConnection();
 
 	void Update();
@@ -53,6 +51,7 @@ public:
 
 	void WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size);
 	void ReadRequest(GameMessageID messageId, GameAddress addr, size_t size);
+	void ReportError(std::string error);
 
 	ObservedGameMemory& GetObservedGameMemory();
 	ObservedGameMemory const& GetObservedGameMemory() const;
@@ -77,6 +76,7 @@ private:
 	static std::string const c_FirstHandshake;
 	static std::string const c_SecondHandshake;
 
+	GameConnectionManager& m_Manager;
 	GameConnectionState m_State;
 	UpdateTimer m_UpdateTimer;
 
@@ -84,10 +84,6 @@ private:
 	std::unique_ptr<GameSession> m_GameSession;
 	std::unique_ptr<ObservedGameMemory> m_ObservedGameMemory;
 
-	// m_Behaviours is read from the window thread (PrimaryUI::Render -> FindBehaviour)
-	// while the connection thread adds/removes entries, so it needs a lock.
-	// m_BehavioursToRemove is only ever touched on the connection thread.
-	std::mutex m_BehavioursMutex;
 	std::vector<GameConnectionBehaviourRef> m_Behaviours;
 	std::vector<GameConnectionBehaviourRef> m_BehavioursToRemove;
 };
@@ -105,10 +101,6 @@ std::shared_ptr<T> GameConnection::AddBehaviour()
 template<typename T>
 std::shared_ptr<T> GameConnection::FindBehaviour()
 {
-	// Returns a strong ref: the caller may be on the window thread, and the
-	// connection thread is free to remove the behaviour at any point.
-	std::lock_guard<std::mutex> lock(m_BehavioursMutex);
-
 	for (auto& ref : m_Behaviours)
 	{
 		std::shared_ptr<T> result = std::dynamic_pointer_cast<T>(ref);

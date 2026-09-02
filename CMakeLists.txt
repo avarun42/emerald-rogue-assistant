@@ -8,6 +8,7 @@ project(
 )
 
 include(CTest)
+find_package(Threads REQUIRED)
 
 option(ROGUE_BUILD_TESTS "Build Rogue Assistant tests" ${BUILD_TESTING})
 option(ROGUE_WARNINGS_AS_ERRORS "Treat Rogue Assistant warnings as errors" OFF)
@@ -113,6 +114,25 @@ target_link_libraries(
         rogue_project_warnings
 )
 rogue_enable_clang_tidy(rogue_bridge)
+
+add_library(
+    rogue_app
+    STATIC
+        RogueAssistantCpp/Src/Application/Application.cpp
+        RogueAssistantCpp/Src/Application/SessionWorker.cpp
+)
+target_include_directories(rogue_app PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc)
+target_link_libraries(
+    rogue_app
+    PUBLIC
+        rogue_bridge
+        rogue_project_options
+        rogue_sanitizers
+        Threads::Threads
+    PRIVATE
+        rogue_project_warnings
+)
+rogue_enable_clang_tidy(rogue_app)
 
 set(
     ROGUE_RESOURCE_FILES

@@ -3,29 +3,24 @@
 #include "Bridge/GameMemoryTransport.h"
 
 #include <atomic>
-#include <functional>
-#include <memory>
 #include <mutex>
 #include <queue>
 
-class NativeLuaTransport : public IGameMemoryTransport, public std::enable_shared_from_this<NativeLuaTransport>
+class NativeLuaTransport : public IGameMemoryTransport
 {
   public:
-	using NativeCompletion = std::function<void(MemoryResult)>;
-	using NativeSubmitter = std::function<bool(MemoryRequest, NativeCompletion)>;
-
-	explicit NativeLuaTransport(NativeSubmitter submitter);
-
 	bool Submit(MemoryRequest request) override;
 	std::vector<MemoryResult> PollResults() override;
 	TransportState State() const override;
 	void Stop() override;
 
-  private:
-	void PushResult(MemoryResult result);
+	// Transitional API used only by the in-process Windows Lua bridge.
+	bool TryPopRequest(MemoryRequest& request);
+	void Complete(MemoryResult result);
 
-	NativeSubmitter m_Submitter;
-	mutable std::mutex m_ResultMutex;
+  private:
+	mutable std::mutex m_Mutex;
+	std::queue<MemoryRequest> m_Requests;
 	std::queue<MemoryResult> m_Results;
 	std::atomic<TransportState> m_State{TransportState::Connected};
 };

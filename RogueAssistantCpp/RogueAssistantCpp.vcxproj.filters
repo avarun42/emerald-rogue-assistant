@@ -25,6 +25,12 @@
     <ClCompile Include="External\imgui\imgui_widgets.cpp">
       <Filter>External</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Application\Application.cpp">
+      <Filter>Src\Application</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Application\SessionWorker.cpp">
+      <Filter>Src\Application</Filter>
+    </ClCompile>
     <ClCompile Include="Src\GameConnection.cpp">
       <Filter>Src</Filter>
     </ClCompile>
@@ -120,6 +126,18 @@
     </ClInclude>
     <ClInclude Include="Inc\Log.h">
       <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Application\Application.h">
+      <Filter>Inc\Application</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Application\ISessionRuntime.h">
+      <Filter>Inc\Application</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Application\SessionWorker.h">
+      <Filter>Inc\Application</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Application\UiModel.h">
+      <Filter>Inc\Application</Filter>
     </ClInclude>
     <ClInclude Include="Inc\Defines.h">
       <Filter>Inc</Filter>
@@ -325,6 +343,12 @@
     </Filter>
     <Filter Include="Src\Behaviours">
       <UniqueIdentifier>{b1977417-dc41-456e-9ceb-c30e9975a76b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Application">
+      <UniqueIdentifier>{A0DE1FF3-31F0-4682-A686-05AB3DDB0B49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Application">
+      <UniqueIdentifier>{4B772E5B-DC54-4DF9-A8BB-7CB45D3AB142}</UniqueIdentifier>
     </Filter>
     <Filter Include="Inc\Bridge">
       <UniqueIdentifier>{35B3D9EA-F8B0-4C7C-9227-6EE77A2939CF}</UniqueIdentifier>

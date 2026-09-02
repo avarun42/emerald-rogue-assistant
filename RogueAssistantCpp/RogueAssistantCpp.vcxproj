@@ -258,6 +258,8 @@
     <ClCompile Include="External\imgui\imgui_impl_opengl2.cpp" />
     <ClCompile Include="External\imgui\imgui_tables.cpp" />
     <ClCompile Include="External\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Src\Application\Application.cpp" />
+    <ClCompile Include="Src\Application\SessionWorker.cpp" />
     <ClCompile Include="Src\Assets.cpp" />
     <ClCompile Include="Src\Behaviours\CommonBehaviour.cpp" />
     <ClCompile Include="Src\Behaviours\HomeBoxBehaviour.cpp" />
@@ -299,6 +301,10 @@
     <ClInclude Include="External\imgui\imstb_rectpack.h" />
     <ClInclude Include="External\imgui\imstb_textedit.h" />
     <ClInclude Include="External\imgui\imstb_truetype.h" />
+    <ClInclude Include="Inc\Application\Application.h" />
+    <ClInclude Include="Inc\Application\ISessionRuntime.h" />
+    <ClInclude Include="Inc\Application\SessionWorker.h" />
+    <ClInclude Include="Inc\Application\UiModel.h" />
     <ClInclude Include="Inc\Bridge\GameMemoryTransport.h" />
     <ClInclude Include="Inc\Bridge\GameSession.h" />
     <ClInclude Include="Inc\Bridge\NativeLuaTransport.h" />

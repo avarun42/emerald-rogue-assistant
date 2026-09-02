@@ -2,7 +2,6 @@
 #include "Behaviours/HomeBoxBehaviour.h"
 #include "Behaviours/MultiplayerBehaviour.h"
 #include "GameConnection.h"
-#include "GameConnectionManager.h"
 #include "GameData.h"
 #include "Log.h"
 
@@ -10,12 +9,12 @@
 // (These numbers must match in order to connect)
 #define ROGUE_ASSISTANT_COMPAT_VERSION 3
 
-void CommonBehaviour::OnAttach(GameConnection & game)
+void CommonBehaviour::OnAttach(GameConnection&)
 {
 
 }
 
-void CommonBehaviour::OnDetach(GameConnection& game)
+void CommonBehaviour::OnDetach(GameConnection&)
 {
 
 }
@@ -29,7 +28,7 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 
 	if (rogueHeader.rogueAssistantCompatVersion != ROGUE_ASSISTANT_COMPAT_VERSION)
 	{
-		GameConnectionManager::Instance().PushError("Cannot connect to Game. Do you need\nto update RogueAssistant?");
+		game.ReportError("Cannot connect to Game. Do you need\nto update RogueAssistant?");
 		game.Disconnect();
 		return;
 	}
@@ -47,7 +46,6 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 	{
 		if (m_MultiplayerBehaviour.expired())
 		{
-			GameAddress multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
 			u8 const* multiplayerBlob = game.GetObservedGameMemory().GetMultiplayerStateBlob();
 
 			u8 requestFlags = multiplayerBlob[rogueHeader.netRequestStateOffset];
