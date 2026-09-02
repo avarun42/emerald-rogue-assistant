@@ -43,8 +43,7 @@ reports the same version packaged in the application metadata.
 
 ## Resources
 
-Standalone builds load the font, frame, window icon, and Lua source from
+The application loads the font, frame, window icon, and Lua source from
 installed resources. On macOS these live in the application bundle's
 `Contents/Resources`; Windows and Linux builds use a `resources` directory
-beside the executable. The embedded resource path remains only in the temporary
-legacy Windows DLL project until that parity reference is retired.
+beside the executable.

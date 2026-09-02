@@ -4,7 +4,6 @@
 #include "Defines.h"
 #include "GameConnectionBehaviour.h"
 #include "GameConnectionMessage.h"
-#include "GameConnectionRPCs.h"
 #include "GameData.h"
 #include "ObservedGameMemory.h"
 #include "Timer.h"
@@ -62,30 +61,17 @@ class GameConnection : public std::enable_shared_from_this<GameConnection>
 	ObservedGameMemory& GetObservedGameMemory();
 	ObservedGameMemory const& GetObservedGameMemory() const;
 
-	// template<typename T>
-	// inline void WriteValue(size_t addr, T& value);
-	//
-	// template<typename T>
-	// inline void ReadValue(size_t addr);
-
   private:
 	void AddDefaultBehaviours();
 	bool RemoveBehaviourInternal(IGameConnectionBehaviour* behaviour);
 
-	void OnRecieveData(u8* data, size_t size);
 	void OnRecieveMessage(GameMessageID messageId, u8 const* data, size_t size);
 	void OnMemoryResult(GameMessageID messageId, MemoryResult result);
-
-	bool HandleExpectedHandshake(std::string const& expectedHandshake, u8* data, size_t size);
-
-	static std::string const c_FirstHandshake;
-	static std::string const c_SecondHandshake;
 
 	GameConnectionManager& m_Manager;
 	GameConnectionState m_State;
 	UpdateTimer m_UpdateTimer;
 
-	RPCQueue m_GameRPCs;
 	std::unique_ptr<GameSession> m_GameSession;
 	std::unique_ptr<ObservedGameMemory> m_ObservedGameMemory;
 

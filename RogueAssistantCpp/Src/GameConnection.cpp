@@ -9,12 +9,8 @@
 #include <stdexcept>
 #include <utility>
 
-std::string const GameConnection::c_FirstHandshake = "3to8UEaoManH7wB4lKlLRgywSHHKmI0g";
-std::string const GameConnection::c_SecondHandshake = "Em68TrzBAFlyhBCOm4XQIjGWbdNhuplY";
-
 GameConnection::GameConnection(GameConnectionManager& manager, TimeDurationNS updateInterval)
-	: m_Manager(manager), m_State(GameConnectionState::AwaitingFirstHandshake), m_UpdateTimer(updateInterval),
-	  m_GameRPCs(*this)
+	: m_Manager(manager), m_State(GameConnectionState::AwaitingFirstHandshake), m_UpdateTimer(updateInterval)
 {
 	m_ObservedGameMemory = std::make_unique<ObservedGameMemory>(*this);
 }
@@ -58,7 +54,6 @@ void GameConnection::Update()
 		if (IsReady() && m_GameSession && m_GameSession->CanSubmit())
 		{
 			m_ObservedGameMemory->Update();
-			// m_GameRPCs.Update();
 		}
 
 		// Make a copy, so behaviours can add new ones for next frame
@@ -161,86 +156,6 @@ ObservedGameMemory const& GameConnection::GetObservedGameMemory() const
 	return *m_ObservedGameMemory.get();
 }
 
-// helper todo - should move
-template <typename T> bool str2num(T& i, char const* s, int base = 0)
-{
-	char* end;
-	long l;
-	errno = 0;
-	l = strtol(s, &end, base);
-	if ((errno == ERANGE && l == LONG_MAX)) // || l > (long)std::numeric_limits<T>::max())
-	{
-		return false;
-	}
-	if ((errno == ERANGE && l == LONG_MIN)) // || l < (long)std::numeric_limits<T>::min())
-	{
-		return false;
-	}
-	if (*s == '\0' || *end != '\0')
-	{
-		return false;
-	}
-	i = (T)l;
-	return true;
-}
-
-void GameConnection::OnRecieveData(u8* data, size_t size)
-{
-	switch (m_State)
-	{
-	case GameConnectionState::AwaitingFirstHandshake:
-	case GameConnectionState::AwaitingSecondHandshake:
-		break;
-	case GameConnectionState::Disconnected:
-		break;
-
-	case GameConnectionState::Connected:
-
-		// Attempt to read and call registered callbacks
-		std::string readId;
-		std::string readSize;
-
-		size_t offset = 0;
-		u8 readMode = 0;
-
-		for (; offset < size; ++offset)
-		{
-			if (data[offset] == ';')
-			{
-				if (readMode == 1)
-				{
-					// Read both readId and readSize
-					GameMessageID messageId;
-					u32 blockSize = 0;
-					if (str2num(messageId.CompactedID, readId.c_str()) && str2num(blockSize, readSize.c_str()))
-					{
-						OnRecieveMessage(messageId, &data[offset + 1], blockSize);
-					}
-					else
-					{
-						LOG_WARN("Failed to parse incoming recv");
-					}
-
-					offset += blockSize;
-
-					// Clear for next
-					readId.clear();
-					readSize.clear();
-					readMode = 0;
-				}
-				else
-					++readMode;
-			}
-			else if (readMode == 0)
-				readId += data[offset];
-			else
-				readSize += data[offset];
-		}
-
-		break;
-	}
-}
-
 void GameConnection::OnRecieveMessage(GameMessageID messageId, u8 const* data, size_t size)
 {
 	switch (messageId.GetChannel())
@@ -271,29 +186,6 @@ void GameConnection::OnMemoryResult(GameMessageID messageId, MemoryResult result
 	if (!result.data.empty())
 		std::memcpy(bytes.data(), result.data.data(), result.data.size());
 	OnRecieveMessage(messageId, bytes.data(), bytes.size());
-}
-
-bool GameConnection::HandleExpectedHandshake(std::string const& expectedHandshake, u8* data, size_t size)
-{
-	if (size != expectedHandshake.length())
-	{
-		LOG_WARN("Invalid incoming handshake size");
-	}
-	else
-	{
-		int result = strncmp(expectedHandshake.c_str(), (const char*)data, size);
-		if (result == 0)
-		{
-			// Handshake matches
-			return true;
-		}
-		else
-		{
-			LOG_WARN("Unexpected handshake");
-		}
-	}
-
-	return false;
 }
 
 void GameConnection::WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size)

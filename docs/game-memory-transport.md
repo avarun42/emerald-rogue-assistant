@@ -42,14 +42,6 @@ pending work closed and returns the listener to its reconnectable state. There
 is no inactivity timeout, so a paused emulator cannot be mistaken for a lost
 connection.
 
-## Temporary native adapter
-
-`NativeLuaTransport` converts value requests into the existing guarded DLL/Lua
-queues. The Lua thread can complete a legacy queue entry, but the adapter only
-enqueues the resulting value. `GameSession::Poll()` dispatches it on the game
-connection thread. This keeps the released Windows path available as a parity
-reference while making the game logic independent of that path.
-
-The native adapter is transitional. The final application uses
-`TcpLuaTransport`, and the DLL, its queue ABI, and this adapter are removed only
-after the socket parity gate.
+The retired in-process DLL adapter and its queue ABI were removed after the TCP
+path passed the documented parity gate. `TcpLuaTransport` is the sole production
+game-memory transport on every supported platform.

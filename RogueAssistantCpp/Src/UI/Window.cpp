@@ -1,8 +1,4 @@
 #include "UI/Window.h"
-
-#ifndef ROGUE_STANDALONE_RESOURCES
-#include "Assets.h"
-#endif
 #include "Defines.h"
 #include "Log.h"
 #include "Platform/FileSystem.h"
@@ -32,13 +28,7 @@ bool LoadWindowIcon(sf::Image& icon, std::filesystem::path const& resourceDirect
 			return true;
 		}
 	}
-
-#ifndef ROGUE_STANDALONE_RESOURCES
-	auto const& embedded = bin2cpp::getWobbuffetImagePngFile();
-	return icon.loadFromMemory(embedded.getBuffer(), embedded.getSize());
-#else
 	return false;
-#endif
 }
 } // namespace
 

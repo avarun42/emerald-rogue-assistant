@@ -1,8 +1,5 @@
 #include "UI/PrimaryUI.h"
 #include "UI/Window.h"
-#ifndef ROGUE_STANDALONE_RESOURCES
-#include "Assets.h"
-#endif
 #include "Defines.h"
 #include "Log.h"
 #include "Platform/BridgeScript.h"
@@ -60,13 +57,6 @@ static bool LoadAsset(T& output, std::filesystem::path const& resourceDirectory,
 	return false;
 }
 
-#ifndef ROGUE_STANDALONE_RESOURCES
-template <typename T> static bool LoadBin2CppAsset(T& output, bin2cpp::File const& file)
-{
-	return output.loadFromMemory(file.getBuffer(), file.getSize());
-}
-#endif
-
 struct AssetCollection
 {
 	double m_DeltaTimeS = 0.0;
@@ -90,9 +80,6 @@ struct AssetCollection
 		m_ErrorFontColour = sf::Color(196, 24, 24);
 
 		bool fontLoaded = LoadAsset(m_Font, resourceDirectory, rogue::platform::Resource::Font);
-#ifndef ROGUE_STANDALONE_RESOURCES
-		fontLoaded = fontLoaded || LoadBin2CppAsset(m_Font, bin2cpp::getPokemonemeraldproTtfFile());
-#endif
 		if (!fontLoaded)
 		{
 			throw std::runtime_error("cannot load Rogue Assistant font");
@@ -100,9 +87,6 @@ struct AssetCollection
 		m_Font.setSmooth(false);
 
 		bool frameLoaded = LoadAsset(m_PoketchOverlay, resourceDirectory, rogue::platform::Resource::Frame);
-#ifndef ROGUE_STANDALONE_RESOURCES
-		frameLoaded = frameLoaded || LoadBin2CppAsset(m_PoketchOverlay, bin2cpp::getPoketch_framePngFile());
-#endif
 		if (!frameLoaded)
 		{
 			throw std::runtime_error("cannot load Rogue Assistant frame texture");
