@@ -1,4 +1,5 @@
 #include "ObservedGameMemory.h"
+#include "Endian.h"
 #include "GameConnection.h"
 #include "Log.h"
 
@@ -20,10 +21,7 @@ enum class ObservedMemoryID : u16
 
 inline static GameMessageID CreateMessageId(GameMessageChannel channel, ObservedMemoryID param)
 {
-	GameMessageID id;
-	id.Channel = channel;
-	id.Param16 = (u16)param;
-	return id;
+	return ::CreateMessageId(channel, static_cast<u16>(param));
 }
 
 // ObservedBlob
@@ -37,15 +35,18 @@ ObservedBlob::ObservedBlob(size_t size)
 
 void ObservedBlob::Resize(size_t size)
 {
+	if (m_Data.size() != size)
+		m_IsValid = false;
 	m_Data.resize(size);
 }
 
 bool ObservedBlob::SetData(u8 const* data, size_t size)
 {
-	ASSERT_MSG(size == GetSize(), "Unexpected size");
-	if (size == GetSize())
+	ASSERT_MSG(size == GetSize() && (size == 0 || data != nullptr), "Unexpected observed data");
+	if (size == GetSize() && (size == 0 || data != nullptr))
 	{
-		memcpy(m_Data.data(), data, GetSize());
+		if (size != 0)
+			std::memcpy(m_Data.data(), data, GetSize());
 		m_IsValid = true;
 		return true;
 	}
@@ -134,7 +135,7 @@ void ObservedGameMemory::Update()
 
 void ObservedGameMemory::OnRecieveMessage(GameMessageID messageId, u8 const* data, size_t size)
 {
-	ObservedMemoryID memoryId = (ObservedMemoryID)messageId.Param16;
+	ObservedMemoryID memoryId = static_cast<ObservedMemoryID>(messageId.GetParam16());
 
 	switch (memoryId)
 	{
@@ -209,9 +210,11 @@ GameAddress ObservedGameMemory::GetPokemonStoragePtr() const
 {
 	if (IsHomeBoxStateValid())
 	{
-		u8 const* ptr = &m_HomeBoxState.GetData()[m_RogueHeader->homeDestMonOffset];
-		GameAddress storagePtrAddr = *(GameAddress*)ptr;
-		return storagePtrAddr;
+		GameAddress storagePtrAddr = 0;
+		std::span<u8 const> const state(m_HomeBoxState.GetData(), m_HomeBoxState.GetSize());
+		if (rogue::endian::ReadLittle(state, m_RogueHeader->homeDestMonOffset, storagePtrAddr))
+			return storagePtrAddr;
+		LOG_WARN("Home Box destination pointer is outside the observed state");
 	}
 
 	return 0;

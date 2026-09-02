@@ -34,20 +34,20 @@ configure_file(
     @ONLY
 )
 
-# The first migration increment deliberately compiles the existing public data
-# contract without changing it. -fms-extensions is removed when Defines.h moves
-# to fixed-width standard integer types in the next atomic increment.
-add_library(rogue_core INTERFACE)
+add_library(
+    rogue_core
+    STATIC
+        RogueAssistantCpp/Src/DataStream.cpp
+        RogueAssistantCpp/Src/GameData.cpp
+        RogueAssistantCpp/Src/Timer.cpp
+)
 target_include_directories(
     rogue_core
-    INTERFACE
+    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc
         ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
-target_link_libraries(rogue_core INTERFACE rogue_project_options rogue_project_warnings)
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(rogue_core INTERFACE -fms-extensions)
-endif()
+target_link_libraries(rogue_core PUBLIC rogue_project_options PRIVATE rogue_project_warnings)
 
 if(ROGUE_BUILD_TESTS)
     include(cmake/Dependencies.cmake)

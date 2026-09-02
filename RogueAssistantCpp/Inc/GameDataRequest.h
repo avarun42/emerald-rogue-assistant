@@ -1,5 +1,6 @@
 #pragma once
 #include "Defines.h"
+#include "GameData.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -15,7 +16,7 @@ struct GameDataRequest
 	};
 
 	RequestType m_Type = REQUEST_READ;
-	size_t m_Address = 0;
+	GameAddress m_Address = 0;
 	size_t m_Size = 0;
 
 	// Payload to push into the game (writes only)

@@ -4,6 +4,8 @@
 #include "GameData.h"
 #include "Log.h"
 
+#include <cstring>
+#include <type_traits>
 #include <vector>
 
 class GameConnection;
@@ -39,23 +41,30 @@ template<typename T>
 class ObservedStruct : public ObservedBlob
 {
 public:
+	static_assert(std::is_trivially_copyable_v<T>);
+
 	ObservedStruct()
 		: ObservedBlob(sizeof(T))
 	{
-#if _DEBUG
-		m_DebugPtr = static_cast<T*>(static_cast<void*>(m_Data.data()));
-#endif
 	}
 
-	inline T& Get() { return *static_cast<T*>(static_cast<void*>(GetData())); }
-	inline T const& Get() const { return *static_cast<T const*>(static_cast<void const*>(GetData())); }
+	bool SetData(u8 const* data, size_t size)
+	{
+		if (!ObservedBlob::SetData(data, size))
+		{
+			return false;
+		}
+		std::memcpy(&m_Value, m_Data.data(), sizeof(T));
+		return true;
+	}
+
+	inline T& Get() { ASSERT_MSG(IsValid(), "Observed memory is invalid"); return m_Value; }
+	inline T const& Get() const { ASSERT_MSG(IsValid(), "Observed memory is invalid"); return m_Value; }
 
 	inline T* operator->() { return &Get(); }
 	inline T const* operator->() const { return &Get(); }
 private:
-#if _DEBUG
-	T* m_DebugPtr;
-#endif
+	T m_Value{};
 };
 
 // Collection of common observed memory
