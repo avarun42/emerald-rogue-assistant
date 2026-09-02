@@ -1,6 +1,5 @@
 #include "Bridge/GameMemoryTransport.h"
 #include "Bridge/GameSession.h"
-#include "Bridge/NativeLuaTransport.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -168,28 +167,4 @@ TEST_CASE("invalid requests complete locally without reaching the transport", "[
 	REQUIRE(status == MemoryResult::Status::InvalidAddress);
 	REQUIRE(transport->submitted.empty());
 	REQUIRE(session.OutstandingRequestCount() == 0);
-}
-
-TEST_CASE("NativeLuaTransport adapts callback queues without cross-thread completion", "[transport][native]")
-{
-	MemoryRequest captured;
-	auto transport = std::make_shared<NativeLuaTransport>();
-	GameSession session(transport);
-	bool completed = false;
-	REQUIRE(session.Read(0x02000000, 2, [&](MemoryResult result) {
-		completed = true;
-		REQUIRE(result.data == Bytes({7, 8}));
-	}));
-	REQUIRE(transport->TryPopRequest(captured));
-	REQUIRE(captured.id != 0);
-
-	transport->Complete(MemoryResult{captured.id, MemoryResult::Status::Ok, Bytes({7, 8})});
-	REQUIRE_FALSE(completed);
-	session.Poll();
-	REQUIRE(completed);
-
-	session.Stop();
-	REQUIRE(transport->State() == TransportState::Connected);
-	transport->Stop();
-	REQUIRE(transport->State() == TransportState::Stopped);
 }

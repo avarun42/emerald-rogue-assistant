@@ -114,7 +114,6 @@ add_library(
         RogueAssistantCpp/Src/Bridge/BridgeProtocol.cpp
         RogueAssistantCpp/Src/Bridge/GameMemoryTransport.cpp
         RogueAssistantCpp/Src/Bridge/GameSession.cpp
-        RogueAssistantCpp/Src/Bridge/NativeLuaTransport.cpp
         RogueAssistantCpp/Src/Bridge/TcpLuaTransport.cpp
         RogueAssistantCpp/Src/Bridge/TcpSocket.cpp
 )
@@ -172,7 +171,6 @@ add_library(
         RogueAssistantCpp/Src/Behaviours/HomeBoxBehaviour.cpp
         RogueAssistantCpp/Src/GameConnection.cpp
         RogueAssistantCpp/Src/GameConnectionManager.cpp
-        RogueAssistantCpp/Src/GameConnectionRPCs.cpp
         RogueAssistantCpp/Src/ObservedGameMemory.cpp
 )
 target_include_directories(rogue_app PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc)

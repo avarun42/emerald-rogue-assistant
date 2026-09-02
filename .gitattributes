@@ -1,6 +1,5 @@
 * text=auto eol=lf
 
-*.rc binary
 *.png binary
 *.ico binary
 *.icns binary
