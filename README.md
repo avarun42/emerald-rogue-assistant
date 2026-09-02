@@ -39,3 +39,16 @@ behavior are documented in
 Home Box migration/recovery and the modern multiplayer compatibility gate are
 documented in [`docs/home-box-format.md`](docs/home-box-format.md) and
 [`docs/multiplayer-protocol.md`](docs/multiplayer-protocol.md).
+
+## Install and release
+
+End-user installation, checksum verification, mGBA script loading, and data
+locations are covered by [`docs/installation.md`](docs/installation.md).
+Maintainers should use the platform release presets and draft-only packaging
+workflow described in [`docs/release.md`](docs/release.md).
+
+The repository owner has not yet selected a project license, and inherited
+artwork does not yet have recorded redistribution provenance. These are hard
+public-release gates documented in
+[`docs/asset-provenance.md`](docs/asset-provenance.md); third-party dependency
+terms are collected in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

@@ -1,0 +1,73 @@
+set(
+  ROGUE_PACKAGE_PLATFORM
+  ""
+  CACHE STRING
+  "Artifact platform suffix; release presets set this explicitly"
+)
+
+if(ROGUE_PACKAGE_PLATFORM STREQUAL "")
+  if(WIN32)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+      set(ROGUE_PACKAGE_PLATFORM windows-x64)
+    else()
+      set(ROGUE_PACKAGE_PLATFORM windows-unsupported)
+    endif()
+  elseif(APPLE)
+    list(FIND CMAKE_OSX_ARCHITECTURES arm64 arm64_index)
+    list(FIND CMAKE_OSX_ARCHITECTURES x86_64 x86_64_index)
+    if(NOT arm64_index EQUAL -1 AND NOT x86_64_index EQUAL -1)
+      set(ROGUE_PACKAGE_PLATFORM macos-universal)
+    else()
+      set(ROGUE_PACKAGE_PLATFORM macos-${CMAKE_SYSTEM_PROCESSOR})
+    endif()
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(ROGUE_PACKAGE_PLATFORM linux-${CMAKE_SYSTEM_PROCESSOR})
+  else()
+    set(ROGUE_PACKAGE_PLATFORM ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR})
+  endif()
+endif()
+
+if(ROGUE_PACKAGE_PLATFORM STREQUAL "windows-x64")
+  if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "windows-x64 packages require a 64-bit Windows toolchain")
+  endif()
+elseif(ROGUE_PACKAGE_PLATFORM STREQUAL "macos-universal")
+  list(FIND CMAKE_OSX_ARCHITECTURES arm64 arm64_index)
+  list(FIND CMAKE_OSX_ARCHITECTURES x86_64 x86_64_index)
+  if(NOT APPLE OR arm64_index EQUAL -1 OR x86_64_index EQUAL -1)
+    message(FATAL_ERROR "macos-universal packages require arm64 and x86_64 architectures")
+  endif()
+elseif(ROGUE_PACKAGE_PLATFORM STREQUAL "linux-x86_64")
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR
+     NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+    message(FATAL_ERROR "linux-x86_64 packages require a Linux x86_64 toolchain")
+  endif()
+endif()
+
+set(CPACK_PACKAGE_NAME RogueAssistant)
+set(CPACK_PACKAGE_VENDOR Pokabbie)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_FILE_NAME RogueAssistant-${PROJECT_VERSION}-${ROGUE_PACKAGE_PLATFORM})
+set(CPACK_PACKAGE_DIRECTORY ${CMAKE_BINARY_DIR}/packages)
+set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
+set(CPACK_VERBATIM_VARIABLES YES)
+set(CPACK_COMPONENTS_ALL RogueAssistant)
+set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
+set(CPACK_COMPONENT_ROGUEASSISTANT_DISPLAY_NAME "Rogue Assistant")
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
+
+if(WIN32)
+  set(CPACK_GENERATOR ZIP)
+elseif(APPLE)
+  # Official macOS ZIP/DMG artifacts are created after signing by
+  # packaging/macos/package.sh. This archive generator keeps CPack useful for
+  # local install-tree inspection without claiming to produce a signed image.
+  set(CPACK_GENERATOR ZIP)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(CPACK_GENERATOR TGZ)
+else()
+  message(FATAL_ERROR "Packaging is unsupported on ${CMAKE_SYSTEM_NAME}")
+endif()
+
+include(CPack)

@@ -1,4 +1,5 @@
 #include "Application/CommandLine.h"
+#include "RogueAssistantVersion.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -49,5 +50,5 @@ TEST_CASE("desktop help and version switches are recognized", "[command-line]")
 	REQUIRE(parsed.error.empty());
 	REQUIRE(parsed.showVersion);
 	REQUIRE(parsed.showHelp);
-	REQUIRE(DesktopUsage().starts_with("Rogue Assistant 1.0.0\n"));
+	REQUIRE(DesktopUsage().starts_with("Rogue Assistant " ROGUE_ASSISTANT_VERSION_STRING "\n"));
 }

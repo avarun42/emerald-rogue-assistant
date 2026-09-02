@@ -1,13 +1,22 @@
 cmake_minimum_required(VERSION 3.25)
 
+include(cmake/Version.cmake)
+
 project(
     RogueAssistant
-    VERSION 1.0.0
+    VERSION ${ROGUE_ASSISTANT_VERSION}
     DESCRIPTION "Cross-platform companion application for Pokemon Emerald Rogue"
     LANGUAGES C CXX
 )
 
+if(MSVC)
+    # Release artifacts are ZIP-based and must run on a clean Windows install
+    # without requiring a separately installed Visual C++ redistributable.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 include(CTest)
+include(GNUInstallDirs)
 find_package(Threads REQUIRED)
 
 option(ROGUE_BUILD_TESTS "Build Rogue Assistant tests" ${BUILD_TESTING})
@@ -184,12 +193,51 @@ rogue_enable_clang_tidy(rogue_app)
 set(
     ROGUE_RESOURCE_FILES
     RogueAssistantCpp/Assets/WobbuffetImage.png
+    RogueAssistantCpp/Assets/WobbuffetIcon.ico
     RogueAssistantCpp/Assets/poketch_frame.png
     RogueAssistantCpp/Assets/pokemon-emerald-pro.ttf
     RogueAssistantCpp/Assets/RogueAssistant_mGBA.lua
 )
 
+set(
+    ROGUE_ROOT_DOCUMENT_FILES
+    README.md
+    THIRD_PARTY_NOTICES.md
+)
+
+set(
+    ROGUE_GUIDE_DOCUMENT_FILES
+    docs/architecture.md
+    docs/asset-provenance.md
+    docs/bridge-protocol.md
+    docs/compatibility.md
+    docs/desktop-application.md
+    docs/development.md
+    docs/game-memory-transport.md
+    docs/home-box-format.md
+    docs/installation.md
+    docs/lifecycle.md
+    docs/multiplayer-protocol.md
+    docs/parity-gate.md
+    docs/platform-services.md
+    docs/release.md
+    docs/roadmap.md
+)
+
+set(ROGUE_DOCUMENT_FILES ${ROGUE_ROOT_DOCUMENT_FILES} ${ROGUE_GUIDE_DOCUMENT_FILES})
+
 if(ROGUE_BUILD_DESKTOP)
+    set(ROGUE_DESKTOP_SOURCES)
+    if(WIN32)
+        enable_language(RC)
+        configure_file(
+            cmake/WindowsVersion.rc.in
+            generated/RogueAssistantVersion.rc
+            @ONLY
+        )
+        list(APPEND ROGUE_DESKTOP_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/generated/RogueAssistantVersion.rc)
+    endif()
+
     add_executable(
         RogueAssistant
         WIN32
@@ -197,6 +245,7 @@ if(ROGUE_BUILD_DESKTOP)
             RogueAssistantCpp/Src/DesktopMain.cpp
             RogueAssistantCpp/Src/UI/PrimaryUI.cpp
             RogueAssistantCpp/Src/UI/Window.cpp
+            ${ROGUE_DESKTOP_SOURCES}
     )
     target_link_libraries(
         RogueAssistant
@@ -222,12 +271,56 @@ if(ROGUE_BUILD_DESKTOP)
     )
 
     if(APPLE)
+        find_program(ROGUE_SIPS_EXECUTABLE sips REQUIRED)
+        set(ROGUE_MACOS_ICON ${CMAKE_CURRENT_BINARY_DIR}/generated/RogueAssistant.icns)
+        add_custom_command(
+            OUTPUT ${ROGUE_MACOS_ICON}
+            COMMAND
+                ${CMAKE_COMMAND}
+                -DROGUE_ICON_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Assets/WobbuffetImage.png
+                -DROGUE_ICON_OUTPUT=${ROGUE_MACOS_ICON}
+                -DROGUE_SIPS_EXECUTABLE=${ROGUE_SIPS_EXECUTABLE}
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateMacIcon.cmake
+            DEPENDS
+                RogueAssistantCpp/Assets/WobbuffetImage.png
+                cmake/GenerateMacIcon.cmake
+            VERBATIM
+        )
         set_source_files_properties(
             ${ROGUE_RESOURCE_FILES}
             PROPERTIES MACOSX_PACKAGE_LOCATION Resources
         )
-        target_sources(RogueAssistant PRIVATE ${ROGUE_RESOURCE_FILES})
-        install(TARGETS RogueAssistant BUNDLE DESTINATION .)
+        set_source_files_properties(
+            ${ROGUE_ROOT_DOCUMENT_FILES}
+            PROPERTIES MACOSX_PACKAGE_LOCATION Resources/Documentation
+        )
+        set_source_files_properties(
+            ${ROGUE_GUIDE_DOCUMENT_FILES}
+            PROPERTIES MACOSX_PACKAGE_LOCATION Resources/Documentation/docs
+        )
+        set_source_files_properties(
+            ${ROGUE_DEPENDENCY_LICENSE_FILES}
+            PROPERTIES MACOSX_PACKAGE_LOCATION Resources/Documentation/licenses
+        )
+        set_source_files_properties(
+            ${ROGUE_MACOS_ICON}
+            PROPERTIES
+                GENERATED TRUE
+                MACOSX_PACKAGE_LOCATION Resources
+        )
+        target_sources(
+            RogueAssistant
+            PRIVATE
+                ${ROGUE_RESOURCE_FILES}
+                ${ROGUE_DOCUMENT_FILES}
+                ${ROGUE_DEPENDENCY_LICENSE_FILES}
+                ${ROGUE_MACOS_ICON}
+        )
+        set_target_properties(
+            RogueAssistant
+            PROPERTIES MACOSX_BUNDLE_ICON_FILE RogueAssistant.icns
+        )
+        install(TARGETS RogueAssistant BUNDLE DESTINATION . COMPONENT RogueAssistant)
     else()
         add_custom_command(
             TARGET RogueAssistant
@@ -244,12 +337,56 @@ if(ROGUE_BUILD_DESKTOP)
                     "$<TARGET_FILE_DIR:RogueAssistant>/resources/${resource_name}"
             )
         endforeach()
-        install(TARGETS RogueAssistant RUNTIME DESTINATION bin)
-        install(FILES ${ROGUE_RESOURCE_FILES} DESTINATION bin/resources)
+        install(
+            TARGETS RogueAssistant
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            COMPONENT RogueAssistant
+        )
+        install(
+            FILES ${ROGUE_RESOURCE_FILES}
+            DESTINATION ${CMAKE_INSTALL_BINDIR}/resources
+            COMPONENT RogueAssistant
+        )
+    endif()
+
+    if(NOT APPLE)
+        install(
+            FILES ${ROGUE_ROOT_DOCUMENT_FILES}
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/RogueAssistant
+            COMPONENT RogueAssistant
+        )
+        install(
+            FILES ${ROGUE_GUIDE_DOCUMENT_FILES}
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/RogueAssistant/docs
+            COMPONENT RogueAssistant
+        )
+        install(
+            FILES ${ROGUE_DEPENDENCY_LICENSE_FILES}
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/RogueAssistant/licenses
+            COMPONENT RogueAssistant
+        )
+    endif()
+
+    if(UNIX AND NOT APPLE)
+        install(
+            FILES packaging/linux/com.pokabbie.rogue-assistant.desktop
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+            COMPONENT RogueAssistant
+        )
+        install(
+            FILES RogueAssistantCpp/Assets/WobbuffetImage.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps
+            RENAME com.pokabbie.rogue-assistant.png
+            COMPONENT RogueAssistant
+        )
     endif()
 endif()
 
 if(ROGUE_BUILD_TESTS)
     include(cmake/Dependencies.cmake)
     add_subdirectory(tests)
+endif()
+
+if(ROGUE_BUILD_DESKTOP)
+    include(cmake/Packaging.cmake)
 endif()

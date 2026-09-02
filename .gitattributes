@@ -4,8 +4,12 @@
 *.vcxproj.filters -text
 *.rc text eol=crlf
 *.bat text eol=crlf
+*.sh text eol=lf
 *.png binary
 *.ico binary
+*.icns binary
+*.dmg binary
+*.AppImage binary
 *.ttf binary
 *.lib binary
 *.dll binary

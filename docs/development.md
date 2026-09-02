@@ -30,6 +30,12 @@ RogueAssistant --help
 Linux source builds require development packages for FreeType, OpenGL, udev,
 X11, Xcursor, Xext, Xi, and Xrandr. CI installs these explicitly.
 
+Platform release builds use `release-windows-x64`,
+`release-macos-universal`, and `release-linux-x86_64`. Their archive and signing
+workflow is documented in [release.md](release.md). Application SemVer has one
+source in `cmake/Version.cmake`; bridge, multiplayer, storage, and ROM API
+versions remain independent.
+
 ## Quality gates
 
 Every review unit must build and pass its applicable tests before it is
@@ -51,3 +57,11 @@ ctest --preset ci-clang-tidy
 
 Only touched C++ files should be formatted. Repository-wide formatting and
 dependency upgrades belong in separate changes.
+
+## Distribution review
+
+`THIRD_PARTY_NOTICES.md` is installed with every application. Keep its versions
+aligned with `cmake/DesktopDependencies.cmake` and SFML's transitive revisions.
+Do not publish a binary until the owner-selected project license and every
+inherited asset's provenance are recorded as described in
+[asset-provenance.md](asset-provenance.md).

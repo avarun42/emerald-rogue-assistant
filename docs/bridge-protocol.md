@@ -24,6 +24,10 @@ send queues each retain at most 256 frames and 4 MiB of wire data. The send
 queue advances only by the byte count actually accepted by the socket. These
 bounds are protocol implementation limits, not flow-control signals.
 
+Because the 1 MiB body ceiling includes headers, a `ReadResult` can carry at
+most 1,048,568 memory bytes and a `WriteRequest` at most 1,048,560 memory bytes.
+The smaller write limit also accounts for its address and byte-count fields.
+
 | ID | Name | Request ID | Payload |
 |---:|---|---|---|
 | 1 | `ClientHello` | zero | `RAB1`, protocol `u16 major, u16 minor`, script version `u32` |

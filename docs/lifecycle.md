@@ -28,12 +28,9 @@ flushes settings, publishes a final snapshot, and joins before its owner is
 destroyed. Runtime exceptions also follow this teardown path and appear in the
 final failed snapshot.
 
-## Native DLL transition
+## Process entry point
 
-The Windows DLL must still rendezvous with callbacks made by mGBA's Lua thread.
-A legacy-only process object therefore owns the transitional native transport
-and the managed UI `std::jthread`. It contains no game, behavior, persistence,
-or UI state. The UI thread owns its SFML window and `Application`; the
-application still owns exactly one session worker. This rendezvous disappears
-with the DLL after socket parity. The standalone application introduced later
-runs the same UI loop directly on the process main thread.
+`DesktopMain` runs the UI loop directly on the process main thread on every
+supported platform. mGBA hosts only the portable Lua memory adapter; it never
+loads application-native code. The retired Windows DLL rendezvous and its
+second managed UI thread are not part of the production lifecycle.
