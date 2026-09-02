@@ -49,3 +49,19 @@ The canonical byte vectors live in
 `tests/fixtures/bridge_protocol_1.golden`. Both the C++ codec suite and the Lua
 adapter suite consume that file so the two implementations cannot silently
 drift.
+
+## mGBA execution bounds
+
+The script receives and sends no more than 256 KiB per emulated frame. It
+starts or advances at most 64 memory operations and 256 KiB of memory per
+frame; larger individual requests are carried across multiple frames. Reads
+use `emu:readRange`. Writes select aligned `write32` and `write16` calls with
+`write8` for byte-safe leading and trailing data. The script independently
+allows reads only from documented GBA RAM, video memory, and ROM ranges and
+writes only to EWRAM or IWRAM.
+
+mGBA owns socket event polling. The script buffers received bytes and retains
+the unsent suffix reported by `socket:send`. A failed connection is attempted
+again no more than once per wall-clock second. Pausing emulation performs no
+work and has no timeout; bounded queues provide backpressure until frames
+resume.

@@ -69,6 +69,19 @@ jobs:
       - name: Test
         run: ctest --preset ci-sanitizers --output-on-failure
 
+  lua-bridge:
+    name: Lua 5.4 bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.4
+        run: sudo apt-get update && sudo apt-get install --yes lua5.4
+      - name: Test portable mGBA adapter
+        run: >-
+          lua5.4 tests/lua/BridgeScriptTests.lua
+          RogueAssistantCpp/Assets/RogueAssistant_mGBA.lua
+          tests/fixtures/bridge_protocol_1.golden
+
   static-analysis:
     name: clang-tidy
     runs-on: ubuntu-latest

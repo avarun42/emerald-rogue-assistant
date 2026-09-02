@@ -151,9 +151,11 @@ TEST_CASE("GameSession bounds outstanding work and validates result shapes", "[t
 	REQUIRE(session.ProtocolErrorCount() == 2);
 
 	session.Stop();
-	REQUIRE(session.State() == TransportState::Stopped);
+	REQUIRE(session.State() == TransportState::Connected);
 	REQUIRE(disconnectedCompletions == MaximumOutstandingMemoryRequests - 1);
 	REQUIRE(session.OutstandingRequestCount() == 0);
+	transport->Stop();
+	REQUIRE(session.State() == TransportState::Stopped);
 }
 
 TEST_CASE("invalid requests complete locally without reaching the transport", "[transport][session]")
@@ -186,5 +188,7 @@ TEST_CASE("NativeLuaTransport adapts callback queues without cross-thread comple
 	REQUIRE(completed);
 
 	session.Stop();
+	REQUIRE(transport->State() == TransportState::Connected);
+	transport->Stop();
 	REQUIRE(transport->State() == TransportState::Stopped);
 }

@@ -22,6 +22,26 @@ When the transport is disconnected or the outstanding-request limit is
 reached, `CanSubmit()` becomes false. Observation code suspends new polling
 rather than accumulating unbounded work.
 
+`GameSession::Stop()` completes only that session's callbacks. Transport
+lifetime belongs to `GameConnectionManager`, which stops the listener before
+detaching behaviors during application shutdown. This separation lets a Lua
+peer disconnect, reload, reset its ROM, or reconnect without replacing the
+worker or application.
+
+## Portable TCP adapter
+
+`TcpLuaTransport` owns a nonblocking listener bound specifically to
+`127.0.0.1`. It has no network thread: the session worker drives accept,
+receive, protocol dispatch, and partial sends through `PollResults()`. One peer
+may finish the protocol 1.0 hello. Additional peers receive a rejected hello,
+a stable busy error, and an orderly close.
+
+The adapter preserves request IDs until a strictly matching read result,
+write result, or error arrives. A malformed or unexpected response fails all
+pending work closed and returns the listener to its reconnectable state. There
+is no inactivity timeout, so a paused emulator cannot be mistaken for a lost
+connection.
+
 ## Temporary native adapter
 
 `NativeLuaTransport` converts value requests into the existing guarded DLL/Lua
