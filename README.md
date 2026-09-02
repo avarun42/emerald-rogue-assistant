@@ -32,4 +32,5 @@ ctest --preset dev-debug
 
 The existing Visual Studio solution remains the reference Windows build until
 the standalone socket application passes feature parity. Architecture and
-migration details live in [`docs/architecture.md`](docs/architecture.md).
+migration details live in [`docs/architecture.md`](docs/architecture.md), with
+local quality-gate instructions in [`docs/development.md`](docs/development.md).

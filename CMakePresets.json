@@ -41,6 +41,22 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "ROGUE_WARNINGS_AS_ERRORS": "ON"
       }
+    },
+    {
+      "name": "ci-sanitizers",
+      "displayName": "Continuous Integration with ASan and UBSan",
+      "inherits": "ci",
+      "cacheVariables": {
+        "ROGUE_ENABLE_SANITIZERS": "ON"
+      }
+    },
+    {
+      "name": "ci-clang-tidy",
+      "displayName": "Continuous Integration with clang-tidy",
+      "inherits": "ci",
+      "cacheVariables": {
+        "ROGUE_ENABLE_CLANG_TIDY": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -55,6 +71,14 @@
     {
       "name": "ci",
       "configurePreset": "ci"
+    },
+    {
+      "name": "ci-sanitizers",
+      "configurePreset": "ci-sanitizers"
+    },
+    {
+      "name": "ci-clang-tidy",
+      "configurePreset": "ci-clang-tidy"
     }
   ],
   "testPresets": [
@@ -75,6 +99,20 @@
     {
       "name": "ci",
       "configurePreset": "ci",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ci-sanitizers",
+      "configurePreset": "ci-sanitizers",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ci-clang-tidy",
+      "configurePreset": "ci-clang-tidy",
       "output": {
         "outputOnFailure": true
       }

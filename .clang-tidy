@@ -1,0 +1,14 @@
+Checks: >
+  -*,
+  clang-analyzer-*,
+  bugprone-assert-side-effect,
+  bugprone-infinite-loop,
+  bugprone-misplaced-widening-cast,
+  bugprone-sizeof-container,
+  bugprone-sizeof-expression,
+  bugprone-suspicious-memset-usage,
+  performance-*,
+  portability-*
+WarningsAsErrors: '*'
+HeaderFilterRegex: '(^|.*[/\\])(RogueAssistantCpp|tests)[/\\].*'
+FormatStyle: file
