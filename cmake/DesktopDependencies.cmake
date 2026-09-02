@@ -15,13 +15,10 @@ FetchContent_Declare(
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
-# ENet 1.3.17 still advertises compatibility with CMake 2.6. CMake 4 needs an
-# explicit policy floor while evaluating that third-party project.
-set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
 FetchContent_Declare(
     ENet
-    URL https://github.com/lsalzman/enet/archive/refs/tags/v1.3.17.tar.gz
-    URL_HASH SHA256=1e0b4bc0b7127a2d779dd7928f0b31830f5b3dcb7ec9588c5de70033e8d2434a
+    URL https://github.com/lsalzman/enet/archive/refs/tags/v1.3.18.tar.gz
+    URL_HASH SHA256=28603c895f9ed24a846478180ee72c7376b39b4bb1287b73877e5eae7d96b0dd
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 

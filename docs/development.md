@@ -15,7 +15,7 @@ ctest --preset dev-debug
 
 `dev-release` provides the corresponding optimized build. Direct dependencies
 are downloaded from checksum-pinned release archives during configuration.
-The desktop target builds SFML 3.1.0 and ENet 1.3.17 from source; SFML's own
+The desktop target builds SFML 3.1.0 and ENet 1.3.18 from source; SFML's own
 transitive sources follow the revisions pinned by its release build.
 
 The resulting executable is `RogueAssistant.exe` on Windows, `RogueAssistant`
