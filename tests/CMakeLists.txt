@@ -4,6 +4,7 @@ add_executable(
     CharacterizationTests.cpp
     LifecycleTests.cpp
     PlatformTests.cpp
+    TcpLuaTransportTests.cpp
     TransportTests.cpp
 )
 

@@ -106,6 +106,8 @@ add_library(
         RogueAssistantCpp/Src/Bridge/GameMemoryTransport.cpp
         RogueAssistantCpp/Src/Bridge/GameSession.cpp
         RogueAssistantCpp/Src/Bridge/NativeLuaTransport.cpp
+        RogueAssistantCpp/Src/Bridge/TcpLuaTransport.cpp
+        RogueAssistantCpp/Src/Bridge/TcpSocket.cpp
 )
 target_include_directories(rogue_bridge PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc)
 target_link_libraries(
@@ -118,6 +120,9 @@ target_link_libraries(
         rogue_project_warnings
 )
 rogue_enable_clang_tidy(rogue_bridge)
+if(WIN32)
+    target_link_libraries(rogue_bridge PRIVATE ws2_32)
+endif()
 
 add_library(
     rogue_app

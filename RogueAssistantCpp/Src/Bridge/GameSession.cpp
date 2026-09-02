@@ -111,7 +111,6 @@ void GameSession::Stop()
 	if (m_Stopped)
 		return;
 	m_Stopped = true;
-	m_Transport->Stop();
 
 	auto pending = std::move(m_Pending);
 	m_Pending.clear();
