@@ -1,10 +1,16 @@
 #include "GameConnectionManager.h"
 
+#include "Application/CommandLine.h"
 #include "Behaviours/HomeBoxBehaviour.h"
 #include "Behaviours/MultiplayerBehaviour.h"
+#include "Bridge/TcpLuaTransport.h"
 #include "GameConnection.h"
 #include "Log.h"
+#include "Platform/BridgeScript.h"
 #include "Platform/Configuration.h"
+#include "Platform/ResourceLocator.h"
+#include "Platform/Utf8.h"
+#include "RogueAssistantVersion.h"
 #include "UserData.h"
 
 #include <algorithm>
@@ -17,6 +23,11 @@ GameConnectionManager::GameConnectionManager(std::shared_ptr<IGameMemoryTranspor
 {
 	if (!m_Transport)
 		throw std::invalid_argument("GameConnectionManager requires a memory transport");
+}
+
+GameConnectionManager::GameConnectionManager(std::optional<std::uint16_t> bridgePortOverride)
+	: m_BridgePortOverride(bridgePortOverride), m_UsesPortableBridge(true)
+{
 }
 
 GameConnectionManager::~GameConnectionManager()
@@ -35,12 +46,31 @@ void GameConnectionManager::Start()
 	}
 
 	m_Started = true;
+	LOG_INFO("Rogue Assistant %s", ROGUE_ASSISTANT_VERSION_STRING);
+	if (m_UsesPortableBridge)
+	{
+		int const savedPort =
+			UserData::GetSavedInt(std::string(rogue::platform::BridgePortKey), static_cast<int>(m_BridgePort));
+		m_BridgePort = rogue::app::SelectBridgePort(m_BridgePortOverride, static_cast<std::uint16_t>(savedPort));
+		m_Transport = std::make_shared<TcpLuaTransport>(m_BridgePort);
+		ExportPortableScript();
+	}
 	m_ListeningForConnections = true;
 	LOG_INFO("Game: Opening connection listener");
 }
 
 void GameConnectionManager::HandleCommand(rogue::app::UiCommand command)
 {
+	if (command.type == rogue::app::UiCommand::Type::SetBridgePort)
+	{
+		ChangeBridgePort(command.value);
+		return;
+	}
+	if (command.type == rogue::app::UiCommand::Type::ExportBridgeScript)
+	{
+		ExportPortableScript();
+		return;
+	}
 	if (command.type != rogue::app::UiCommand::Type::ProvideMultiplayerAddress)
 		return;
 
@@ -83,8 +113,11 @@ void GameConnectionManager::Tick()
 rogue::app::UiSnapshot GameConnectionManager::Snapshot() const
 {
 	rogue::app::UiSnapshot snapshot;
-	snapshot.transportState = m_Transport->State();
+	snapshot.transportState = m_Transport ? m_Transport->State() : TransportState::Disconnected;
 	snapshot.error = m_RecentError;
+	snapshot.bridgePort = m_BridgePort;
+	snapshot.bridgeScriptPath = m_BridgeScriptPath;
+	snapshot.bridgeMessage = m_BridgeMessage;
 	if (m_Started)
 	{
 		snapshot.multiplayerHostPort =
@@ -131,6 +164,58 @@ void GameConnectionManager::Stop()
 		UserData::Shutdown();
 		m_Started = false;
 	}
+}
+
+void GameConnectionManager::ExportPortableScript()
+{
+	if (!m_UsesPortableBridge || !m_Started)
+		return;
+	rogue::platform::ResourceLocator const resources(UserData::GetResourceDirectory());
+	auto const exported = rogue::platform::ExportBridgeScript(
+		resources.Resolve(rogue::platform::Resource::BridgeScript), UserData::GetScriptDirectory(), m_BridgePort);
+	if (!exported.Succeeded())
+	{
+		m_BridgeMessage.clear();
+		PushError(exported.error);
+		return;
+	}
+	m_BridgeScriptPath = rogue::platform::PathToUtf8(exported.path);
+	m_BridgeMessage = "mGBA script exported";
+}
+
+void GameConnectionManager::ChangeBridgePort(std::string const& value)
+{
+	if (!m_UsesPortableBridge)
+		return;
+	rogue::platform::Settings candidate;
+	std::string error;
+	if (!rogue::platform::TrySetSetting(candidate, rogue::platform::BridgePortKey, value, error))
+	{
+		PushError(error);
+		return;
+	}
+	if (candidate.bridgePort != m_BridgePort)
+	{
+		std::shared_ptr<IGameMemoryTransport> replacement;
+		try
+		{
+			replacement = std::make_shared<TcpLuaTransport>(candidate.bridgePort);
+		}
+		catch (std::exception const& exception)
+		{
+			PushError(exception.what());
+			return;
+		}
+
+		m_Transport->Stop();
+		DisconnectConnections();
+		m_Transport = std::move(replacement);
+		m_BridgePort = candidate.bridgePort;
+		m_BridgePortOverride.reset();
+		m_ListeningForConnections = true;
+	}
+	UserData::SetSavedString(std::string(rogue::platform::BridgePortKey), std::to_string(m_BridgePort));
+	ExportPortableScript();
 }
 
 void GameConnectionManager::PushError(std::string error)

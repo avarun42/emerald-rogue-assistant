@@ -58,6 +58,9 @@ struct UiSnapshot
 	std::string error;
 	std::string multiplayerHostPort = "30025";
 	std::string multiplayerJoinAddress;
+	std::uint16_t bridgePort = 30125;
+	std::string bridgeScriptPath;
+	std::string bridgeMessage;
 };
 
 struct UiCommand
@@ -65,6 +68,8 @@ struct UiCommand
 	enum class Type
 	{
 		ProvideMultiplayerAddress,
+		SetBridgePort,
+		ExportBridgeScript,
 	};
 
 	Type type = Type::ProvideMultiplayerAddress;

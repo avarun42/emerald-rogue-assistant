@@ -34,3 +34,6 @@ The existing Visual Studio solution remains the reference Windows build until
 the standalone socket application passes feature parity. Architecture and
 migration details live in [`docs/architecture.md`](docs/architecture.md), with
 local quality-gate instructions in [`docs/development.md`](docs/development.md).
+Standalone usage, bridge controls, resource locations, and command-line
+behavior are documented in
+[`docs/desktop-application.md`](docs/desktop-application.md).

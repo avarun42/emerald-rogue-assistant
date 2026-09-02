@@ -1,8 +1,10 @@
 #pragma once
-#include <functional>
-#include <bitset>
-#include <string>
 #include <SFML/Window.hpp>
+#include <bitset>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <string>
 
 class Window;
 
@@ -18,23 +20,34 @@ struct WindowConfig
 	std::string title;
 	int width = 640;
 	int height = 480;
-	bool resizable = false;
+	bool resizable = true;
 	bool canBeDestroyed = true;
 	bool imGuiEnabled = false;
+	std::filesystem::path resourceDirectory;
 };
 
 class Window
 {
 public:
 	Window(WindowConfig const&);
+	~Window();
+
+	Window(Window const&) = delete;
+	Window& operator=(Window const&) = delete;
 
 	bool Create();
 	bool Destroy();
 
 	void EnterMainLoop(WindowCallback callback, void* userData = nullptr);
 
-	inline sf::RenderWindow* GetHandle() { return m_WindowHandle; }
-	inline sf::RenderWindow const * GetHandle() const { return m_WindowHandle; }
+	inline sf::RenderWindow* GetHandle()
+	{
+		return m_WindowHandle.get();
+	}
+	inline sf::RenderWindow const* GetHandle() const
+	{
+		return m_WindowHandle.get();
+	}
 
 	inline bool IsButtonHeld(sf::Keyboard::Key key) const { return m_CurrentKeyStates.test(key); }
 	inline bool ButtonJustPressed(sf::Keyboard::Key key) const { return m_CurrentKeyStates.test(key) && !m_PreviousKeyStates.test(key); }
@@ -46,7 +59,7 @@ public:
 
 private:
 	WindowConfig m_Config;
-	sf::RenderWindow* m_WindowHandle;
+	std::unique_ptr<sf::RenderWindow> m_WindowHandle;
 
 	std::string m_TextEntered;
 	std::bitset<sf::Keyboard::KeyCount> m_CurrentKeyStates;

@@ -108,7 +108,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;lua54.lib;sfml-system-s-d.lib;sfml-network-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;freetype.lib;winmm.lib;gdi32.lib;glfw3.lib;enet.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;lua54.lib;sfml-system-s-d.lib;sfml-network-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;freetype.lib;winmm.lib;gdi32.lib;glfw3.lib;enet.lib;ws2_32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)External\ENet\;$(ProjectDir)External\SFML\Win32\lib;$(ProjectDir)External\Lua\Win32;$(ProjectDir)External\glfw-3.3.8\lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -149,7 +149,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;lua54.lib;sfml-system-s.lib;sfml-network-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;freetype.lib;winmm.lib;gdi32.lib;glfw3.lib;enet.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;lua54.lib;sfml-system-s.lib;sfml-network-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;freetype.lib;winmm.lib;gdi32.lib;glfw3.lib;enet.lib;ws2_32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)External\ENet\;$(ProjectDir)External\SFML\Win32\lib;$(ProjectDir)External\Lua\Win32;$(ProjectDir)External\glfw-3.3.8\lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -186,7 +186,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;lua54.lib;sfml-system-s-d.lib;sfml-network-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;freetype.lib;winmm.lib;gdi32.lib;glfw3.lib;enet64.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;lua54.lib;sfml-system-s-d.lib;sfml-network-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;freetype.lib;winmm.lib;gdi32.lib;glfw3.lib;enet64.lib;ws2_32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)External\ENet\;$(ProjectDir)External\SFML\Win64\lib;$(ProjectDir)External\Lua\Win64;$(ProjectDir)External\glfw-3.3.8\lib\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -227,7 +227,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;lua54.lib;sfml-system-s.lib;sfml-network-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;freetype.lib;winmm.lib;gdi32.lib;glfw3.lib;enet64.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;lua54.lib;sfml-system-s.lib;sfml-network-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;freetype.lib;winmm.lib;gdi32.lib;glfw3.lib;enet64.lib;ws2_32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)External\ENet\;$(ProjectDir)External\SFML\Win64\lib;$(ProjectDir)External\Lua\Win64;$(ProjectDir)External\glfw-3.3.8\lib\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -259,14 +259,18 @@
     <ClCompile Include="External\imgui\imgui_tables.cpp" />
     <ClCompile Include="External\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Src\Application\Application.cpp" />
+    <ClCompile Include="Src\Application\CommandLine.cpp" />
     <ClCompile Include="Src\Application\SessionWorker.cpp" />
     <ClCompile Include="Src\Assets.cpp" />
     <ClCompile Include="Src\Behaviours\CommonBehaviour.cpp" />
     <ClCompile Include="Src\Behaviours\HomeBoxBehaviour.cpp" />
     <ClCompile Include="Src\Behaviours\MultiplayerBehaviour.cpp" />
     <ClCompile Include="Src\Bridge\GameMemoryTransport.cpp" />
+    <ClCompile Include="Src\Bridge\BridgeProtocol.cpp" />
     <ClCompile Include="Src\Bridge\GameSession.cpp" />
     <ClCompile Include="Src\Bridge\NativeLuaTransport.cpp" />
+    <ClCompile Include="Src\Bridge\TcpLuaTransport.cpp" />
+    <ClCompile Include="Src\Bridge\TcpSocket.cpp" />
     <ClCompile Include="Src\DataStream.cpp" />
     <ClCompile Include="Src\GameConnection.cpp" />
     <ClCompile Include="Src\GameConnectionManager.cpp" />
@@ -277,6 +281,7 @@
     <ClCompile Include="Src\Main.cpp" />
     <ClCompile Include="Src\ObservedGameMemory.cpp" />
     <ClCompile Include="Src\Platform\AppPaths.cpp" />
+    <ClCompile Include="Src\Platform\BridgeScript.cpp" />
     <ClCompile Include="Src\Platform\Configuration.cpp" />
     <ClCompile Include="Src\Platform\FileSystem.cpp" />
     <ClCompile Include="Src\Platform\ResourceLocator.cpp" />
@@ -302,12 +307,16 @@
     <ClInclude Include="External\imgui\imstb_textedit.h" />
     <ClInclude Include="External\imgui\imstb_truetype.h" />
     <ClInclude Include="Inc\Application\Application.h" />
+    <ClInclude Include="Inc\Application\CommandLine.h" />
     <ClInclude Include="Inc\Application\ISessionRuntime.h" />
     <ClInclude Include="Inc\Application\SessionWorker.h" />
     <ClInclude Include="Inc\Application\UiModel.h" />
     <ClInclude Include="Inc\Bridge\GameMemoryTransport.h" />
+    <ClInclude Include="Inc\Bridge\BridgeProtocol.h" />
     <ClInclude Include="Inc\Bridge\GameSession.h" />
     <ClInclude Include="Inc\Bridge\NativeLuaTransport.h" />
+    <ClInclude Include="Inc\Bridge\TcpLuaTransport.h" />
+    <ClInclude Include="Inc\Bridge\TcpSocket.h" />
     <ClInclude Include="External\SFML\include\SFML\Audio.hpp" />
     <ClInclude Include="External\SFML\include\SFML\Audio\AlResource.hpp" />
     <ClInclude Include="External\SFML\include\SFML\Audio\Export.hpp" />
@@ -425,10 +434,12 @@
     <ClInclude Include="Inc\Log.h" />
     <ClInclude Include="Inc\ObservedGameMemory.h" />
     <ClInclude Include="Inc\Platform\AppPaths.h" />
+    <ClInclude Include="Inc\Platform\BridgeScript.h" />
     <ClInclude Include="Inc\Platform\Configuration.h" />
     <ClInclude Include="Inc\Platform\FileSystem.h" />
     <ClInclude Include="Inc\Platform\ResourceLocator.h" />
     <ClInclude Include="Inc\Platform\Utf8.h" />
+    <ClInclude Include="Inc\RogueAssistantVersion.h" />
     <ClInclude Include="Inc\StringUtils.h" />
     <ClInclude Include="Inc\Timer.h" />
     <ClInclude Include="Inc\UI\PrimaryUI.h" />

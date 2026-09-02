@@ -9,6 +9,7 @@
 
 void HomeBoxBehaviour::OnAttach(GameConnection& game)
 {
+	(void)game;
 	m_State = State::First;
 	m_ActiveBoxData.clear();
 }
@@ -202,8 +203,7 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 void HomeBoxBehaviour::InitaliseLocalBoxData(GameConnection& game, u32 boxId)
 {
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
-	u8 const* homeBoxState = game.GetObservedGameMemory().GetHomeBoxStateBlob();
-	
+
 	BoxData& targetBox = m_ActiveBoxData[boxId];
 
 	if (boxId < rogueHeader.homeLocalBoxCount)
@@ -306,8 +306,6 @@ u8 const* HomeBoxBehaviour::GetMonBoxPtr(GameConnection& game, u32 boxId)
 
 void HomeBoxBehaviour::HandlePendingFileWrite(GameConnection& game)
 {
-	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
-
 	if (m_WriteFilePath.empty())
 		return;
 

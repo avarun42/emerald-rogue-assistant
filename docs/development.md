@@ -12,7 +12,21 @@ ctest --preset dev-debug
 ```
 
 `dev-release` provides the corresponding optimized build. Dependencies are
-downloaded from checksum-pinned release archives during configuration.
+downloaded from checksum-pinned release archives during configuration. The
+desktop target currently builds the parity versions SFML 2.6.2 and ENet 1.3.17
+from source; dependency upgrades are isolated later review units.
+
+The resulting executable is `RogueAssistant.exe` on Windows, `RogueAssistant`
+on Linux, and `RogueAssistant.app` on macOS. A smoke check does not create a
+window:
+
+```sh
+RogueAssistant --version
+RogueAssistant --help
+```
+
+Linux source builds require development packages for FreeType, OpenGL, udev,
+X11, Xcursor, Xext, Xi, and Xrandr. CI installs these explicitly.
 
 ## Quality gates
 

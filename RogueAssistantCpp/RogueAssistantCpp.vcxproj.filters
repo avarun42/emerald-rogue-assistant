@@ -28,6 +28,9 @@
     <ClCompile Include="Src\Application\Application.cpp">
       <Filter>Src\Application</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Application\CommandLine.cpp">
+      <Filter>Src\Application</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Application\SessionWorker.cpp">
       <Filter>Src\Application</Filter>
     </ClCompile>
@@ -70,10 +73,19 @@
     <ClCompile Include="Src\Bridge\GameMemoryTransport.cpp">
       <Filter>Src\Bridge</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Bridge\BridgeProtocol.cpp">
+      <Filter>Src\Bridge</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Bridge\GameSession.cpp">
       <Filter>Src\Bridge</Filter>
     </ClCompile>
     <ClCompile Include="Src\Bridge\NativeLuaTransport.cpp">
+      <Filter>Src\Bridge</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Bridge\TcpLuaTransport.cpp">
+      <Filter>Src\Bridge</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Bridge\TcpSocket.cpp">
       <Filter>Src\Bridge</Filter>
     </ClCompile>
     <ClCompile Include="Src\UserData.cpp">
@@ -84,6 +96,9 @@
     </ClCompile>
     <ClCompile Include="Src\LuaMain.cpp" />
     <ClCompile Include="Src\Platform\AppPaths.cpp">
+      <Filter>Src\Platform</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Platform\BridgeScript.cpp">
       <Filter>Src\Platform</Filter>
     </ClCompile>
     <ClCompile Include="Src\Platform\Configuration.cpp">
@@ -128,6 +143,9 @@
       <Filter>Inc</Filter>
     </ClInclude>
     <ClInclude Include="Inc\Application\Application.h">
+      <Filter>Inc\Application</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Application\CommandLine.h">
       <Filter>Inc\Application</Filter>
     </ClInclude>
     <ClInclude Include="Inc\Application\ISessionRuntime.h">
@@ -196,10 +214,19 @@
     <ClInclude Include="Inc\Bridge\GameMemoryTransport.h">
       <Filter>Inc\Bridge</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Bridge\BridgeProtocol.h">
+      <Filter>Inc\Bridge</Filter>
+    </ClInclude>
     <ClInclude Include="Inc\Bridge\GameSession.h">
       <Filter>Inc\Bridge</Filter>
     </ClInclude>
     <ClInclude Include="Inc\Bridge\NativeLuaTransport.h">
+      <Filter>Inc\Bridge</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Bridge\TcpLuaTransport.h">
+      <Filter>Inc\Bridge</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Bridge\TcpSocket.h">
       <Filter>Inc\Bridge</Filter>
     </ClInclude>
     <ClInclude Include="External\glew-2.1.0\include\GL\eglew.h" />
@@ -315,6 +342,9 @@
     <ClInclude Include="Inc\Platform\AppPaths.h">
       <Filter>Inc\Platform</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Platform\BridgeScript.h">
+      <Filter>Inc\Platform</Filter>
+    </ClInclude>
     <ClInclude Include="Inc\Platform\Configuration.h">
       <Filter>Inc\Platform</Filter>
     </ClInclude>
@@ -326,6 +356,9 @@
     </ClInclude>
     <ClInclude Include="Inc\Platform\Utf8.h">
       <Filter>Inc\Platform</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\RogueAssistantVersion.h">
+      <Filter>Inc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -13,11 +13,9 @@ enum class MethodId
     GetItemName,
 };
 
-RPCQueue::RPCQueue(GameConnection& game)
-    : m_Game(game)
-    , m_Counter(0)
-    , m_SendBufferSize(0)
+RPCQueue::RPCQueue(GameConnection& game) : m_SendBufferSize(0)
 {
+	(void)game;
 }
 
 void RPCQueue::Update()
@@ -53,7 +51,8 @@ void RPCQueue::ClearSendBuffer()
 
 void RPCQueue::RPC_GetSpeciesName(u16 species)
 {
-    //ClearSendBuffer();
+	(void)species;
+	//ClearSendBuffer();
     //PushSendData<u16>(m_Counter++);
     //PushSendData<u16>((u16)MethodId::GetSpeciesName);
     //PushSendData<u16>(species);

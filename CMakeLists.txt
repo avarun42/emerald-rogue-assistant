@@ -4,13 +4,14 @@ project(
     RogueAssistant
     VERSION 1.0.0
     DESCRIPTION "Cross-platform companion application for Pokemon Emerald Rogue"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 include(CTest)
 find_package(Threads REQUIRED)
 
 option(ROGUE_BUILD_TESTS "Build Rogue Assistant tests" ${BUILD_TESTING})
+option(ROGUE_BUILD_DESKTOP "Build the standalone Rogue Assistant desktop application" ON)
 option(ROGUE_WARNINGS_AS_ERRORS "Treat Rogue Assistant warnings as errors" OFF)
 option(ROGUE_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 option(ROGUE_ENABLE_CLANG_TIDY "Run clang-tidy on Rogue Assistant targets" OFF)
@@ -62,7 +63,7 @@ endfunction()
 
 configure_file(
     cmake/RogueAssistantVersion.h.in
-    generated/RogueAssistantVersion.h
+    generated/RogueAssistantVersionGenerated.h
     @ONLY
 )
 
@@ -73,6 +74,7 @@ add_library(
         RogueAssistantCpp/Src/GameData.cpp
         RogueAssistantCpp/Src/Log.cpp
         RogueAssistantCpp/Src/Platform/AppPaths.cpp
+        RogueAssistantCpp/Src/Platform/BridgeScript.cpp
         RogueAssistantCpp/Src/Platform/Configuration.cpp
         RogueAssistantCpp/Src/Platform/FileSystem.cpp
         RogueAssistantCpp/Src/Platform/ResourceLocator.cpp
@@ -95,6 +97,9 @@ target_link_libraries(
         rogue_project_warnings
 )
 rogue_enable_clang_tidy(rogue_core)
+if(WIN32)
+    target_link_libraries(rogue_core PRIVATE shell32)
+endif()
 
 add_library(
     rogue_bridge
@@ -121,17 +126,53 @@ if(WIN32)
     target_link_libraries(rogue_bridge PRIVATE ws2_32)
 endif()
 
+include(cmake/DesktopDependencies.cmake)
+
+add_library(
+    rogue_multiplayer
+    OBJECT
+        RogueAssistantCpp/Src/Behaviours/MultiplayerBehaviour.cpp
+)
+target_include_directories(
+    rogue_multiplayer
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc
+        ${enet_SOURCE_DIR}/include
+)
+target_link_libraries(
+    rogue_multiplayer
+    PUBLIC
+        enet
+        rogue_bridge
+        rogue_project_options
+        rogue_sanitizers
+    PRIVATE
+        rogue_project_warnings
+)
+if(WIN32)
+    target_link_libraries(rogue_multiplayer PUBLIC winmm ws2_32)
+endif()
+rogue_enable_clang_tidy(rogue_multiplayer)
+
 add_library(
     rogue_app
     STATIC
         RogueAssistantCpp/Src/Application/Application.cpp
+        RogueAssistantCpp/Src/Application/CommandLine.cpp
         RogueAssistantCpp/Src/Application/SessionWorker.cpp
+        RogueAssistantCpp/Src/Behaviours/CommonBehaviour.cpp
+        RogueAssistantCpp/Src/Behaviours/HomeBoxBehaviour.cpp
+        RogueAssistantCpp/Src/GameConnection.cpp
+        RogueAssistantCpp/Src/GameConnectionManager.cpp
+        RogueAssistantCpp/Src/GameConnectionRPCs.cpp
+        RogueAssistantCpp/Src/ObservedGameMemory.cpp
 )
 target_include_directories(rogue_app PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc)
 target_link_libraries(
     rogue_app
     PUBLIC
         rogue_bridge
+        rogue_multiplayer
         rogue_project_options
         rogue_sanitizers
         Threads::Threads
@@ -147,7 +188,67 @@ set(
     RogueAssistantCpp/Assets/pokemon-emerald-pro.ttf
     RogueAssistantCpp/Assets/RogueAssistant_mGBA.lua
 )
-install(FILES ${ROGUE_RESOURCE_FILES} DESTINATION resources)
+
+if(ROGUE_BUILD_DESKTOP)
+    add_executable(
+        RogueAssistant
+        WIN32
+        MACOSX_BUNDLE
+            RogueAssistantCpp/Src/DesktopMain.cpp
+            RogueAssistantCpp/Src/UI/PrimaryUI.cpp
+            RogueAssistantCpp/Src/UI/Window.cpp
+    )
+    target_compile_definitions(RogueAssistant PRIVATE ROGUE_STANDALONE_RESOURCES=1)
+    target_link_libraries(
+        RogueAssistant
+        PRIVATE
+            rogue_app
+            rogue_project_warnings
+            sfml-graphics
+            sfml-window
+            sfml-system
+    )
+    if(WIN32)
+        target_link_libraries(RogueAssistant PRIVATE sfml-main)
+    endif()
+    rogue_enable_clang_tidy(RogueAssistant)
+    set_target_properties(
+        RogueAssistant
+        PROPERTIES
+            OUTPUT_NAME RogueAssistant
+            MACOSX_BUNDLE_BUNDLE_NAME "Rogue Assistant"
+            MACOSX_BUNDLE_GUI_IDENTIFIER "com.pokabbie.rogue-assistant"
+            MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+            MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+    )
+
+    if(APPLE)
+        set_source_files_properties(
+            ${ROGUE_RESOURCE_FILES}
+            PROPERTIES MACOSX_PACKAGE_LOCATION Resources
+        )
+        target_sources(RogueAssistant PRIVATE ${ROGUE_RESOURCE_FILES})
+        install(TARGETS RogueAssistant BUNDLE DESTINATION .)
+    else()
+        add_custom_command(
+            TARGET RogueAssistant
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:RogueAssistant>/resources"
+        )
+        foreach(resource IN LISTS ROGUE_RESOURCE_FILES)
+            get_filename_component(resource_name "${resource}" NAME)
+            add_custom_command(
+                TARGET RogueAssistant
+                POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_CURRENT_SOURCE_DIR}/${resource}"
+                    "$<TARGET_FILE_DIR:RogueAssistant>/resources/${resource_name}"
+            )
+        endforeach()
+        install(TARGETS RogueAssistant RUNTIME DESTINATION bin)
+        install(FILES ${ROGUE_RESOURCE_FILES} DESTINATION bin/resources)
+    endif()
+endif()
 
 if(ROGUE_BUILD_TESTS)
     include(cmake/Dependencies.cmake)

@@ -62,6 +62,57 @@ namespace rogue::platform
 		return false;
 	}
 
+	bool ReadFile(fs::path const& source, std::size_t maximumSize, std::vector<std::byte>& bytes, std::string& error)
+	{
+		bytes.clear();
+		error.clear();
+		std::error_code ec;
+		std::uintmax_t const fileSize = fs::file_size(source, ec);
+		if (ec)
+		{
+			error = "cannot determine file size: " + ec.message();
+			return false;
+		}
+		if (fileSize > maximumSize ||
+			fileSize > static_cast<std::uintmax_t>(std::numeric_limits<std::streamsize>::max()))
+		{
+			error = "file exceeds its size limit";
+			return false;
+		}
+
+		std::ifstream stream(source, std::ios::binary);
+		if (!stream)
+		{
+			error = "cannot open file for reading";
+			return false;
+		}
+		bytes.resize(static_cast<std::size_t>(fileSize));
+		if (!bytes.empty())
+			stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+		if (!stream || stream.peek() != std::ifstream::traits_type::eof())
+		{
+			bytes.clear();
+			error = "cannot read file exactly";
+			return false;
+		}
+		return true;
+	}
+
+	bool ReadTextFile(fs::path const& source, std::size_t maximumSize, std::string& text, std::string& error)
+	{
+		std::vector<std::byte> bytes;
+		if (!ReadFile(source, maximumSize, bytes, error))
+		{
+			text.clear();
+			return false;
+		}
+		if (bytes.empty())
+			text.clear();
+		else
+			text.assign(reinterpret_cast<char const*>(bytes.data()), bytes.size());
+		return true;
+	}
+
 	bool WriteFileAtomically(fs::path const& destination, std::span<std::byte const> bytes, std::string& error)
 	{
 		error.clear();

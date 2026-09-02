@@ -47,3 +47,5 @@ Thread ownership, value-only UI boundaries, and deterministic shutdown are
 documented in [lifecycle.md](lifecycle.md).
 The frozen loopback wire format is documented in
 [bridge-protocol.md](bridge-protocol.md).
+The standalone process, packaged-resource model, and bridge controls are
+documented in [desktop-application.md](desktop-application.md).

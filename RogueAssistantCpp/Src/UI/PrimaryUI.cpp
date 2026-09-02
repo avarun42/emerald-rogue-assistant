@@ -1,12 +1,25 @@
 #include "UI/PrimaryUI.h"
 #include "UI/Window.h"
+#ifndef ROGUE_STANDALONE_RESOURCES
 #include "Assets.h"
+#endif
 #include "Defines.h"
+#include "Log.h"
+#include "Platform/BridgeScript.h"
+#include "Platform/FileSystem.h"
+#include "Platform/ResourceLocator.h"
+#include "Platform/Utf8.h"
+#include "RogueAssistantVersion.h"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
+#include <SFML/Window/Clipboard.hpp>
 
+#include <cmath>
+#include <cstddef>
+#include <stdexcept>
 #include <utility>
+#include <vector>
 
 // Dimension is based on the poketch frame asset
 static int const c_ViewWidth = 256;
@@ -31,10 +44,28 @@ static std::string SanitiseConnectionAddress(std::string const& address, bool re
 }
 
 template <typename T>
-static inline void LoadBin2CppAsset(T& output, bin2cpp::File const& file)
+static bool LoadAsset(T& output, std::filesystem::path const& resourceDirectory, rogue::platform::Resource resource)
 {
-	output.loadFromMemory(file.getBuffer(), file.getSize());
+	if (!resourceDirectory.empty())
+	{
+		rogue::platform::ResourceLocator const resources(resourceDirectory);
+		std::vector<std::byte> bytes;
+		std::string error;
+		if (rogue::platform::ReadFile(resources.Resolve(resource), 32U * 1024U * 1024U, bytes, error) &&
+			output.loadFromMemory(bytes.data(), bytes.size()))
+		{
+			return true;
+		}
+	}
+	return false;
 }
+
+#ifndef ROGUE_STANDALONE_RESOURCES
+template <typename T> static bool LoadBin2CppAsset(T& output, bin2cpp::File const& file)
+{
+	return output.loadFromMemory(file.getBuffer(), file.getSize());
+}
+#endif
 
 struct AssetCollection
 {
@@ -51,17 +82,31 @@ struct AssetCollection
 	sf::Font m_Font;
 	sf::Texture m_PoketchOverlay;
 
-	AssetCollection()
+	explicit AssetCollection(std::filesystem::path const& resourceDirectory)
 	{
 		m_ClearColour = sf::Color(112, 176, 112);
 		m_DarkFontColour = sf::Color(16, 40, 24);
 		m_LightFontColour = sf::Color(56, 80, 48);
 		m_ErrorFontColour = sf::Color(196, 24, 24);
 
-		LoadBin2CppAsset(m_Font, bin2cpp::getPokemonemeraldproTtfFile());
+		bool fontLoaded = LoadAsset(m_Font, resourceDirectory, rogue::platform::Resource::Font);
+#ifndef ROGUE_STANDALONE_RESOURCES
+		fontLoaded = fontLoaded || LoadBin2CppAsset(m_Font, bin2cpp::getPokemonemeraldproTtfFile());
+#endif
+		if (!fontLoaded)
+		{
+			throw std::runtime_error("cannot load Rogue Assistant font");
+		}
 		m_Font.setSmooth(false);
 
-		LoadBin2CppAsset(m_PoketchOverlay, bin2cpp::getPoketch_framePngFile());
+		bool frameLoaded = LoadAsset(m_PoketchOverlay, resourceDirectory, rogue::platform::Resource::Frame);
+#ifndef ROGUE_STANDALONE_RESOURCES
+		frameLoaded = frameLoaded || LoadBin2CppAsset(m_PoketchOverlay, bin2cpp::getPoketch_framePngFile());
+#endif
+		if (!frameLoaded)
+		{
+			throw std::runtime_error("cannot load Rogue Assistant frame texture");
+		}
 		m_PoketchOverlay.setSmooth(false);
 	}
 
@@ -105,18 +150,13 @@ struct AssetCollection
 	}
 };
 
-PrimaryUI::PrimaryUI()
-	: m_CurrentPage(rogue::app::UiPage::Awaiting)
+PrimaryUI::PrimaryUI(std::filesystem::path resourceDirectory)
+	: m_Assets(std::make_unique<AssetCollection>(resourceDirectory)), m_CurrentPage(rogue::app::UiPage::Awaiting)
 {
-	m_Assets = new AssetCollection();
 	m_LastDrawTime = UpdateTimer::GetCurrentClock();
 }
 
-PrimaryUI::~PrimaryUI()
-{
-	delete m_Assets;
-	m_Assets = nullptr;
-}
+PrimaryUI::~PrimaryUI() = default;
 
 void PrimaryUI::SetToStubTheme()
 {
@@ -205,6 +245,8 @@ void PrimaryUI::Render(
 			m_Assets->m_ErrorFontColour
 		);
 	}
+	m_Assets->DrawRightAlignedText(gfx, "v" ROGUE_ASSISTANT_VERSION_STRING, c_CentreOffset + sf::Vector2f(101, -90), 10,
+								   m_Assets->m_LightFontColour);
 
 	// Print awaiting connection screen
 	if (snapshot.connections.empty())
@@ -217,17 +259,13 @@ void PrimaryUI::Render(
 			m_Assets->m_LightFontColour
 		);
 
-		m_Assets->DrawLeftAlignedText(
-			gfx,
-			"How to connect to mGBA:\n"
-			"1. Make sure Emerald Rogue is running\n\tin mGBA v0.10.0 or greater\n"
-			"2. In mGBA select Tools > Scripting...\n"
-			"3. In the new Window, Select\n\tFile > Load Script...\n"
-			"4. Locate and select\n\tRogueAssistant_mGBA.lua\n",
-			c_CentreOffset + sf::Vector2f(-90, -40),
-			16,
-			m_Assets->m_LightFontColour
-		);
+		m_Assets->DrawLeftAlignedText(gfx,
+									  "How to connect to mGBA:\n"
+									  "1. Make sure Emerald Rogue is running\n\tin mGBA v0.10.5 or greater\n"
+									  "2. In mGBA select Tools > Scripting...\n"
+									  "3. In the new Window, Select\n\tFile > Load Script...\n"
+									  "4. Locate and select\n\tRogueAssistant_mGBA.lua\n",
+									  c_CentreOffset + sf::Vector2f(-90, -40), 16, m_Assets->m_LightFontColour);
 
 		//m_Assets->DrawCenteredText(
 		//	gfx,
@@ -299,6 +337,7 @@ void PrimaryUI::Render(
 		}
 	}
 
+	RenderBridgeControls(window, snapshot, submitCommand);
 
 	// Draw poketch overlay last
 	sf::Sprite sprite;
@@ -310,6 +349,103 @@ void PrimaryUI::Render(
 	gfx.setView(gfx.getDefaultView());
 
 	m_LastDrawTime = UpdateTimer::GetCurrentClock();
+}
+
+void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot const& snapshot,
+									 CommandSink const& submitCommand)
+{
+	sf::RenderWindow& gfx = *window.GetHandle();
+	std::string bridgeState;
+	switch (snapshot.transportState)
+	{
+	case TransportState::Stopped:
+		bridgeState = "Bridge stopped";
+		break;
+	case TransportState::Disconnected:
+		bridgeState = "Bridge disconnected";
+		break;
+	case TransportState::Listening:
+		bridgeState = "Bridge :" + std::to_string(snapshot.bridgePort) + " waiting for mGBA";
+		break;
+	case TransportState::Connected:
+		bridgeState = "Bridge :" + std::to_string(snapshot.bridgePort) + " connected";
+		break;
+	}
+	m_Assets->DrawCenteredText(gfx, bridgeState, c_CentreOffset + sf::Vector2f(0, 72), 10, m_Assets->m_DarkFontColour);
+
+	if (!snapshot.connections.empty())
+		return;
+
+	if (!m_EditingBridgePort && window.ButtonJustReleased(sf::Keyboard::P))
+	{
+		m_EditingBridgePort = true;
+		window.SetInputText(std::to_string(snapshot.bridgePort));
+	}
+	if (m_EditingBridgePort)
+	{
+		window.SetInputText(SanitiseConnectionAddress(window.GetInputText(), true));
+		m_Assets->DrawCenteredText(gfx,
+								   "Bridge port: " + window.GetInputText() + m_Assets->m_CursorPosAnimText +
+									   "  [ENTER] save  [ESC] cancel",
+								   c_CentreOffset + sf::Vector2f(0, 84), 9, m_Assets->m_DarkFontColour);
+		if (window.ButtonJustReleased(sf::Keyboard::Return))
+		{
+			rogue::app::UiCommand command;
+			command.type = rogue::app::UiCommand::Type::SetBridgePort;
+			command.value = window.GetInputText();
+			(void)submitCommand(std::move(command));
+			m_EditingBridgePort = false;
+			window.ClearInputText();
+		}
+		else if (window.ButtonJustReleased(sf::Keyboard::Escape))
+		{
+			m_EditingBridgePort = false;
+			window.ClearInputText();
+		}
+		return;
+	}
+
+	if (window.ButtonJustReleased(sf::Keyboard::E))
+	{
+		rogue::app::UiCommand command;
+		command.type = rogue::app::UiCommand::Type::ExportBridgeScript;
+		(void)submitCommand(std::move(command));
+		m_ActionMessage = "Export requested";
+	}
+	if (window.ButtonJustReleased(sf::Keyboard::C))
+	{
+		if (snapshot.bridgeScriptPath.empty())
+		{
+			m_ActionMessage = "Script has not been exported";
+		}
+		else
+		{
+			auto const begin = snapshot.bridgeScriptPath.begin();
+			sf::Clipboard::setString(sf::String::fromUtf8(begin, snapshot.bridgeScriptPath.end()));
+			m_ActionMessage = "Script path copied";
+		}
+	}
+	if (window.ButtonJustReleased(sf::Keyboard::R))
+	{
+		std::string error;
+		if (snapshot.bridgeScriptPath.empty() ||
+			!rogue::platform::RevealDirectory(rogue::platform::PathFromUtf8(snapshot.bridgeScriptPath).parent_path(),
+											  error))
+		{
+			m_ActionMessage = error.empty() ? "Script has not been exported" : error;
+			LOG_WARN("Cannot reveal bridge script: %s", m_ActionMessage.c_str());
+		}
+		else
+		{
+			m_ActionMessage = "Script folder revealed";
+		}
+	}
+
+	std::string const& action = m_ActionMessage.empty() ? snapshot.bridgeMessage : m_ActionMessage;
+	std::string controls = "[P] port  [E] export  [C] copy path  [R] reveal";
+	if (!action.empty())
+		controls += "  -  " + action;
+	m_Assets->DrawCenteredText(gfx, controls, c_CentreOffset + sf::Vector2f(0, 84), 8, m_Assets->m_LightFontColour);
 }
 
 void PrimaryUI::RenderAwaitingPage(Window& window)

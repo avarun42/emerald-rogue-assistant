@@ -40,6 +40,12 @@ jobs:
       CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install Linux desktop dependencies
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get update && sudo apt-get install --yes
+          libfreetype6-dev libgl1-mesa-dev libudev-dev libx11-dev libxcursor-dev
+          libxext-dev libxi-dev libxrandr-dev
       - name: Configure MSVC environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
@@ -62,6 +68,11 @@ jobs:
       UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
     steps:
       - uses: actions/checkout@v4
+      - name: Install Linux desktop dependencies
+        run: >-
+          sudo apt-get update && sudo apt-get install --yes
+          libfreetype6-dev libgl1-mesa-dev libudev-dev libx11-dev libxcursor-dev
+          libxext-dev libxi-dev libxrandr-dev
       - name: Configure
         run: cmake --preset ci-sanitizers --fresh -G Ninja
       - name: Build
@@ -90,6 +101,11 @@ jobs:
       CXX: clang++
     steps:
       - uses: actions/checkout@v4
+      - name: Install Linux desktop dependencies
+        run: >-
+          sudo apt-get update && sudo apt-get install --yes
+          libfreetype6-dev libgl1-mesa-dev libudev-dev libx11-dev libxcursor-dev
+          libxext-dev libxi-dev libxrandr-dev
       - name: Show analyzer version
         run: clang-tidy --version
       - name: Configure
