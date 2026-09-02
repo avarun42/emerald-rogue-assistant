@@ -49,3 +49,7 @@ The frozen loopback wire format is documented in
 [bridge-protocol.md](bridge-protocol.md).
 The standalone process, packaged-resource model, and bridge controls are
 documented in [desktop-application.md](desktop-application.md).
+The durable Home Box representation and recovery policy are documented in
+[home-box-format.md](home-box-format.md). The peer compatibility envelope and
+opaque ROM payload channels are documented in
+[multiplayer-protocol.md](multiplayer-protocol.md).

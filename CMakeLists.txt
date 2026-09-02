@@ -79,6 +79,7 @@ add_library(
         RogueAssistantCpp/Src/Platform/FileSystem.cpp
         RogueAssistantCpp/Src/Platform/ResourceLocator.cpp
         RogueAssistantCpp/Src/Platform/Utf8.cpp
+        RogueAssistantCpp/Src/Storage/HomeBoxFile.cpp
         RogueAssistantCpp/Src/Timer.cpp
         RogueAssistantCpp/Src/UserData.cpp
 )
@@ -132,6 +133,7 @@ add_library(
     rogue_multiplayer
     OBJECT
         RogueAssistantCpp/Src/Behaviours/MultiplayerBehaviour.cpp
+        RogueAssistantCpp/Src/Multiplayer/MultiplayerProtocol.cpp
 )
 target_include_directories(
     rogue_multiplayer

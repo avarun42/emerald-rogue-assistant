@@ -37,3 +37,6 @@ local quality-gate instructions in [`docs/development.md`](docs/development.md).
 Standalone usage, bridge controls, resource locations, and command-line
 behavior are documented in
 [`docs/desktop-application.md`](docs/desktop-application.md).
+Home Box migration/recovery and the modern multiplayer compatibility gate are
+documented in [`docs/home-box-format.md`](docs/home-box-format.md) and
+[`docs/multiplayer-protocol.md`](docs/multiplayer-protocol.md).

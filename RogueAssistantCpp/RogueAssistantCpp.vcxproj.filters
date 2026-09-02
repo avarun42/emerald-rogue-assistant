@@ -70,6 +70,12 @@
     <ClCompile Include="Src\Behaviours\HomeBoxBehaviour.cpp">
       <Filter>Src\Behaviours</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Multiplayer\MultiplayerProtocol.cpp">
+      <Filter>Src\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Storage\HomeBoxFile.cpp">
+      <Filter>Src\Storage</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Bridge\GameMemoryTransport.cpp">
       <Filter>Src\Bridge</Filter>
     </ClCompile>
@@ -204,6 +210,12 @@
     </ClInclude>
     <ClInclude Include="Inc\Behaviours\HomeBoxBehaviour.h">
       <Filter>Inc\Behaviours</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Multiplayer\MultiplayerProtocol.h">
+      <Filter>Inc\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Storage\HomeBoxFile.h">
+      <Filter>Inc\Storage</Filter>
     </ClInclude>
     <ClInclude Include="Inc\UserData.h">
       <Filter>Inc</Filter>
@@ -360,6 +372,9 @@
     <ClInclude Include="Inc\RogueAssistantVersion.h">
       <Filter>Inc</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\RomCompatibility.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="External">
@@ -400,6 +415,18 @@
     </Filter>
     <Filter Include="Src\Platform">
       <UniqueIdentifier>{07ff41da-b765-4785-bf66-8bb4ff6a3378}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Multiplayer">
+      <UniqueIdentifier>{cc1c9d02-e37d-4797-b11f-730de67b4b1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Multiplayer">
+      <UniqueIdentifier>{95863a29-175f-4813-8576-963103d2c7f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Storage">
+      <UniqueIdentifier>{8c18e44d-aeb7-49e4-b571-827c3819c723}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Storage">
+      <UniqueIdentifier>{43d10365-f56c-4305-9671-e2f2498b92b6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

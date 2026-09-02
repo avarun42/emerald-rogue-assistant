@@ -4,19 +4,14 @@
 #include "GameConnection.h"
 #include "GameData.h"
 #include "Log.h"
-
-// Make sure to change the same value in the Game if this ever changes
-// (These numbers must match in order to connect)
-#define ROGUE_ASSISTANT_COMPAT_VERSION 3
+#include "RomCompatibility.h"
 
 void CommonBehaviour::OnAttach(GameConnection&)
 {
-
 }
 
 void CommonBehaviour::OnDetach(GameConnection&)
 {
-
 }
 
 void CommonBehaviour::OnUpdate(GameConnection& game)
@@ -26,19 +21,18 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
 
-	if (rogueHeader.rogueAssistantCompatVersion != ROGUE_ASSISTANT_COMPAT_VERSION)
+	if (rogueHeader.rogueAssistantCompatVersion != rogue::rom::RequiredAssistantApi)
 	{
-		game.ReportError("Cannot connect to Game. Do you need\nto update RogueAssistant?");
+		game.ReportError("Unsupported ROM Assistant API.\nRogue Assistant 1.0 requires API 3.");
 		game.Disconnect();
 		return;
 	}
 
-
 	// Notify game that connected, by constantly spamming 0 into the confirm address
 	//
 	u32 value = 0;
-	game.WriteRequest(CreateAnonymousMessageId(), rogueHeader.assistantState + rogueHeader.assistantConfirmOffset, &value, rogueHeader.assistantConfirmSize);
-
+	game.WriteRequest(CreateAnonymousMessageId(), rogueHeader.assistantState + rogueHeader.assistantConfirmOffset,
+					  &value, rogueHeader.assistantConfirmSize);
 
 	// Handle multiplayer connect/disconnect
 	//
@@ -49,7 +43,7 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 			u8 const* multiplayerBlob = game.GetObservedGameMemory().GetMultiplayerStateBlob();
 
 			u8 requestFlags = multiplayerBlob[rogueHeader.netRequestStateOffset];
-			//u8 currentFlags = multiplayerBlob[rogueHeader.netCurrentStateOffset];
+			// u8 currentFlags = multiplayerBlob[rogueHeader.netCurrentStateOffset];
 
 			if (requestFlags != 0)
 			{

@@ -265,6 +265,7 @@
     <ClCompile Include="Src\Behaviours\CommonBehaviour.cpp" />
     <ClCompile Include="Src\Behaviours\HomeBoxBehaviour.cpp" />
     <ClCompile Include="Src\Behaviours\MultiplayerBehaviour.cpp" />
+    <ClCompile Include="Src\Multiplayer\MultiplayerProtocol.cpp" />
     <ClCompile Include="Src\Bridge\GameMemoryTransport.cpp" />
     <ClCompile Include="Src\Bridge\BridgeProtocol.cpp" />
     <ClCompile Include="Src\Bridge\GameSession.cpp" />
@@ -286,6 +287,7 @@
     <ClCompile Include="Src\Platform\FileSystem.cpp" />
     <ClCompile Include="Src\Platform\ResourceLocator.cpp" />
     <ClCompile Include="Src\Platform\Utf8.cpp" />
+    <ClCompile Include="Src\Storage\HomeBoxFile.cpp" />
     <ClCompile Include="Src\Timer.cpp" />
     <ClCompile Include="Src\UI\PrimaryUI.cpp" />
     <ClCompile Include="Src\UI\Window.cpp" />
@@ -421,6 +423,7 @@
     <ClInclude Include="Inc\Behaviours\CommonBehaviour.h" />
     <ClInclude Include="Inc\Behaviours\HomeBoxBehaviour.h" />
     <ClInclude Include="Inc\Behaviours\MultiplayerBehaviour.h" />
+    <ClInclude Include="Inc\Multiplayer\MultiplayerProtocol.h" />
     <ClInclude Include="Inc\DataStream.h" />
     <ClInclude Include="Inc\Defines.h" />
     <ClInclude Include="Inc\Endian.h" />
@@ -440,7 +443,9 @@
     <ClInclude Include="Inc\Platform\ResourceLocator.h" />
     <ClInclude Include="Inc\Platform\Utf8.h" />
     <ClInclude Include="Inc\RogueAssistantVersion.h" />
+    <ClInclude Include="Inc\RomCompatibility.h" />
     <ClInclude Include="Inc\StringUtils.h" />
+    <ClInclude Include="Inc\Storage\HomeBoxFile.h" />
     <ClInclude Include="Inc\Timer.h" />
     <ClInclude Include="Inc\UI\PrimaryUI.h" />
     <ClInclude Include="Inc\UI\Window.h" />

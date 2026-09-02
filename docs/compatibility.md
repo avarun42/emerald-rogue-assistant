@@ -18,3 +18,7 @@ validation.
 
 The 1.0.0 support contract is mGBA 0.10.5 or newer, ROM Assistant API 3, and
 both Vanilla and EX editions. Other emulators are out of scope.
+
+The concrete storage and peer wire contracts are frozen in
+[home-box-format.md](home-box-format.md) and
+[multiplayer-protocol.md](multiplayer-protocol.md).

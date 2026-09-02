@@ -1,11 +1,17 @@
 #include "ObservedGameMemory.h"
+#include "Bridge/BridgeProtocol.h"
 #include "Endian.h"
 #include "GameConnection.h"
 #include "Log.h"
 
-
 // Helpers
 //
+
+namespace
+{
+constexpr std::uint32_t MaximumObservedReadSize =
+	rogue::bridge::MaximumFrameBodyLength - rogue::bridge::FrameBodyHeaderSize;
+}
 
 enum class ObservedMemoryID : u16
 {
@@ -27,8 +33,7 @@ inline static GameMessageID CreateMessageId(GameMessageChannel channel, Observed
 // ObservedBlob
 //
 
-ObservedBlob::ObservedBlob(size_t size)
-	: m_IsValid(false)
+ObservedBlob::ObservedBlob(size_t size) : m_IsValid(false)
 {
 	Resize(size);
 }
@@ -62,8 +67,7 @@ void ObservedBlob::Clear()
 // ObservedGameMemory
 //
 
-ObservedGameMemory::ObservedGameMemory(GameConnection& game)
-	: m_Game(game)
+ObservedGameMemory::ObservedGameMemory(GameConnection& game) : m_Game(game)
 {
 }
 
@@ -84,13 +88,12 @@ void ObservedGameMemory::Update()
 		// Both headers are valid, so can update other memory now
 		GameMessageID messageId;
 
-
 		// Grab assistant state
 		//
 		// NOTE: This is laggy to get, as it's so large
 		// Should consider setting up a system which will grab in smaller sizes over multiple frames
-		//messageId = CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::AssitantState);
-		//m_Game.ReadRequest(messageId, m_RogueHeader->assistantState, m_AssistantState.GetSize());
+		// messageId = CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::AssitantState);
+		// m_Game.ReadRequest(messageId, m_RogueHeader->assistantState, m_AssistantState.GetSize());
 
 		// Grab multiplayer state, if we have one
 		//
@@ -99,6 +102,13 @@ void ObservedGameMemory::Update()
 
 		if (m_MultiplayerStatePtr.IsValid() && m_MultiplayerStatePtr.Get() != 0)
 		{
+			if (m_RogueHeader->netMultiplayerSize == 0 || m_RogueHeader->netMultiplayerSize > MaximumObservedReadSize)
+			{
+				LOG_ERROR("Multiplayer state size is outside 1..1 MiB");
+				m_Game.ReportError("Cannot use multiplayer: invalid ROM state size.");
+				m_Game.Disconnect();
+				return;
+			}
 			if (m_MultiplayerState.GetSize() != m_RogueHeader->netMultiplayerSize)
 				m_MultiplayerState.Resize(m_RogueHeader->netMultiplayerSize);
 
@@ -118,6 +128,13 @@ void ObservedGameMemory::Update()
 
 		if (m_HomeBoxStatePtr.IsValid() && m_HomeBoxStatePtr.Get() != 0)
 		{
+			if (m_RogueHeader->homeBoxSize == 0 || m_RogueHeader->homeBoxSize > MaximumObservedReadSize)
+			{
+				LOG_ERROR("Home Box state size is outside 1..1 MiB");
+				m_Game.ReportError("Cannot use Home Box: invalid ROM state size.");
+				m_Game.Disconnect();
+				return;
+			}
 			if (m_HomeBoxState.GetSize() != m_RogueHeader->homeBoxSize)
 				m_HomeBoxState.Resize(m_RogueHeader->homeBoxSize);
 
@@ -228,13 +245,15 @@ bool ObservedGameMemory::RequestPokemonStorageData(u32 boxId)
 	{
 		GameStructures::RogueAssistantHeader const& rogueHeader = m_Game.GetObservedGameMemory().GetRogueHeader();
 
-		GameMessageID messageId = CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::GamePokemonStorageData);
+		GameMessageID messageId =
+			CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::GamePokemonStorageData);
 
-		m_Game.ReadRequest(messageId, GetPokemonStoragePtr() + rogueHeader.homeDestMonSize * boxId, rogueHeader.homeDestMonSize);
+		m_Game.ReadRequest(messageId, GetPokemonStoragePtr() + rogueHeader.homeDestMonSize * boxId,
+						   rogueHeader.homeDestMonSize);
 		m_PokemonStorageData.Resize(rogueHeader.homeDestMonSize);
 		return true;
 	}
 
 	return false;
-	//m_PokemonStorageData.Resize()
+	// m_PokemonStorageData.Resize()
 }
