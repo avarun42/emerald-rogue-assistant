@@ -38,3 +38,6 @@ The native DLL transport remains a temporary adapter until the socket path has
 passed feature parity. Each migration increment must leave its applicable
 targets buildable and tested. Formatting, dependency upgrades, protocol
 changes, and behavior changes are separate review units.
+
+Filesystem roots, strict settings behavior, resource lookup, and the Windows
+legacy import policy are documented in [platform-services.md](platform-services.md).

@@ -70,7 +70,14 @@ add_library(
     STATIC
         RogueAssistantCpp/Src/DataStream.cpp
         RogueAssistantCpp/Src/GameData.cpp
+        RogueAssistantCpp/Src/Log.cpp
+        RogueAssistantCpp/Src/Platform/AppPaths.cpp
+        RogueAssistantCpp/Src/Platform/Configuration.cpp
+        RogueAssistantCpp/Src/Platform/FileSystem.cpp
+        RogueAssistantCpp/Src/Platform/ResourceLocator.cpp
+        RogueAssistantCpp/Src/Platform/Utf8.cpp
         RogueAssistantCpp/Src/Timer.cpp
+        RogueAssistantCpp/Src/UserData.cpp
 )
 target_include_directories(
     rogue_core
@@ -87,6 +94,15 @@ target_link_libraries(
         rogue_project_warnings
 )
 rogue_enable_clang_tidy(rogue_core)
+
+set(
+    ROGUE_RESOURCE_FILES
+    RogueAssistantCpp/Assets/WobbuffetImage.png
+    RogueAssistantCpp/Assets/poketch_frame.png
+    RogueAssistantCpp/Assets/pokemon-emerald-pro.ttf
+    RogueAssistantCpp/Assets/RogueAssistant_mGBA.lua
+)
+install(FILES ${ROGUE_RESOURCE_FILES} DESTINATION resources)
 
 if(ROGUE_BUILD_TESTS)
     include(cmake/Dependencies.cmake)

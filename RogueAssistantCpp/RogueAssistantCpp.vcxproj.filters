@@ -68,6 +68,21 @@
       <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="Src\LuaMain.cpp" />
+    <ClCompile Include="Src\Platform\AppPaths.cpp">
+      <Filter>Src\Platform</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Platform\Configuration.cpp">
+      <Filter>Src\Platform</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Platform\FileSystem.cpp">
+      <Filter>Src\Platform</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Platform\ResourceLocator.cpp">
+      <Filter>Src\Platform</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Platform\Utf8.cpp">
+      <Filter>Src\Platform</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\imstb_truetype.h">
@@ -258,6 +273,24 @@
     <ClInclude Include="External\SFML\include\SFML\System.hpp" />
     <ClInclude Include="External\SFML\include\SFML\Window.hpp" />
     <ClInclude Include="Inc\GameDataRequest.h" />
+    <ClInclude Include="Inc\Endian.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Platform\AppPaths.h">
+      <Filter>Inc\Platform</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Platform\Configuration.h">
+      <Filter>Inc\Platform</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Platform\FileSystem.h">
+      <Filter>Inc\Platform</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Platform\ResourceLocator.h">
+      <Filter>Inc\Platform</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Platform\Utf8.h">
+      <Filter>Inc\Platform</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="External">
@@ -280,6 +313,12 @@
     </Filter>
     <Filter Include="Src\UI">
       <UniqueIdentifier>{807a428c-7dd3-4788-b9ba-3dc50438f964}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Platform">
+      <UniqueIdentifier>{b29e0f95-0927-446f-a80c-fcf7aeeea674}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Platform">
+      <UniqueIdentifier>{07ff41da-b765-4785-bf66-8bb4ff6a3378}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

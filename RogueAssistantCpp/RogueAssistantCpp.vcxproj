@@ -271,6 +271,11 @@
     <ClCompile Include="Src\LuaMain.cpp" />
     <ClCompile Include="Src\Main.cpp" />
     <ClCompile Include="Src\ObservedGameMemory.cpp" />
+    <ClCompile Include="Src\Platform\AppPaths.cpp" />
+    <ClCompile Include="Src\Platform\Configuration.cpp" />
+    <ClCompile Include="Src\Platform\FileSystem.cpp" />
+    <ClCompile Include="Src\Platform\ResourceLocator.cpp" />
+    <ClCompile Include="Src\Platform\Utf8.cpp" />
     <ClCompile Include="Src\Timer.cpp" />
     <ClCompile Include="Src\UI\PrimaryUI.cpp" />
     <ClCompile Include="Src\UI\Window.cpp" />
@@ -397,6 +402,7 @@
     <ClInclude Include="Inc\Behaviours\MultiplayerBehaviour.h" />
     <ClInclude Include="Inc\DataStream.h" />
     <ClInclude Include="Inc\Defines.h" />
+    <ClInclude Include="Inc\Endian.h" />
     <ClInclude Include="Inc\GameConnection.h" />
     <ClInclude Include="Inc\GameConnectionBehaviour.h" />
     <ClInclude Include="Inc\GameConnectionManager.h" />
@@ -406,6 +412,11 @@
     <ClInclude Include="Inc\GameDataRequest.h" />
     <ClInclude Include="Inc\Log.h" />
     <ClInclude Include="Inc\ObservedGameMemory.h" />
+    <ClInclude Include="Inc\Platform\AppPaths.h" />
+    <ClInclude Include="Inc\Platform\Configuration.h" />
+    <ClInclude Include="Inc\Platform\FileSystem.h" />
+    <ClInclude Include="Inc\Platform\ResourceLocator.h" />
+    <ClInclude Include="Inc\Platform\Utf8.h" />
     <ClInclude Include="Inc\StringUtils.h" />
     <ClInclude Include="Inc\Timer.h" />
     <ClInclude Include="Inc\UI\PrimaryUI.h" />
