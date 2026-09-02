@@ -13,10 +13,10 @@ cmake --build --preset dev-debug --parallel
 ctest --preset dev-debug
 ```
 
-`dev-release` provides the corresponding optimized build. Dependencies are
-downloaded from checksum-pinned release archives during configuration. The
-desktop target currently builds the parity versions SFML 2.6.2 and ENet 1.3.17
-from source; dependency upgrades are isolated later review units.
+`dev-release` provides the corresponding optimized build. Direct dependencies
+are downloaded from checksum-pinned release archives during configuration.
+The desktop target builds SFML 3.1.0 and ENet 1.3.17 from source; SFML's own
+transitive sources follow the revisions pinned by its release build.
 
 The resulting executable is `RogueAssistant.exe` on Windows, `RogueAssistant`
 on Linux, and `RogueAssistant.app` on macOS. A smoke check does not create a

@@ -10,8 +10,8 @@ set(SFML_USE_SYSTEM_DEPS OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
     SFML
-    URL https://github.com/SFML/SFML/archive/refs/tags/2.6.2.tar.gz
-    URL_HASH SHA256=15ff4d608a018f287c6a885db0a2da86ea389e516d2323629e4d4407a7ce047f
+    URL https://github.com/SFML/SFML/archive/refs/tags/3.1.0.tar.gz
+    URL_HASH SHA256=91209a112c2bd0bc6f4ce0d5f3e413cfb48b57c0de59f5507dc81f71b1ad7a5c
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
@@ -27,7 +27,6 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SFML ENET)
 
-# SFML 2.6 intentionally remains a parity dependency until the isolated SFML 3
-# migration. Treat its public headers as third-party so current libc++ warnings
-# do not become Rogue Assistant project errors.
+# Treat SFML's public headers as third-party so dependency diagnostics do not
+# become Rogue Assistant project errors.
 set_target_properties(sfml-system sfml-window sfml-graphics PROPERTIES SYSTEM TRUE)

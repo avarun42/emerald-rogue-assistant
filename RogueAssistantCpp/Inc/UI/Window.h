@@ -10,7 +10,7 @@ class Window;
 
 namespace sf
 {
-	class RenderWindow;
+class RenderWindow;
 }
 
 typedef std::function<bool(Window*, void*)> WindowCallback;
@@ -28,7 +28,7 @@ struct WindowConfig
 
 class Window
 {
-public:
+  public:
 	Window(WindowConfig const&);
 	~Window();
 
@@ -49,15 +49,35 @@ public:
 		return m_WindowHandle.get();
 	}
 
-	inline bool IsButtonHeld(sf::Keyboard::Key key) const { return m_CurrentKeyStates.test(key); }
-	inline bool ButtonJustPressed(sf::Keyboard::Key key) const { return m_CurrentKeyStates.test(key) && !m_PreviousKeyStates.test(key); }
-	inline bool ButtonJustReleased(sf::Keyboard::Key key) const { return !m_CurrentKeyStates.test(key) && m_PreviousKeyStates.test(key); }
+	inline bool IsButtonHeld(sf::Keyboard::Key key) const
+	{
+		return m_CurrentKeyStates.test(static_cast<std::size_t>(key));
+	}
+	inline bool ButtonJustPressed(sf::Keyboard::Key key) const
+	{
+		auto const index = static_cast<std::size_t>(key);
+		return m_CurrentKeyStates.test(index) && !m_PreviousKeyStates.test(index);
+	}
+	inline bool ButtonJustReleased(sf::Keyboard::Key key) const
+	{
+		auto const index = static_cast<std::size_t>(key);
+		return !m_CurrentKeyStates.test(index) && m_PreviousKeyStates.test(index);
+	}
 
-	inline void ClearInputText() { m_TextEntered = ""; }
-	inline void SetInputText(std::string const& text) { m_TextEntered = text; }
-	inline std::string const& GetInputText() const { return m_TextEntered; }
+	inline void ClearInputText()
+	{
+		m_TextEntered = "";
+	}
+	inline void SetInputText(std::string const& text)
+	{
+		m_TextEntered = text;
+	}
+	inline std::string const& GetInputText() const
+	{
+		return m_TextEntered;
+	}
 
-private:
+  private:
 	WindowConfig m_Config;
 	std::unique_ptr<sf::RenderWindow> m_WindowHandle;
 

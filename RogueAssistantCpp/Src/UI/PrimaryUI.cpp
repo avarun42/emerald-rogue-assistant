@@ -1,12 +1,11 @@
 #include "UI/PrimaryUI.h"
-#include "UI/Window.h"
 #include "Defines.h"
 #include "Log.h"
 #include "Platform/BridgeScript.h"
-#include "Platform/FileSystem.h"
 #include "Platform/ResourceLocator.h"
 #include "Platform/Utf8.h"
 #include "RogueAssistantVersion.h"
+#include "UI/Window.h"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
@@ -40,21 +39,20 @@ static std::string SanitiseConnectionAddress(std::string const& address, bool re
 	return result;
 }
 
-template <typename T>
-static bool LoadAsset(T& output, std::filesystem::path const& resourceDirectory, rogue::platform::Resource resource)
+static bool LoadFont(sf::Font& output, std::filesystem::path const& resourceDirectory)
 {
-	if (!resourceDirectory.empty())
-	{
-		rogue::platform::ResourceLocator const resources(resourceDirectory);
-		std::vector<std::byte> bytes;
-		std::string error;
-		if (rogue::platform::ReadFile(resources.Resolve(resource), 32U * 1024U * 1024U, bytes, error) &&
-			output.loadFromMemory(bytes.data(), bytes.size()))
-		{
-			return true;
-		}
-	}
-	return false;
+	if (resourceDirectory.empty())
+		return false;
+	rogue::platform::ResourceLocator const resources(resourceDirectory);
+	return output.openFromFile(resources.Resolve(rogue::platform::Resource::Font));
+}
+
+static bool LoadFrame(sf::Texture& output, std::filesystem::path const& resourceDirectory)
+{
+	if (resourceDirectory.empty())
+		return false;
+	rogue::platform::ResourceLocator const resources(resourceDirectory);
+	return output.loadFromFile(resources.Resolve(rogue::platform::Resource::Frame));
 }
 
 struct AssetCollection
@@ -79,14 +77,14 @@ struct AssetCollection
 		m_LightFontColour = sf::Color(56, 80, 48);
 		m_ErrorFontColour = sf::Color(196, 24, 24);
 
-		bool fontLoaded = LoadAsset(m_Font, resourceDirectory, rogue::platform::Resource::Font);
+		bool fontLoaded = LoadFont(m_Font, resourceDirectory);
 		if (!fontLoaded)
 		{
 			throw std::runtime_error("cannot load Rogue Assistant font");
 		}
 		m_Font.setSmooth(false);
 
-		bool frameLoaded = LoadAsset(m_PoketchOverlay, resourceDirectory, rogue::platform::Resource::Frame);
+		bool frameLoaded = LoadFrame(m_PoketchOverlay, resourceDirectory);
 		if (!frameLoaded)
 		{
 			throw std::runtime_error("cannot load Rogue Assistant frame texture");
@@ -94,41 +92,32 @@ struct AssetCollection
 		m_PoketchOverlay.setSmooth(false);
 	}
 
-	void DrawCenteredText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize, sf::Color const& colour)
+	void DrawCenteredText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
+						  sf::Color const& colour)
 	{
-		sf::Text text;
-		text.setFont(m_Font);
+		sf::Text text(m_Font, msg, static_cast<unsigned int>(fontSize));
 		text.setFillColor(colour);
-		text.setCharacterSize(fontSize);
-
-		text.setString(msg);
-		text.setOrigin(sf::Vector2f(text.getLocalBounds().width / 2, 0));
+		text.setOrigin(sf::Vector2f(text.getLocalBounds().size.x / 2, 0));
 		text.setPosition(pos);
 		gfx.draw(text);
 	}
 
-	void DrawLeftAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize, sf::Color const& colour)
+	void DrawLeftAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
+							 sf::Color const& colour)
 	{
-		sf::Text text;
-		text.setFont(m_Font);
+		sf::Text text(m_Font, msg, static_cast<unsigned int>(fontSize));
 		text.setFillColor(colour);
-		text.setCharacterSize(fontSize);
-
-		text.setString(msg);
 		text.setOrigin(sf::Vector2f(0, 0));
 		text.setPosition(pos);
 		gfx.draw(text);
 	}
 
-	void DrawRightAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize, sf::Color const& colour)
+	void DrawRightAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
+							  sf::Color const& colour)
 	{
-		sf::Text text;
-		text.setFont(m_Font);
+		sf::Text text(m_Font, msg, static_cast<unsigned int>(fontSize));
 		text.setFillColor(colour);
-		text.setCharacterSize(fontSize);
-
-		text.setString(msg);
-		text.setOrigin(sf::Vector2f(text.getLocalBounds().width, 0));
+		text.setOrigin(sf::Vector2f(text.getLocalBounds().size.x, 0));
 		text.setPosition(pos);
 		gfx.draw(text);
 	}
@@ -150,8 +139,7 @@ void PrimaryUI::SetToStubTheme()
 	m_Assets->m_ErrorFontColour = sf::Color(196, 24, 24);
 }
 
-void PrimaryUI::Render(
-	Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand)
+void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand)
 {
 	// Calc delta time
 	TimeDurationNS deltaTimeNS = UpdateTimer::GetCurrentClock() - m_LastDrawTime;
@@ -177,7 +165,6 @@ void PrimaryUI::Render(
 	if (m_Assets->m_FramesRemainderS >= 0.75)
 		m_Assets->m_CursorPosAnimText = "|";
 
-
 	sf::RenderWindow& gfx = *window.GetHandle();
 
 	// Snap window to aspect ratio
@@ -186,10 +173,9 @@ void PrimaryUI::Render(
 
 		// Snap based on how much window is dragged left or right
 		sf::Vector2u snappedWindowSize(
-			currentWindowSize.x,
-			(u32)std::max(1.0, std::round(currentWindowSize.x / c_ViewAspectW) * c_ViewAspectH)
+			currentWindowSize.x, (u32)std::max(1.0, std::round(currentWindowSize.x / c_ViewAspectW) * c_ViewAspectH)
 			//(u32)std::max(1.0, std::round(currentWindowSize.y / c_ViewAspectH) * c_ViewAspectW),
-			//currentWindowSize.y
+			// currentWindowSize.y
 		);
 
 		if (currentWindowSize != snappedWindowSize)
@@ -199,35 +185,24 @@ void PrimaryUI::Render(
 	}
 
 	// Dimension is based on the poketch frame asset
-	sf::View view(sf::FloatRect(-c_ViewWidth / 2, -c_ViewHeight / 2, c_ViewWidth, c_ViewHeight));
+	sf::View view(
+		sf::FloatRect(sf::Vector2f(-c_ViewWidth / 2, -c_ViewHeight / 2), sf::Vector2f(c_ViewWidth, c_ViewHeight)));
 	gfx.setView(view);
 
-
 	gfx.clear(m_Assets->m_ClearColour);
-
 
 	// Draw title
 	std::string const& errorStr = snapshot.error;
 
 	if (errorStr.empty())
 	{
-		m_Assets->DrawCenteredText(
-			gfx,
-			"Rogue Assistant",
-			c_CentreOffset + sf::Vector2f(0, -86),
-			32,
-			m_Assets->m_DarkFontColour
-		);
+		m_Assets->DrawCenteredText(gfx, "Rogue Assistant", c_CentreOffset + sf::Vector2f(0, -86), 32,
+								   m_Assets->m_DarkFontColour);
 	}
 	else
 	{
-		m_Assets->DrawCenteredText(
-			gfx,
-			errorStr,
-			c_CentreOffset + sf::Vector2f(0, -86),
-			16,
-			m_Assets->m_ErrorFontColour
-		);
+		m_Assets->DrawCenteredText(gfx, errorStr, c_CentreOffset + sf::Vector2f(0, -86), 16,
+								   m_Assets->m_ErrorFontColour);
 	}
 	m_Assets->DrawRightAlignedText(gfx, "v" ROGUE_ASSISTANT_VERSION_STRING, c_CentreOffset + sf::Vector2f(101, -90), 10,
 								   m_Assets->m_LightFontColour);
@@ -235,13 +210,8 @@ void PrimaryUI::Render(
 	// Print awaiting connection screen
 	if (snapshot.connections.empty())
 	{
-		m_Assets->DrawLeftAlignedText(
-			gfx,
-			"Please launch the Game " + m_Assets->m_LoadingSpinnerAnimText,
-			c_CentreOffset + sf::Vector2f(-74, -55),
-			16,
-			m_Assets->m_LightFontColour
-		);
+		m_Assets->DrawLeftAlignedText(gfx, "Please launch the Game " + m_Assets->m_LoadingSpinnerAnimText,
+									  c_CentreOffset + sf::Vector2f(-74, -55), 16, m_Assets->m_LightFontColour);
 
 		m_Assets->DrawLeftAlignedText(gfx,
 									  "How to connect to mGBA:\n"
@@ -251,7 +221,7 @@ void PrimaryUI::Render(
 									  "4. Locate and select\n\tRogueAssistant_mGBA.lua\n",
 									  c_CentreOffset + sf::Vector2f(-90, -40), 16, m_Assets->m_LightFontColour);
 
-		//m_Assets->DrawCenteredText(
+		// m_Assets->DrawCenteredText(
 		//	gfx,
 		//	"disconnected",
 		//	c_CentreOffset + sf::Vector2f(0, 60),
@@ -265,31 +235,26 @@ void PrimaryUI::Render(
 		int const connectionCount = static_cast<int>(snapshot.connections.size());
 		int prevConnIdx = m_CurrentConnectionIdx;
 
-		if (window.ButtonJustReleased(sf::Keyboard::Tab))
+		if (window.ButtonJustReleased(sf::Keyboard::Key::Tab))
 		{
 			m_CurrentConnectionIdx++;
 		}
 
 		m_CurrentConnectionIdx %= connectionCount;
 		rogue::app::ConnectionSnapshot const& connection = snapshot.connections[m_CurrentConnectionIdx];
-		bool const hasSwappedConnection = prevConnIdx != m_CurrentConnectionIdx
-			|| m_CurrentConnectionId != connection.id;
+		bool const hasSwappedConnection =
+			prevConnIdx != m_CurrentConnectionIdx || m_CurrentConnectionId != connection.id;
 		m_CurrentConnectionId = connection.id;
 
 		std::string connectionText = "Connected to Game";
 
 		if (connectionCount > 1)
 		{
-			connectionText += " " + std::to_string(m_CurrentConnectionIdx + 1) + " / " + std::to_string(connectionCount) + " [TAB]";
+			connectionText +=
+				" " + std::to_string(m_CurrentConnectionIdx + 1) + " / " + std::to_string(connectionCount) + " [TAB]";
 		}
 
-		m_Assets->DrawCenteredText(
-			gfx,
-			connectionText,
-			c_CentreOffset + sf::Vector2f(0, 60),
-			16,
-			sf::Color::Green
-		);
+		m_Assets->DrawCenteredText(gfx, connectionText, c_CentreOffset + sf::Vector2f(0, 60), 16, sf::Color::Green);
 
 		// Determine current page
 
@@ -302,7 +267,6 @@ void PrimaryUI::Render(
 			window.ClearInputText();
 		}
 		m_CurrentPage = newPage;
-
 
 		// Render specific page
 		switch (m_CurrentPage)
@@ -324,9 +288,8 @@ void PrimaryUI::Render(
 	RenderBridgeControls(window, snapshot, submitCommand);
 
 	// Draw poketch overlay last
-	sf::Sprite sprite;
+	sf::Sprite sprite(m_Assets->m_PoketchOverlay);
 	sprite.setOrigin(sf::Vector2f(c_ViewWidth / 2, c_ViewHeight / 2));
-	sprite.setTexture(m_Assets->m_PoketchOverlay);
 	gfx.draw(sprite);
 
 	// End draw
@@ -360,7 +323,7 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 	if (!snapshot.connections.empty())
 		return;
 
-	if (!m_EditingBridgePort && window.ButtonJustReleased(sf::Keyboard::P))
+	if (!m_EditingBridgePort && window.ButtonJustReleased(sf::Keyboard::Key::P))
 	{
 		m_EditingBridgePort = true;
 		window.SetInputText(std::to_string(snapshot.bridgePort));
@@ -372,7 +335,7 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 								   "Bridge port: " + window.GetInputText() + m_Assets->m_CursorPosAnimText +
 									   "  [ENTER] save  [ESC] cancel",
 								   c_CentreOffset + sf::Vector2f(0, 84), 9, m_Assets->m_DarkFontColour);
-		if (window.ButtonJustReleased(sf::Keyboard::Return))
+		if (window.ButtonJustReleased(sf::Keyboard::Key::Enter))
 		{
 			rogue::app::UiCommand command;
 			command.type = rogue::app::UiCommand::Type::SetBridgePort;
@@ -381,7 +344,7 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 			m_EditingBridgePort = false;
 			window.ClearInputText();
 		}
-		else if (window.ButtonJustReleased(sf::Keyboard::Escape))
+		else if (window.ButtonJustReleased(sf::Keyboard::Key::Escape))
 		{
 			m_EditingBridgePort = false;
 			window.ClearInputText();
@@ -389,14 +352,14 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 		return;
 	}
 
-	if (window.ButtonJustReleased(sf::Keyboard::E))
+	if (window.ButtonJustReleased(sf::Keyboard::Key::E))
 	{
 		rogue::app::UiCommand command;
 		command.type = rogue::app::UiCommand::Type::ExportBridgeScript;
 		(void)submitCommand(std::move(command));
 		m_ActionMessage = "Export requested";
 	}
-	if (window.ButtonJustReleased(sf::Keyboard::C))
+	if (window.ButtonJustReleased(sf::Keyboard::Key::C))
 	{
 		if (snapshot.bridgeScriptPath.empty())
 		{
@@ -409,7 +372,7 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 			m_ActionMessage = "Script path copied";
 		}
 	}
-	if (window.ButtonJustReleased(sf::Keyboard::R))
+	if (window.ButtonJustReleased(sf::Keyboard::Key::R))
 	{
 		std::string error;
 		if (snapshot.bridgeScriptPath.empty() ||
@@ -437,15 +400,10 @@ void PrimaryUI::RenderAwaitingPage(Window& window)
 	sf::RenderWindow& gfx = *window.GetHandle();
 
 	// Print state
-	m_Assets->DrawCenteredText(
-		gfx,
-		"Ready to go!",
-		c_CentreOffset + sf::Vector2f(0, -55),
-		16,
-		m_Assets->m_LightFontColour
-	);
+	m_Assets->DrawCenteredText(gfx, "Ready to go!", c_CentreOffset + sf::Vector2f(0, -55), 16,
+							   m_Assets->m_LightFontColour);
 
-	//m_Assets->DrawLeftAlignedText(
+	// m_Assets->DrawLeftAlignedText(
 	//	gfx,
 	//	"When Emerald Rogue needs input\nfrom Rogue Assistant, this screen\nwill update",
 	//	c_CentreOffset + sf::Vector2f(-90, -30),
@@ -455,19 +413,15 @@ void PrimaryUI::RenderAwaitingPage(Window& window)
 }
 
 void PrimaryUI::RenderMultiplayerPage(Window& window, rogue::app::UiSnapshot const& snapshot,
-	rogue::app::ConnectionSnapshot const& connection, bool initialLoad, CommandSink const& submitCommand)
+									  rogue::app::ConnectionSnapshot const& connection, bool initialLoad,
+									  CommandSink const& submitCommand)
 {
 	sf::RenderWindow& gfx = *window.GetHandle();
 	rogue::app::MultiplayerSnapshot const& multiplayer = connection.multiplayer;
 
 	// Titlt
-	m_Assets->DrawCenteredText(
-		gfx,
-		"=== Multiplayer ===",
-		c_CentreOffset + sf::Vector2f(0, -55),
-		16,
-		m_Assets->m_LightFontColour
-	);
+	m_Assets->DrawCenteredText(gfx, "=== Multiplayer ===", c_CentreOffset + sf::Vector2f(0, -55), 16,
+							   m_Assets->m_LightFontColour);
 
 	if (initialLoad)
 	{
@@ -487,26 +441,20 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, rogue::app::UiSnapshot con
 
 		if (multiplayer.requestingHost)
 		{
-			m_Assets->DrawLeftAlignedText(
-				gfx,
-				"What Port would you like to host on?\n" + window.GetInputText() + m_Assets->m_CursorPosAnimText + "\n\nPress [ENTER] to continue",
-				c_CentreOffset + sf::Vector2f(-90, -30),
-				16,
-				m_Assets->m_LightFontColour
-			);
+			m_Assets->DrawLeftAlignedText(gfx,
+										  "What Port would you like to host on?\n" + window.GetInputText() +
+											  m_Assets->m_CursorPosAnimText + "\n\nPress [ENTER] to continue",
+										  c_CentreOffset + sf::Vector2f(-90, -30), 16, m_Assets->m_LightFontColour);
 		}
 		else
 		{
-			m_Assets->DrawLeftAlignedText(
-				gfx,
-				"What is the IP address you would like\nto join?\n" + window.GetInputText() + m_Assets->m_CursorPosAnimText + "\n\nPress [ENTER] to continue",
-				c_CentreOffset + sf::Vector2f(-90, -30),
-				16,
-				m_Assets->m_LightFontColour
-			);
+			m_Assets->DrawLeftAlignedText(gfx,
+										  "What is the IP address you would like\nto join?\n" + window.GetInputText() +
+											  m_Assets->m_CursorPosAnimText + "\n\nPress [ENTER] to continue",
+										  c_CentreOffset + sf::Vector2f(-90, -30), 16, m_Assets->m_LightFontColour);
 		}
 
-		if (window.ButtonJustReleased(sf::Keyboard::Return))
+		if (window.ButtonJustReleased(sf::Keyboard::Key::Enter))
 		{
 			rogue::app::UiCommand command;
 			command.type = rogue::app::UiCommand::Type::ProvideMultiplayerAddress;
@@ -520,73 +468,42 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, rogue::app::UiSnapshot con
 	{
 		if (multiplayer.requestingHost)
 		{
-			m_Assets->DrawLeftAlignedText(
-				gfx,
-				"Hosting on Port:" + std::to_string(multiplayer.port),
-				c_CentreOffset + sf::Vector2f(-90, -40),
-				16,
-				m_Assets->m_LightFontColour
-			);
+			m_Assets->DrawLeftAlignedText(gfx, "Hosting on Port:" + std::to_string(multiplayer.port),
+										  c_CentreOffset + sf::Vector2f(-90, -40), 16, m_Assets->m_LightFontColour);
 		}
 		else
 		{
 			if (multiplayer.connected)
 			{
-				m_Assets->DrawLeftAlignedText(
-					gfx,
-					"Connected to Host",
-					c_CentreOffset + sf::Vector2f(-90, -40),
-					16,
-					m_Assets->m_LightFontColour
-				);
+				m_Assets->DrawLeftAlignedText(gfx, "Connected to Host", c_CentreOffset + sf::Vector2f(-90, -40), 16,
+											  m_Assets->m_LightFontColour);
 			}
 		}
 
 		if (!multiplayer.connected)
 		{
-			m_Assets->DrawLeftAlignedText(
-				gfx,
-				"Connection being established " + m_Assets->m_LoadingSpinnerAnimText,
-				c_CentreOffset + sf::Vector2f(-90, -30),
-				16,
-				m_Assets->m_LightFontColour
-			);
+			m_Assets->DrawLeftAlignedText(gfx, "Connection being established " + m_Assets->m_LoadingSpinnerAnimText,
+										  c_CentreOffset + sf::Vector2f(-90, -30), 16, m_Assets->m_LightFontColour);
 		}
 	}
 }
 
-void PrimaryUI::RenderHomeBoxPage(
-	Window& window, rogue::app::HomeBoxSnapshot const& homeBox, bool /*initialLoad*/)
+void PrimaryUI::RenderHomeBoxPage(Window& window, rogue::app::HomeBoxSnapshot const& homeBox, bool /*initialLoad*/)
 {
 	sf::RenderWindow& gfx = *window.GetHandle();
 
 	// Print state
-	m_Assets->DrawCenteredText(
-		gfx,
-		"Transferring Pokémon Boxes",
-		c_CentreOffset + sf::Vector2f(0, -55),
-		16,
-		m_Assets->m_LightFontColour
-	);
+	m_Assets->DrawCenteredText(gfx, "Transferring Pokémon Boxes", c_CentreOffset + sf::Vector2f(0, -55), 16,
+							   m_Assets->m_LightFontColour);
 
 	if (homeBox.loading)
 	{
-		m_Assets->DrawCenteredText(
-			gfx,
-			"Loading" + m_Assets->m_LoadingSpinnerAnimText,
-			c_CentreOffset + sf::Vector2f(0, -40),
-			16,
-			m_Assets->m_LightFontColour
-		);
+		m_Assets->DrawCenteredText(gfx, "Loading" + m_Assets->m_LoadingSpinnerAnimText,
+								   c_CentreOffset + sf::Vector2f(0, -40), 16, m_Assets->m_LightFontColour);
 	}
 	else if (homeBox.saving)
 	{
-		m_Assets->DrawCenteredText(
-			gfx,
-			"Saving" + m_Assets->m_LoadingSpinnerAnimText,
-			c_CentreOffset + sf::Vector2f(0, -40),
-			16,
-			m_Assets->m_DarkFontColour
-		);
+		m_Assets->DrawCenteredText(gfx, "Saving" + m_Assets->m_LoadingSpinnerAnimText,
+								   c_CentreOffset + sf::Vector2f(0, -40), 16, m_Assets->m_DarkFontColour);
 	}
 }
