@@ -4,8 +4,7 @@
 #include "Timer.h"
 #include "enet/enet.h"
 
-#include <atomic>
-#include <mutex>
+#include <chrono>
 #include <string>
 #include <queue>
 
@@ -21,23 +20,24 @@ public:
 	virtual void OnUpdate(GameConnection& game) override;
 
 	bool IsRequestingHostConnection() const;
-	inline bool IsHost() const { return m_NetServer.load(std::memory_order_relaxed) != nullptr; }
-	inline u16 GetPort() const { return m_Port.load(std::memory_order_relaxed); }
+	inline bool IsHost() const { return m_NetServer != nullptr; }
+	inline u16 GetPort() const { return m_Port; }
 
-	bool IsAwaitingAddress() const { return !m_HasAttemptedConnection.load(std::memory_order_acquire); }
-	bool IsConnected() const { return m_ConnState.load(std::memory_order_relaxed) >= ConnectionState::Connected; }
+	bool IsAwaitingAddress() const { return !m_HasAttemptedConnection; }
+	bool IsConnected() const { return m_ConnState >= ConnectionState::Connected; }
 	std::string SanitiseConnectionAddress(std::string const& address);
 	void ProvideConnectionAddress(std::string const& address);
 
 private:
 	enum class ConnectionState
 	{
+		Connecting,
 		AwaitingHandshake,
 		AwaitingResponse,
 		ConnectionConfirmed,
 		Connected,
 
-		Default = AwaitingHandshake
+		Default = Connecting
 	};
 
 	struct ServerState
@@ -73,23 +73,20 @@ private:
 
 	void SendMultiplayerConfirmationToGame(GameConnection& game);
 
-	// PrimaryUI::Render reads these from the window thread while OnUpdate mutates
-	// them on the connection thread, and ProvideConnectionAddress is a straight
-	// cross-thread write from the window thread.
-	std::atomic<u16> m_Port;
-	std::atomic<ConnectionState> m_ConnState;
-
-	mutable std::mutex m_ConnectionAddressMutex;
+	// SessionWorker owns all behavior state. The UI receives value snapshots and
+	// sends value commands rather than accessing this object.
+	u16 m_Port;
+	ConnectionState m_ConnState;
 	std::string m_ConnectionAddressRaw;
 
-	std::atomic<bool> m_HasAttemptedConnection;
-	std::atomic<u8> m_RequestFlags;
-	std::atomic<ENetHost*> m_NetServer;
+	bool m_HasAttemptedConnection;
+	u8 m_RequestFlags;
+	ENetHost* m_NetServer;
 
-	// Connection thread only
 	u8 m_PlayerId;
 	ENetHost* m_NetClient;
 	ENetPeer* m_NetPeer;
+	std::chrono::steady_clock::time_point m_ConnectDeadline;
 
 	ServerState m_ServerState;
 	ClientState m_ClientState;

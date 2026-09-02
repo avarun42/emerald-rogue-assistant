@@ -11,6 +11,7 @@ set(ROGUE_ASSISTANT_APPLICATION_ID "assistant.emerald.rogue")
 set(ROGUE_ASSISTANT_DISPLAY_NAME "Emerald Rogue Assistant")
 
 include(CTest)
+find_package(Threads REQUIRED)
 
 option(ROGUE_BUILD_TESTS "Build Emerald Rogue Assistant tests" ${BUILD_TESTING})
 option(ROGUE_WARNINGS_AS_ERRORS "Treat Emerald Rogue Assistant warnings as errors" OFF)
@@ -97,6 +98,44 @@ target_link_libraries(
         rogue_project_warnings
 )
 rogue_enable_clang_tidy(rogue_core)
+
+add_library(
+    rogue_bridge
+    STATIC
+        RogueAssistantCpp/Src/Bridge/GameMemoryTransport.cpp
+        RogueAssistantCpp/Src/Bridge/GameSession.cpp
+        RogueAssistantCpp/Src/Bridge/NativeLuaTransport.cpp
+)
+target_include_directories(rogue_bridge PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc)
+target_link_libraries(
+    rogue_bridge
+    PUBLIC
+        rogue_core
+        rogue_project_options
+        rogue_sanitizers
+    PRIVATE
+        rogue_project_warnings
+)
+rogue_enable_clang_tidy(rogue_bridge)
+
+add_library(
+    rogue_app
+    STATIC
+        RogueAssistantCpp/Src/Application/Application.cpp
+        RogueAssistantCpp/Src/Application/SessionWorker.cpp
+)
+target_include_directories(rogue_app PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc)
+target_link_libraries(
+    rogue_app
+    PUBLIC
+        rogue_bridge
+        rogue_project_options
+        rogue_sanitizers
+        Threads::Threads
+    PRIVATE
+        rogue_project_warnings
+)
+rogue_enable_clang_tidy(rogue_app)
 
 set(
     ROGUE_RESOURCE_FILES

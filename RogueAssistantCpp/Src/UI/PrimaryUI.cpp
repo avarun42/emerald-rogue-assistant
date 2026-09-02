@@ -1,15 +1,12 @@
 #include "UI/PrimaryUI.h"
 #include "UI/Window.h"
 #include "Assets.h"
-#include "Behaviours/MultiplayerBehaviour.h"
-#include "Behaviours/HomeBoxBehaviour.h"
 #include "Defines.h"
-#include "GameConnection.h"
-#include "GameConnectionManager.h"
-#include "UserData.h"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
+
+#include <utility>
 
 // Dimension is based on the poketch frame asset
 static int const c_ViewWidth = 256;
@@ -18,6 +15,20 @@ static double const c_ViewAspectW = 4;
 static double const c_ViewAspectH = 3;
 
 static sf::Vector2f const c_CentreOffset(-16, 0);
+
+static std::string SanitiseConnectionAddress(std::string const& address, bool requestingHost)
+{
+	if (!requestingHost)
+		return address;
+
+	std::string result;
+	for (char character : address)
+	{
+		if (character >= '0' && character <= '9')
+			result += character;
+	}
+	return result;
+}
 
 template <typename T>
 static inline void LoadBin2CppAsset(T& output, bin2cpp::File const& file)
@@ -95,7 +106,7 @@ struct AssetCollection
 };
 
 PrimaryUI::PrimaryUI()
-	: m_CurrentPage(PageUI::Awaiting)
+	: m_CurrentPage(rogue::app::UiPage::Awaiting)
 {
 	m_Assets = new AssetCollection();
 	m_LastDrawTime = UpdateTimer::GetCurrentClock();
@@ -115,7 +126,8 @@ void PrimaryUI::SetToStubTheme()
 	m_Assets->m_ErrorFontColour = sf::Color(196, 24, 24);
 }
 
-void PrimaryUI::Render(Window& window)
+void PrimaryUI::Render(
+	Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand)
 {
 	// Calc delta time
 	TimeDurationNS deltaTimeNS = UpdateTimer::GetCurrentClock() - m_LastDrawTime;
@@ -171,7 +183,7 @@ void PrimaryUI::Render(Window& window)
 
 
 	// Draw title
-	std::string errorStr = GameConnectionManager::Instance().GetRecentError();
+	std::string const& errorStr = snapshot.error;
 
 	if (errorStr.empty())
 	{
@@ -195,7 +207,7 @@ void PrimaryUI::Render(Window& window)
 	}
 
 	// Print awaiting connection screen
-	if (!GameConnectionManager::Instance().AnyConnectionsActive())
+	if (snapshot.connections.empty())
 	{
 		m_Assets->DrawLeftAlignedText(
 			gfx,
@@ -228,7 +240,7 @@ void PrimaryUI::Render(Window& window)
 	else
 	{
 		// Print connected text
-		int connectionCount = GameConnectionManager::Instance().ActiveConnectionCount();
+		int const connectionCount = static_cast<int>(snapshot.connections.size());
 		int prevConnIdx = m_CurrentConnectionIdx;
 
 		if (window.ButtonJustReleased(sf::Keyboard::Tab))
@@ -237,8 +249,10 @@ void PrimaryUI::Render(Window& window)
 		}
 
 		m_CurrentConnectionIdx %= connectionCount;
-		ActiveGameConnection& game = GameConnectionManager::Instance().GetGameConnectionAt(m_CurrentConnectionIdx);
-		bool hasSwappedConnection = prevConnIdx != m_CurrentConnectionIdx;
+		rogue::app::ConnectionSnapshot const& connection = snapshot.connections[m_CurrentConnectionIdx];
+		bool const hasSwappedConnection = prevConnIdx != m_CurrentConnectionIdx
+			|| m_CurrentConnectionId != connection.id;
+		m_CurrentConnectionId = connection.id;
 
 		std::string connectionText = "Connected to Game";
 
@@ -257,22 +271,8 @@ void PrimaryUI::Render(Window& window)
 
 		// Determine current page
 
-		PageUI newPage = PageUI::Awaiting;
+		rogue::app::UiPage const newPage = connection.page;
 		bool initialLoad = false;
-
-		// Strong refs: the connection thread may remove either behaviour while
-		// we're still drawing with it.
-		std::shared_ptr<MultiplayerBehaviour> multiplayer = game.m_Game->FindBehaviour<MultiplayerBehaviour>();
-		std::shared_ptr<HomeBoxBehaviour> homebox = game.m_Game->FindBehaviour<HomeBoxBehaviour>();
-
-		if (homebox != nullptr)
-		{
-			newPage = PageUI::HomeBox;
-		}
-		else if (multiplayer != nullptr)
-		{
-			newPage = PageUI::Multiplayer;
-		}
 
 		if (m_CurrentPage != newPage || hasSwappedConnection)
 		{
@@ -285,12 +285,12 @@ void PrimaryUI::Render(Window& window)
 		// Render specific page
 		switch (m_CurrentPage)
 		{
-		case PrimaryUI::PageUI::Multiplayer:
-			RenderMultiplayerPage(window, multiplayer.get(), initialLoad);
+		case rogue::app::UiPage::Multiplayer:
+			RenderMultiplayerPage(window, snapshot, connection, initialLoad, submitCommand);
 			break;
 
-		case PrimaryUI::PageUI::HomeBox:
-			RenderHomeBoxPage(window, homebox.get(), initialLoad);
+		case rogue::app::UiPage::HomeBox:
+			RenderHomeBoxPage(window, connection.homeBox, initialLoad);
 			break;
 
 		default:
@@ -334,9 +334,11 @@ void PrimaryUI::RenderAwaitingPage(Window& window)
 	//);
 }
 
-void PrimaryUI::RenderMultiplayerPage(Window& window, MultiplayerBehaviour* multiplayer, bool initialLoad)
+void PrimaryUI::RenderMultiplayerPage(Window& window, rogue::app::UiSnapshot const& snapshot,
+	rogue::app::ConnectionSnapshot const& connection, bool initialLoad, CommandSink const& submitCommand)
 {
 	sf::RenderWindow& gfx = *window.GetHandle();
+	rogue::app::MultiplayerSnapshot const& multiplayer = connection.multiplayer;
 
 	// Titlt
 	m_Assets->DrawCenteredText(
@@ -349,21 +351,21 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, MultiplayerBehaviour* mult
 
 	if (initialLoad)
 	{
-		if (multiplayer->IsRequestingHostConnection())
+		if (multiplayer.requestingHost)
 		{
-			window.SetInputText(UserData::GetSavedString("Multiplayer.HostPort", std::to_string(MultiplayerBehaviour::c_DefaultPort)));
+			window.SetInputText(snapshot.multiplayerHostPort);
 		}
 		else
 		{
-			window.SetInputText(UserData::GetSavedString("Multiplayer.JoinIP"));
+			window.SetInputText(snapshot.multiplayerJoinAddress);
 		}
 	}
 
-	if (multiplayer->IsAwaitingAddress())
+	if (multiplayer.awaitingAddress)
 	{
-		window.SetInputText(multiplayer->SanitiseConnectionAddress(window.GetInputText()));
+		window.SetInputText(SanitiseConnectionAddress(window.GetInputText(), multiplayer.requestingHost));
 
-		if (multiplayer->IsRequestingHostConnection())
+		if (multiplayer.requestingHost)
 		{
 			m_Assets->DrawLeftAlignedText(
 				gfx,
@@ -386,24 +388,21 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, MultiplayerBehaviour* mult
 
 		if (window.ButtonJustReleased(sf::Keyboard::Return))
 		{
-			std::string input = window.GetInputText();
-			multiplayer->ProvideConnectionAddress(input);
-
-			if (multiplayer->IsRequestingHostConnection())
-				UserData::SetSavedString("Multiplayer.HostPort", input);
-			else
-				UserData::SetSavedString("Multiplayer.JoinIP", input);
-
-			window.ClearInputText();
+			rogue::app::UiCommand command;
+			command.type = rogue::app::UiCommand::Type::ProvideMultiplayerAddress;
+			command.connectionId = connection.id;
+			command.value = window.GetInputText();
+			if (submitCommand(std::move(command)))
+				window.ClearInputText();
 		}
 	}
 	else
 	{
-		if (multiplayer->IsRequestingHostConnection())
+		if (multiplayer.requestingHost)
 		{
 			m_Assets->DrawLeftAlignedText(
 				gfx,
-				"Hosting on Port:" + std::to_string(multiplayer->GetPort()),
+				"Hosting on Port:" + std::to_string(multiplayer.port),
 				c_CentreOffset + sf::Vector2f(-90, -40),
 				16,
 				m_Assets->m_LightFontColour
@@ -411,7 +410,7 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, MultiplayerBehaviour* mult
 		}
 		else
 		{
-			if (multiplayer->IsConnected())
+			if (multiplayer.connected)
 			{
 				m_Assets->DrawLeftAlignedText(
 					gfx,
@@ -423,7 +422,7 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, MultiplayerBehaviour* mult
 			}
 		}
 
-		if (!multiplayer->IsConnected())
+		if (!multiplayer.connected)
 		{
 			m_Assets->DrawLeftAlignedText(
 				gfx,
@@ -436,20 +435,21 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, MultiplayerBehaviour* mult
 	}
 }
 
-void PrimaryUI::RenderHomeBoxPage(Window& window, HomeBoxBehaviour* homebox, bool initialLoad)
+void PrimaryUI::RenderHomeBoxPage(
+	Window& window, rogue::app::HomeBoxSnapshot const& homeBox, bool /*initialLoad*/)
 {
 	sf::RenderWindow& gfx = *window.GetHandle();
 
 	// Print state
 	m_Assets->DrawCenteredText(
 		gfx,
-		"Transferring Pokémon Boxes",
+		"Transferring PokÃ©mon Boxes",
 		c_CentreOffset + sf::Vector2f(0, -55),
 		16,
 		m_Assets->m_LightFontColour
 	);
 
-	if (homebox->IsLoading())
+	if (homeBox.loading)
 	{
 		m_Assets->DrawCenteredText(
 			gfx,
@@ -459,7 +459,7 @@ void PrimaryUI::RenderHomeBoxPage(Window& window, HomeBoxBehaviour* homebox, boo
 			m_Assets->m_LightFontColour
 		);
 	}
-	else if (homebox->IsSaving())
+	else if (homeBox.saving)
 	{
 		m_Assets->DrawCenteredText(
 			gfx,

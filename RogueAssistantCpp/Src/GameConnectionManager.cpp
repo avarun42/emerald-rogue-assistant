@@ -1,155 +1,185 @@
 #include "GameConnectionManager.h"
+
+#include "Behaviours/HomeBoxBehaviour.h"
+#include "Behaviours/MultiplayerBehaviour.h"
 #include "GameConnection.h"
-#include "GameDataRequest.h"
-
 #include "Log.h"
+#include "Platform/Configuration.h"
+#include "UserData.h"
 
-//#include <WinSock2.h>
+#include <algorithm>
+#include <stdexcept>
+#include <string_view>
+#include <utility>
 
-#include <atomic>
-#include <SFML/Network.hpp>
-
-static std::unique_ptr<GameConnectionManager> s_Manager;
-static std::once_flag s_ManagerOnce;
-static std::atomic<bool> s_ManagerReady{ false };
-
-GameConnectionManager& GameConnectionManager::Instance()
+GameConnectionManager::GameConnectionManager(std::shared_ptr<IGameMemoryTransport> transport)
+	: m_Transport(std::move(transport))
 {
-	// Instance() is reached from the window thread, the connection threads and the
-	// emulator Lua thread, so construction has to happen exactly once.
-	std::call_once(s_ManagerOnce, []()
-		{
-			s_Manager = std::make_unique<GameConnectionManager>();
-			s_ManagerReady.store(true, std::memory_order_release);
-		});
-	return *s_Manager;
+	if (!m_Transport)
+		throw std::invalid_argument("GameConnectionManager requires a memory transport");
 }
 
-bool GameConnectionManager::IsValid()
+GameConnectionManager::~GameConnectionManager()
 {
-	return s_ManagerReady.load(std::memory_order_acquire);
+	Stop();
 }
 
-void GameConnectionManager::OpenListener()
+void GameConnectionManager::Start()
 {
-	LOG_INFO("Game: Opening connection listener");
+	if (m_Started)
+		return;
+	if (!UserData::Init())
+	{
+		UserData::Shutdown();
+		throw std::runtime_error("Cannot initialize Rogue Assistant user data");
+	}
+
+	m_Started = true;
 	m_ListeningForConnections = true;
+	LOG_INFO("Game: Opening connection listener");
 }
 
-void GameConnectionManager::CloseListener()
+void GameConnectionManager::HandleCommand(rogue::app::UiCommand command)
 {
-	LOG_INFO("Game: Closing connection listener");
+	if (command.type != rogue::app::UiCommand::Type::ProvideMultiplayerAddress)
+		return;
+
+	auto const connection =
+		std::find_if(m_ActiveConnections.begin(), m_ActiveConnections.end(),
+					 [&command](ActiveGameConnection const& active) { return active.id == command.connectionId; });
+	if (connection == m_ActiveConnections.end())
+		return;
+
+	auto multiplayer = connection->game->FindBehaviour<MultiplayerBehaviour>();
+	if (!multiplayer || !multiplayer->IsAwaitingAddress())
+		return;
+
+	std::string const address = multiplayer->SanitiseConnectionAddress(command.value);
+	if (address.empty())
+		return;
+	rogue::platform::Settings validated;
+	std::string validationError;
+	std::string_view const settingKey = multiplayer->IsRequestingHostConnection()
+											? rogue::platform::MultiplayerHostPortKey
+											: rogue::platform::MultiplayerJoinIpKey;
+	if (!rogue::platform::TrySetSetting(validated, settingKey, address, validationError))
+	{
+		PushError("Invalid multiplayer address: " + validationError);
+		return;
+	}
+	m_RecentError.clear();
+	multiplayer->ProvideConnectionAddress(address);
+	UserData::SetSavedString(std::string(settingKey), address);
+}
+
+void GameConnectionManager::Tick()
+{
+	if (!m_Started)
+		return;
+	UpdateConnections();
+	UserData::Update();
+}
+
+rogue::app::UiSnapshot GameConnectionManager::Snapshot() const
+{
+	rogue::app::UiSnapshot snapshot;
+	snapshot.transportState = m_Transport->State();
+	snapshot.error = m_RecentError;
+	if (m_Started)
+	{
+		snapshot.multiplayerHostPort =
+			UserData::GetSavedString("Multiplayer.HostPort", std::to_string(MultiplayerBehaviour::c_DefaultPort));
+		snapshot.multiplayerJoinAddress = UserData::GetSavedString("Multiplayer.JoinIP");
+	}
+
+	snapshot.connections.reserve(m_ActiveConnections.size());
+	for (ActiveGameConnection const& active : m_ActiveConnections)
+	{
+		rogue::app::ConnectionSnapshot connection;
+		connection.id = active.id;
+
+		if (auto homeBox = active.game->FindBehaviour<HomeBoxBehaviour>())
+		{
+			connection.page = rogue::app::UiPage::HomeBox;
+			connection.homeBox.loading = homeBox->IsLoading();
+			connection.homeBox.saving = homeBox->IsSaving();
+		}
+		else if (auto multiplayer = active.game->FindBehaviour<MultiplayerBehaviour>())
+		{
+			connection.page = rogue::app::UiPage::Multiplayer;
+			connection.multiplayer.requestingHost = multiplayer->IsRequestingHostConnection();
+			connection.multiplayer.awaitingAddress = multiplayer->IsAwaitingAddress();
+			connection.multiplayer.connected = multiplayer->IsConnected();
+			connection.multiplayer.port = multiplayer->GetPort();
+		}
+
+		snapshot.connections.push_back(std::move(connection));
+	}
+	return snapshot;
+}
+
+void GameConnectionManager::Stop()
+{
+	if (m_Transport)
+		m_Transport->Stop();
 	m_ListeningForConnections = false;
+	DisconnectConnections();
+
+	if (m_Started)
+	{
+		LOG_INFO("Game: Closing connection listener");
+		UserData::Shutdown();
+		m_Started = false;
+	}
+}
+
+void GameConnectionManager::PushError(std::string error)
+{
+	m_RecentError = std::move(error);
 }
 
 void GameConnectionManager::UpdateConnections()
 {
-	// Accept any incoming connections
-	if (m_AcceptingConnection == nullptr)
-		m_AcceptingConnection = std::make_shared<GameConnection>();
+	if (m_ListeningForConnections && m_AcceptingConnection == nullptr &&
+		m_Transport->State() == TransportState::Connected)
+	{
+		m_AcceptingConnection = std::make_shared<GameConnection>(*this);
+		m_AcceptingConnection->SetMemoryTransport(m_Transport);
+	}
 
-	if (m_ListeningForConnections && m_ActiveConnections.empty())
+	if (m_ListeningForConnections && m_ActiveConnections.empty() && m_AcceptingConnection)
 	{
 		LOG_INFO("Game: Incoming connection...");
-		ClearRecentError();
-		m_ListeningForConnections = false; // only 1 connection per emulator now
-
-		GameConnectionRef gameConn = m_AcceptingConnection;
-		m_AcceptingConnection = nullptr;
-
-		ActiveGameConnection newConnection;
-		newConnection.m_Game = gameConn;
-		newConnection.m_UpdateThread = std::thread([this, gameConn]() { BackgroundUpdate(gameConn); });
-		m_ActiveConnections.push_back(std::move(newConnection));
+		m_RecentError.clear();
+		m_ListeningForConnections = false;
+		m_ActiveConnections.push_back({m_NextConnectionId++, std::move(m_AcceptingConnection)});
 	}
 
-	// Handle disconnections
-	for (int i = 0; i < (int)m_ActiveConnections.size();)
+	for (ActiveGameConnection& active : m_ActiveConnections)
+		active.game->Update();
+
+	for (auto active = m_ActiveConnections.begin(); active != m_ActiveConnections.end();)
 	{
-		if (m_ActiveConnections[i].m_Game->HasDisconnected())
+		if (active->game->HasDisconnected())
 		{
 			LOG_INFO("Game: Connection disconnected");
-			m_ActiveConnections[i].m_UpdateThread.join();
-			m_ActiveConnections.erase(m_ActiveConnections.begin() + i);
+			active = m_ActiveConnections.erase(active);
 		}
 		else
-			++i;
-	}
-}
-
-void GameConnectionManager::EnqueueGameDataRequest(GameDataRequest const& request)
-{
-	std::lock_guard<std::mutex> lock(m_PendingDataRequestsMutex);
-	m_PendingDataRequests.push(request);
-}
-
-bool GameConnectionManager::TryPopDataRequest(GameDataRequest& target)
-{
-	std::lock_guard<std::mutex> lock(m_PendingDataRequestsMutex);
-
-	if (!m_PendingDataRequests.empty())
-	{
-		target = std::move(m_PendingDataRequests.front());
-		m_PendingDataRequests.pop();
-		return true;
-	}
-
-	return false;
-}
-
-void GameConnectionManager::PushCompletedDataRequest(GameDataRequest&& request)
-{
-	std::lock_guard<std::mutex> lock(m_CompletedDataRequestsMutex);
-	m_CompletedDataRequests.push(std::move(request));
-}
-
-void GameConnectionManager::DispatchCompletedDataRequests(GameConnection& owner)
-{
-	std::queue<GameDataRequest> mine;
-
-	{
-		std::lock_guard<std::mutex> lock(m_CompletedDataRequestsMutex);
-
-		std::queue<GameDataRequest> others;
-		while (!m_CompletedDataRequests.empty())
 		{
-			GameDataRequest& front = m_CompletedDataRequests.front();
-			GameConnectionRef ownerRef = front.m_Owner.lock();
-
-			if (ownerRef == nullptr)
-			{
-				// Issuing connection has gone away; running the callback would touch
-				// a destroyed GameConnection, so drop it.
-			}
-			else if (ownerRef.get() == &owner)
-				mine.push(std::move(front));
-			else
-				others.push(std::move(front));
-
-			m_CompletedDataRequests.pop();
+			++active;
 		}
-
-		m_CompletedDataRequests = std::move(others);
-	}
-
-	// Run outside the lock: callbacks re-enter EnqueueGameDataRequest
-	while (!mine.empty())
-	{
-		GameDataRequest& request = mine.front();
-
-		if (request.m_Callback)
-			request.m_Callback(request.m_Response);
-
-		mine.pop();
 	}
 }
 
-void GameConnectionManager::BackgroundUpdate(GameConnectionRef game)
+void GameConnectionManager::DisconnectConnections()
 {
-	// At max run at 30UPS for now
-	while (!game->HasDisconnected())
+	if (m_AcceptingConnection)
 	{
-		game->Update();
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000 / 30));
+		m_AcceptingConnection->Disconnect();
+		m_AcceptingConnection.reset();
 	}
+	for (ActiveGameConnection& active : m_ActiveConnections)
+		active.game->Disconnect();
+	m_ActiveConnections.clear();
 }
