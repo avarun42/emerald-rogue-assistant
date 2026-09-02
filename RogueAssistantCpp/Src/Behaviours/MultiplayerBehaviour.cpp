@@ -4,6 +4,8 @@
 #include "Log.h"
 #include "StringUtils.h"
 
+#include <cstring>
+
 enum RogueNetChannel
 {
 	Handshake,
@@ -488,7 +490,8 @@ static bool UpdateBinaryBlob(std::vector<u8>& copy, u8 const* rawBuffer, size_t 
 	if (hasChanged)
 	{
 		copy.resize(rawSize);
-		memcpy_s(copy.data(), copy.size(), rawBuffer, rawSize);
+		if (rawSize != 0)
+			std::memcpy(copy.data(), rawBuffer, rawSize);
 	}
 
 	return hasChanged;

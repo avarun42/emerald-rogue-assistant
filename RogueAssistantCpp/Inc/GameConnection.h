@@ -49,8 +49,8 @@ public:
 
 	inline bool IsMemoryReadable() const { return IsReady() && GetObservedGameMemory().AreHeadersValid(); }
 
-	void WriteRequest(GameMessageID messageId, size_t addr, void const* data, size_t size);
-	void ReadRequest(GameMessageID messageId, size_t addr, size_t size);
+	void WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size);
+	void ReadRequest(GameMessageID messageId, GameAddress addr, size_t size);
 
 	ObservedGameMemory& GetObservedGameMemory();
 	ObservedGameMemory const& GetObservedGameMemory() const;
