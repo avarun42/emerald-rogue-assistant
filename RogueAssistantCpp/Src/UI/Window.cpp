@@ -63,7 +63,7 @@ bool Window::Destroy()
 	return true;
 }
 
-void Window::EnterMainLoop(WindowCallback callback, void* userData)
+void Window::EnterMainLoop(WindowCallback const& callback, void* userData)
 {
 	if (!m_WindowHandle)
 	{

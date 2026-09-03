@@ -11,4 +11,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Catch2)
 
+# Keep diagnostics in Catch2's implementation from being attributed to the
+# Rogue Assistant tests that include its assertion macros.
+set_target_properties(Catch2 Catch2WithMain PROPERTIES SYSTEM TRUE)
+
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)

@@ -123,7 +123,7 @@ struct AssetCollection
 	}
 };
 
-PrimaryUI::PrimaryUI(std::filesystem::path resourceDirectory)
+PrimaryUI::PrimaryUI(std::filesystem::path const& resourceDirectory)
 	: m_Assets(std::make_unique<AssetCollection>(resourceDirectory)), m_CurrentPage(rogue::app::UiPage::Awaiting)
 {
 	m_LastDrawTime = UpdateTimer::GetCurrentClock();

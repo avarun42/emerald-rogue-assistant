@@ -14,7 +14,7 @@ class Window;
 class PrimaryUI
 {
 public:
-  explicit PrimaryUI(std::filesystem::path resourceDirectory = {});
+  explicit PrimaryUI(std::filesystem::path const& resourceDirectory = {});
   ~PrimaryUI();
 
   using CommandSink = std::function<bool(rogue::app::UiCommand)>;

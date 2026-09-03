@@ -39,8 +39,8 @@ TEST_CASE("desktop command line rejects missing invalid duplicate and unknown op
 TEST_CASE("current-run bridge port override takes precedence without replacing configuration",
 		  "[command-line][configuration]")
 {
-	REQUIRE(SelectBridgePort(std::nullopt, 30125) == 30125);
-	REQUIRE(SelectBridgePort(40125, 30125) == 40125);
+	REQUIRE(SelectBridgePort(std::nullopt, std::uint16_t{30125}) == std::uint16_t{30125});
+	REQUIRE(SelectBridgePort(std::uint16_t{40125}, std::uint16_t{30125}) == std::uint16_t{40125});
 }
 
 TEST_CASE("desktop help and version switches are recognized", "[command-line]")

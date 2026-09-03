@@ -38,7 +38,7 @@ class Window
 	bool Create();
 	bool Destroy();
 
-	void EnterMainLoop(WindowCallback callback, void* userData = nullptr);
+	void EnterMainLoop(WindowCallback const& callback, void* userData = nullptr);
 
 	inline sf::RenderWindow* GetHandle()
 	{
