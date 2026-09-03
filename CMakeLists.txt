@@ -4,7 +4,7 @@ include(cmake/Version.cmake)
 
 project(
     RogueAssistant
-    VERSION ${ROGUE_ASSISTANT_VERSION}
+    VERSION ${ROGUE_ASSISTANT_VERSION_CORE}
     DESCRIPTION "Cross-platform companion application for Pokémon Emerald Rogue"
     LANGUAGES C CXX
 )
@@ -269,6 +269,8 @@ if(ROGUE_BUILD_DESKTOP)
             OUTPUT_NAME RogueAssistant
             MACOSX_BUNDLE_BUNDLE_NAME "Rogue Assistant"
             MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.avarun42.rogue-assistant"
+            MACOSX_BUNDLE_INFO_STRING "Rogue Assistant ${ROGUE_ASSISTANT_VERSION}"
+            MACOSX_BUNDLE_LONG_VERSION_STRING "${ROGUE_ASSISTANT_VERSION}"
             MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
             MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
     )

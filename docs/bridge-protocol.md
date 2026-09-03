@@ -31,7 +31,7 @@ bytes because its payload also contains address and byte-count fields.
 | ID | Name | Request ID | Payload |
 |---:|---|---|---|
 | 1 | `ClientHello` | zero | `RAB1`, protocol `u16 major, u16 minor`, script version `u32` |
-| 2 | `ServerHello` | zero | status `u8`, reserved `u8`, protocol `u16, u16`, app SemVer `u16, u16, u16` |
+| 2 | `ServerHello` | zero | status `u8`, reserved `u8`, protocol `u16, u16`, app version core `u16, u16, u16` |
 | 3 | `ReadRequest` | nonzero | address `u32`, byte count `u32` |
 | 4 | `WriteRequest` | nonzero | address `u32`, byte count `u32`, bytes |
 | 5 | `ReadResult` | nonzero | requested bytes |
@@ -47,7 +47,9 @@ full (7), and internal error (8).
 The handshake must finish before the server accepts memory messages. Protocol
 majors must match. The server can accept an older protocol minor only when that
 minor defines every feature in use. The initial implementation negotiates
-exactly 1.0. The server sends `Close` after it rejects a hello.
+exactly 1.0. The server sends `Close` after it rejects a hello. The application
+version fields contain the numeric SemVer core. Command-line output, logs, and
+the UI include any prerelease identifier.
 
 The canonical byte vectors live in
 `tests/fixtures/bridge_protocol_1.golden`. Both the C++ codec suite and the Lua

@@ -10,7 +10,7 @@ cross-platform fork. It is based on
 which is preserved in the Git history. Pokabbie does not maintain this fork.
 
 The legacy 2.2-era application supported only Windows and loaded a native DLL
-inside mGBA. Version 1.0.0 uses one standalone C++20 application and one
+inside mGBA. The 1.0 series uses one standalone C++20 application and one
 portable mGBA Lua bridge on Windows, macOS, and Linux. The game-facing feature
 logic remains in C++.
 

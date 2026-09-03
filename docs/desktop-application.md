@@ -38,9 +38,10 @@ first available port value in this order: `--bridge-port`, `Bridge.Port` in
 `settings.ini`, and then `30125`. Ports are decimal integers from 1 through
 65535. Rogue Assistant rejects repeated or unknown options.
 
-The CMake project version supplies the version in the window, UI, log,
-command-line output, bridge handshake, and package metadata. As a result,
-`RogueAssistant --version` reports the packaged application version.
+`cmake/Version.cmake` supplies the application version. The window, UI, log,
+command-line output, and package names use the complete version. The bridge
+handshake and native numeric metadata use its three-part numeric core.
+`RogueAssistant --version` includes a prerelease identifier when present.
 
 ## Resources
 

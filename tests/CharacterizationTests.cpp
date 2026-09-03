@@ -94,6 +94,8 @@ TEST_CASE("application versioning is independent from ROM compatibility", "[char
 	std::string expectedVersion = std::to_string(ROGUE_ASSISTANT_VERSION_MAJOR);
 	expectedVersion += "." + std::to_string(ROGUE_ASSISTANT_VERSION_MINOR);
 	expectedVersion += "." + std::to_string(ROGUE_ASSISTANT_VERSION_PATCH);
+	if (!std::string_view(ROGUE_ASSISTANT_VERSION_PRERELEASE).empty())
+		expectedVersion += "-" ROGUE_ASSISTANT_VERSION_PRERELEASE;
 	REQUIRE(std::string_view(ROGUE_ASSISTANT_VERSION_STRING) == expectedVersion);
 	STATIC_REQUIRE(rogue::rom::RequiredAssistantApi == 3);
 	STATIC_REQUIRE(rogue::rom::IsSupportedEdition(0));

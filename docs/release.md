@@ -5,18 +5,20 @@ publication or choose a license for the project.
 
 ## Version source and supported artifacts
 
-`cmake/Version.cmake` is the single application-version source. CMake uses it
-for executable metadata, `--version`, UI/log text, handshakes, bundle metadata,
-and package names. Protocol and storage versions remain independent constants
-and must not be changed merely because the application patch version changes.
+`cmake/Version.cmake` is the single application-version source. It defines a
+numeric core and an optional SemVer prerelease identifier. CMake uses the full
+version for `--version`, UI and log text, and package names. Native
+Windows/macOS metadata and bridge messages use the numeric core where their
+formats require it. Protocol and storage versions remain independent constants
+and must not change merely because the application patch version changes.
 
-The 1.0.0 release set is:
+The 1.0.0 beta 1 release set is:
 
-- `RogueAssistant-1.0.0-windows-x64.zip`
-- `RogueAssistant-1.0.0-macos-arm64.zip`
-- `RogueAssistant-1.0.0-macos-arm64.dmg`
-- `RogueAssistant-1.0.0-linux-x86_64.AppImage`
-- `RogueAssistant-1.0.0-linux-x86_64.tar.gz`
+- `RogueAssistant-1.0.0-beta.1-windows-x64.zip`
+- `RogueAssistant-1.0.0-beta.1-macos-arm64.zip`
+- `RogueAssistant-1.0.0-beta.1-macos-arm64.dmg`
+- `RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage`
+- `RogueAssistant-1.0.0-beta.1-linux-x86_64.tar.gz`
 - `THIRD_PARTY_NOTICES.md`
 - `SHA256SUMS`
 
@@ -67,10 +69,11 @@ Windows target on the same runtime setting.
 ## GitHub Actions flow
 
 `.github/workflows/release.yml` can be run manually to obtain development
-artifacts without creating a GitHub release. A tag matching the exact CMake
-version (`v1.0.0`) builds all three platforms, verifies their install trees,
-assembles checksums, and creates or updates a **draft** GitHub release. It never
-publishes the draft.
+artifacts without creating a GitHub release. A tag matching the complete CMake
+version, such as `v1.0.0-beta.1`, builds all three platforms, verifies their
+install trees, assembles checksums, and creates or updates a **draft** GitHub
+release. Versions with a prerelease identifier are marked as GitHub
+prereleases. The workflow never publishes the draft.
 
 The macOS job always signs the bundle. Without credentials, it uses ad hoc
 signing. Developer ID signing and notarization require all of these repository

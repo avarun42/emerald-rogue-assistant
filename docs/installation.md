@@ -21,15 +21,15 @@ Every release contains `SHA256SUMS`. Verify the artifact before opening it:
 
 ```powershell
 # Windows PowerShell
-Get-FileHash .\RogueAssistant-1.0.0-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\RogueAssistant-1.0.0-beta.1-windows-x64.zip -Algorithm SHA256
 ```
 
 ```sh
 # macOS
-shasum -a 256 RogueAssistant-1.0.0-macos-arm64.dmg
+shasum -a 256 RogueAssistant-1.0.0-beta.1-macos-arm64.dmg
 
 # Linux
-sha256sum RogueAssistant-1.0.0-linux-x86_64.AppImage
+sha256sum RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage
 ```
 
 Compare the complete hexadecimal value with the matching line in
@@ -39,15 +39,15 @@ Compare the complete hexadecimal value with the matching line in
 
 ### Windows x64
 
-Extract `RogueAssistant-1.0.0-windows-x64.zip` to a user-writable directory and
-run `bin\RogueAssistant.exe`. Keep the `resources` directory beside the
-executable. Moving only the executable produces a resource-loading failure.
-The release binary statically links its Microsoft C/C++ runtime and does not
-require a separate Visual C++ Redistributable installation.
+Extract `RogueAssistant-1.0.0-beta.1-windows-x64.zip` to a user-writable
+directory and run `bin\RogueAssistant.exe`. Keep the `resources` directory
+beside the executable. Moving only the executable produces a resource-loading
+failure. The release binary statically links its Microsoft C/C++ runtime and
+does not require a separate Visual C++ Redistributable installation.
 
 ### macOS
 
-Open `RogueAssistant-1.0.0-macos-arm64.dmg` and drag
+Open `RogueAssistant-1.0.0-beta.1-macos-arm64.dmg` and drag
 `RogueAssistant.app` to Applications. The application is native to Apple
 silicon and contains only an arm64 slice. Release builds use a Developer ID
 signature and notarization when credentials are available. Otherwise, CI
@@ -59,12 +59,12 @@ unverified build.
 For the AppImage:
 
 ```sh
-chmod +x RogueAssistant-1.0.0-linux-x86_64.AppImage
-./RogueAssistant-1.0.0-linux-x86_64.AppImage
+chmod +x RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage
+./RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage
 ```
 
-Alternatively, extract `RogueAssistant-1.0.0-linux-x86_64.tar.gz` into an empty
-directory and run `bin/RogueAssistant` without separating it from
+Alternatively, extract `RogueAssistant-1.0.0-beta.1-linux-x86_64.tar.gz` into
+an empty directory and run `bin/RogueAssistant` without separating it from
 `bin/resources`. The archive build uses desktop OpenGL/X11 system interfaces;
 use the AppImage when those runtime dependencies are not already available.
 

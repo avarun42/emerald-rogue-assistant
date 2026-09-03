@@ -34,8 +34,10 @@ X11, Xcursor, Xext, Xi, and Xrandr. CI installs these explicitly.
 Platform release builds use `release-windows-x64`,
 `release-macos-arm64`, and `release-linux-x86_64`. Their archive and signing
 workflow is documented in [Release engineering](release.md). Application
-SemVer has one source in `cmake/Version.cmake`; bridge, multiplayer, storage,
-and ROM API versions remain independent.
+SemVer has one source in `cmake/Version.cmake`. That file separates the numeric
+version core from an optional prerelease identifier because native operating
+system metadata requires a numeric core. Bridge, multiplayer, storage, and ROM
+API versions remain independent.
 
 ## Quality gates
 

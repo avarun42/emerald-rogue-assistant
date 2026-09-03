@@ -1,7 +1,7 @@
 # Third-party notices
 
-These notices cover third-party software and the font that Rogue Assistant
-1.0.0 includes or uses during its build. They do not license Rogue Assistant,
+These notices cover third-party software and the font that Rogue Assistant 1.0
+includes or uses during its build. They do not license Rogue Assistant,
 its Lua adapter, or its images. Before public distribution, document a license
 grant that covers the inherited source and resolve the remaining asset
 provenance in `docs/asset-provenance.md`.

@@ -23,11 +23,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Varun Arora\0"
             VALUE "FileDescription", "Rogue Assistant\0"
-            VALUE "FileVersion", "@PROJECT_VERSION@\0"
+            VALUE "FileVersion", "@ROGUE_ASSISTANT_VERSION@\0"
             VALUE "InternalName", "RogueAssistant\0"
             VALUE "OriginalFilename", "RogueAssistant.exe\0"
             VALUE "ProductName", "Rogue Assistant\0"
-            VALUE "ProductVersion", "@PROJECT_VERSION@\0"
+            VALUE "ProductVersion", "@ROGUE_ASSISTANT_VERSION@\0"
         END
     END
     BLOCK "VarFileInfo"

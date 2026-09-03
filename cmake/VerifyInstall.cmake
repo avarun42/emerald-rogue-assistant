@@ -14,6 +14,7 @@ elseif(ROGUE_INSTALL_PLATFORM STREQUAL "macos")
   set(executable ${ROGUE_INSTALL_ROOT}/RogueAssistant.app/Contents/MacOS/RogueAssistant)
   set(resource_directory ${ROGUE_INSTALL_ROOT}/RogueAssistant.app/Contents/Resources)
   set(document_directory ${resource_directory}/Documentation)
+  set(bundle_plist ${ROGUE_INSTALL_ROOT}/RogueAssistant.app/Contents/Info.plist)
 elseif(ROGUE_INSTALL_PLATFORM STREQUAL "linux")
   set(executable ${ROGUE_INSTALL_ROOT}/bin/RogueAssistant)
   set(resource_directory ${ROGUE_INSTALL_ROOT}/bin/resources)
@@ -145,4 +146,30 @@ endif()
 string(STRIP "${output}" output)
 if(NOT output STREQUAL "Rogue Assistant ${ROGUE_EXPECTED_VERSION}")
   message(FATAL_ERROR "Unexpected installed version output: ${output}")
+endif()
+
+if(ROGUE_INSTALL_PLATFORM STREQUAL "macos")
+  find_program(ROGUE_PLUTIL_EXECUTABLE NAMES plutil REQUIRED)
+  string(REGEX MATCH "^[0-9]+[.][0-9]+[.][0-9]+" expected_version_core "${ROGUE_EXPECTED_VERSION}")
+  foreach(key_and_expected IN ITEMS
+          "CFBundleIdentifier|io.github.avarun42.rogue-assistant"
+          "CFBundleShortVersionString|${expected_version_core}"
+          "CFBundleLongVersionString|${ROGUE_EXPECTED_VERSION}")
+    string(REPLACE "|" ";" key_and_expected "${key_and_expected}")
+    list(GET key_and_expected 0 key)
+    list(GET key_and_expected 1 expected)
+    execute_process(
+      COMMAND ${ROGUE_PLUTIL_EXECUTABLE} -extract ${key} raw -o - ${bundle_plist}
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE output
+      ERROR_VARIABLE error
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT result EQUAL 0)
+      message(FATAL_ERROR "Cannot read ${key} from the installed application (${result}): ${error}")
+    endif()
+    if(NOT "${output}" STREQUAL "${expected}")
+      message(FATAL_ERROR "Unexpected ${key}: ${output}")
+    endif()
+  endforeach()
 endif()

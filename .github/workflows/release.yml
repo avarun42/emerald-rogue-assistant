@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Read and validate application version
@@ -29,7 +30,7 @@ jobs:
             -DROGUE_VERSION_OUTPUT="$RUNNER_TEMP/version.txt" \
             -P cmake/WriteVersion.cmake
           version="$(tr -d '\r\n' < "$RUNNER_TEMP/version.txt")"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             echo "Invalid CMake application version: $version" >&2
             exit 1
           fi
@@ -38,6 +39,11 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
 
   windows:
     name: Windows x64 package
@@ -327,10 +333,15 @@ jobs:
         shell: bash
         run: |
           if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release create "$GITHUB_REF_NAME" \
-              --draft \
-              --verify-tag \
-              --title "Rogue Assistant ${{ needs.metadata.outputs.version }}" \
+            release_options=(
+              --draft
+              --verify-tag
+              --title "Rogue Assistant ${{ needs.metadata.outputs.version }}"
               --generate-notes
+            )
+            if [[ "${{ needs.metadata.outputs.prerelease }}" == true ]]; then
+              release_options+=(--prerelease --latest=false)
+            fi
+            gh release create "$GITHUB_REF_NAME" "${release_options[@]}"
           fi
           gh release upload "$GITHUB_REF_NAME" dist/* --clobber
