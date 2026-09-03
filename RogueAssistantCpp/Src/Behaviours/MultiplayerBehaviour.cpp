@@ -349,6 +349,12 @@ void MultiplayerBehaviour::HandlePeerDisconnect(GameConnection& game, ENetPeer* 
 	}
 	if (!knownPeer)
 		return;
+	if (IsHost())
+	{
+		// A host can serve another peer after one client leaves. This also keeps
+		// the remaining peers alive when the ROM supports more than two players.
+		return;
+	}
 
 	game.ReportError("The other player disconnected.");
 	game.RemoveBehaviour(this);

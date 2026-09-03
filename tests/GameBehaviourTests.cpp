@@ -140,7 +140,8 @@ void ConfigureFeatureLayouts(GameStructures::RogueAssistantHeader& header)
 
 struct GameHarness
 {
-	GameHarness() : manager(transport), game(manager, transport, UpdateTimer::c_1UPS * 60 * 60)
+	explicit GameHarness(TimeDurationNS updateInterval = UpdateTimer::c_1UPS * 60 * 60)
+		: manager(transport), game(manager, transport, updateInterval)
 	{
 		game.Update();
 	}
@@ -546,6 +547,81 @@ TEST_CASE("Multiplayer retries a rejected host ROM handshake write", "[multiplay
 	REQUIRE(retried.data == std::vector<std::byte>(AsBytes(handshake)));
 
 	client.reset();
+	harness.game.Disconnect();
+}
+
+TEST_CASE("Multiplayer host remains available after a client disconnects", "[multiplayer][disconnect]")
+{
+	GameHarness harness(UpdateTimer::c_60UPS);
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress);
+
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	if (!multiplayer)
+	{
+		common->OnUpdate(harness.game);
+		multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	}
+	REQUIRE(multiplayer != nullptr);
+	multiplayer->ProvideConnectionAddress("30025");
+	multiplayer->OnUpdate(harness.game);
+	multiplayer->OnUpdate(harness.game);
+	REQUIRE(multiplayer->IsHost());
+
+	auto client = std::unique_ptr<ENetHost, decltype(&enet_host_destroy)>(
+		enet_host_create(nullptr, 1, 5, 0, 0), &enet_host_destroy);
+	REQUIRE(client != nullptr);
+	ENetAddress address{};
+	REQUIRE(enet_address_set_host_ip(&address, "127.0.0.1") == 0);
+	address.port = 30025;
+	ENetPeer* peer = enet_host_connect(client.get(), &address, 5, 0);
+	REQUIRE(peer != nullptr);
+
+	bool connected = false;
+	auto const connectDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (!connected && std::chrono::steady_clock::now() < connectDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		ENetEvent event{};
+		while (enet_host_service(client.get(), &event, 0) > 0)
+		{
+			if (event.type == ENET_EVENT_TYPE_CONNECT)
+				connected = true;
+			if (event.type == ENET_EVENT_TYPE_RECEIVE)
+				enet_packet_destroy(event.packet);
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(connected);
+
+	enet_peer_disconnect(peer, 0);
+	enet_host_flush(client.get());
+	bool disconnected = false;
+	auto const disconnectDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (!disconnected && std::chrono::steady_clock::now() < disconnectDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		ENetEvent event{};
+		while (enet_host_service(client.get(), &event, 0) > 0)
+		{
+			if (event.type == ENET_EVENT_TYPE_DISCONNECT)
+				disconnected = true;
+			if (event.type == ENET_EVENT_TYPE_RECEIVE)
+				enet_packet_destroy(event.packet);
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(disconnected);
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	harness.game.Update();
+	REQUIRE(harness.game.FindBehaviour<MultiplayerBehaviour>() == multiplayer);
 	harness.game.Disconnect();
 }
 
