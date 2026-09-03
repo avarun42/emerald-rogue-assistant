@@ -1,7 +1,7 @@
 # Release engineering
 
-This page describes how to produce a release candidate. It does not authorize
-publication or choose a license for the project.
+This page describes how the fork maintainer produces and publishes a release
+candidate. It does not choose a general repository license.
 
 ## Version source and supported artifacts
 

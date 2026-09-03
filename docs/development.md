@@ -83,6 +83,6 @@ vendored third-party license text.
 
 `THIRD_PARTY_NOTICES.md` is installed with every application. Keep its versions
 aligned with `cmake/DesktopDependencies.cmake` and SFML's transitive revisions.
-Do not publish a binary until a license grant covers the inherited source and
-the project records the provenance of every inherited asset. See
-[Asset provenance and licensing](asset-provenance.md).
+The original Rogue Assistant creator has approved this fork and its GitHub
+releases. Keep that release permission distinct from any general repository
+license added later. See [Distribution status](asset-provenance.md).
