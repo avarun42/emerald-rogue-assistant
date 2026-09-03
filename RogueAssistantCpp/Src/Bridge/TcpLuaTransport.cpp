@@ -34,6 +34,10 @@ MemoryResult::Status ToMemoryStatus(rogue::bridge::ProtocolErrorCode code)
 }
 } // namespace
 
+TcpLuaTransport::Peer::Peer(rogue::bridge::TcpSocket acceptedSocket) : socket(std::move(acceptedSocket))
+{
+}
+
 TcpLuaTransport::TcpLuaTransport(std::uint16_t port)
 {
 	std::string error;
@@ -174,8 +178,7 @@ void TcpLuaTransport::AcceptClients()
 
 		if (!m_Client)
 		{
-			m_Client.emplace();
-			m_Client->socket = std::move(socket);
+			m_Client.emplace(std::move(socket));
 		}
 		else
 		{

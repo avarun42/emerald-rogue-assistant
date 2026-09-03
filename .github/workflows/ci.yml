@@ -40,6 +40,9 @@ jobs:
       CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Select C++20-capable Xcode
+        if: runner.os == 'macOS'
+        run: sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
       - name: Install Linux desktop dependencies
         if: runner.os == 'Linux'
         run: >-
