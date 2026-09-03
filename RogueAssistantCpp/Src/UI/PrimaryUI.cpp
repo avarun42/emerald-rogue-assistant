@@ -377,8 +377,10 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 	{
 		rogue::app::UiCommand command;
 		command.type = rogue::app::UiCommand::Type::ExportBridgeScript;
-		(void)submitCommand(std::move(command));
-		m_ActionMessage = "Exporting the mGBA script";
+		if (submitCommand(std::move(command)))
+			m_ActionMessage.clear();
+		else
+			m_ActionMessage = "Rogue Assistant is busy. Try again.";
 	}
 	if (window.ButtonJustReleased(sf::Keyboard::Key::C))
 	{
