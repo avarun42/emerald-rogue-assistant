@@ -126,6 +126,11 @@ TEST_CASE("bridge typed payloads reject inconsistent lengths and invalid UTF-8",
 
 	message.diagnostic.assign(MaximumDiagnosticLength + 1, 'x');
 	REQUIRE_FALSE(TryEncodeError(1, message, frame, error));
+
+	message = {};
+	frame = {MessageType::Error, 0, 1, ParseHex("00000000")};
+	REQUIRE_FALSE(DecodeErrorMessage(frame, message, error));
+	REQUIRE(error == "unknown Error code");
 }
 
 TEST_CASE("bridge decoder fails closed on malformed frame headers", "[bridge]")

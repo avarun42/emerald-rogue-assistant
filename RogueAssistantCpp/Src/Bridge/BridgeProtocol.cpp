@@ -70,6 +70,39 @@ std::string BytesToString(std::span<std::byte const> bytes)
 		value.push_back(static_cast<char>(std::to_integer<unsigned char>(byte)));
 	return value;
 }
+
+bool DecodeProtocolErrorCode(std::uint16_t encoded, ProtocolErrorCode& decoded)
+{
+	switch (encoded)
+	{
+	case static_cast<std::uint16_t>(ProtocolErrorCode::UnsupportedProtocol):
+		decoded = ProtocolErrorCode::UnsupportedProtocol;
+		return true;
+	case static_cast<std::uint16_t>(ProtocolErrorCode::Busy):
+		decoded = ProtocolErrorCode::Busy;
+		return true;
+	case static_cast<std::uint16_t>(ProtocolErrorCode::MalformedFrame):
+		decoded = ProtocolErrorCode::MalformedFrame;
+		return true;
+	case static_cast<std::uint16_t>(ProtocolErrorCode::InvalidRequestId):
+		decoded = ProtocolErrorCode::InvalidRequestId;
+		return true;
+	case static_cast<std::uint16_t>(ProtocolErrorCode::InvalidAddress):
+		decoded = ProtocolErrorCode::InvalidAddress;
+		return true;
+	case static_cast<std::uint16_t>(ProtocolErrorCode::InvalidSize):
+		decoded = ProtocolErrorCode::InvalidSize;
+		return true;
+	case static_cast<std::uint16_t>(ProtocolErrorCode::QueueFull):
+		decoded = ProtocolErrorCode::QueueFull;
+		return true;
+	case static_cast<std::uint16_t>(ProtocolErrorCode::InternalError):
+		decoded = ProtocolErrorCode::InternalError;
+		return true;
+	default:
+		return false;
+	}
+}
 } // namespace
 
 bool ValidateFrame(Frame const& frame, std::string& error)
@@ -296,7 +329,11 @@ bool DecodeErrorMessage(Frame const& frame, ErrorMessage& message, std::string& 
 		error = "Error diagnostic is not valid UTF-8";
 		return false;
 	}
-	message.code = static_cast<ProtocolErrorCode>(code);
+	if (!DecodeProtocolErrorCode(code, message.code))
+	{
+		error = "unknown Error code";
+		return false;
+	}
 	message.diagnostic = std::move(diagnostic);
 	return true;
 }
