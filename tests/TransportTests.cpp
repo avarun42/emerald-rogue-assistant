@@ -130,13 +130,13 @@ TEST_CASE("GameSession bounds outstanding work and validates result shapes", "[t
 	std::size_t disconnectedCompletions = 0;
 	for (std::size_t index = 0; index < MaximumOutstandingMemoryRequests; ++index)
 	{
-		REQUIRE(session.Read(0x02000000, 1, [&](MemoryResult result) {
+		REQUIRE(session.Read(0x02000000, 1, [&](MemoryResult const& result) {
 			if (result.status == MemoryResult::Status::Disconnected)
 				++disconnectedCompletions;
 		}));
 	}
 	REQUIRE_FALSE(session.CanSubmit());
-	REQUIRE_FALSE(session.Read(0x02000000, 1, [](MemoryResult) {}));
+	REQUIRE_FALSE(session.Read(0x02000000, 1, [](MemoryResult const&) {}));
 	REQUIRE(transport->submitted.size() == MaximumOutstandingMemoryRequests);
 
 	auto const firstId = transport->submitted.front().id;
@@ -162,7 +162,8 @@ TEST_CASE("invalid requests complete locally without reaching the transport", "[
 	auto transport = std::make_shared<FakeTransport>();
 	GameSession session(transport);
 	MemoryResult::Status status = MemoryResult::Status::Ok;
-	REQUIRE_FALSE(session.Write(0x08000000, Bytes({1}), [&](MemoryResult result) { status = result.status; }));
+	REQUIRE_FALSE(
+		session.Write(0x08000000, Bytes({1}), [&](MemoryResult const& result) { status = result.status; }));
 	REQUIRE(status == MemoryResult::Status::InvalidAddress);
 	REQUIRE(transport->submitted.empty());
 	REQUIRE(session.OutstandingRequestCount() == 0);

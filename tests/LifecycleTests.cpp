@@ -107,7 +107,8 @@ TEST_CASE("Application confines runtime work and callbacks to SessionWorker", "[
 	rogue::app::UiCommand command;
 	command.connectionId = 42;
 	command.value = "127.0.0.1:30025";
-	REQUIRE(application.Submit(std::move(command)));
+	auto const submitted = application.Submit(std::move(command));
+	REQUIRE(submitted);
 	REQUIRE(WaitFor(state, [](RuntimeState const& value) { return value.lastCommand == "127.0.0.1:30025"; }));
 
 	application.Stop();

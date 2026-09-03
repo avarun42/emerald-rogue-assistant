@@ -23,9 +23,10 @@ namespace rogue::platform
 {
 	namespace
 	{
-		fs::path SelectAbsoluteOrFallback(fs::path const& preferred, fs::path const& fallback)
+		fs::path SelectPosixAbsoluteOrFallback(fs::path const& preferred, fs::path const& fallback)
 		{
-			return !preferred.empty() && preferred.is_absolute() ? preferred : fallback;
+			auto const generic = preferred.generic_string();
+			return !generic.empty() && generic.front() == '/' ? preferred : fallback;
 		}
 
 		fs::path FindResourceDirectory(HostPlatform platform, fs::path const& executablePath)
@@ -197,10 +198,10 @@ namespace rogue::platform
 			paths.configDirectory = paths.dataDirectory;
 			break;
 		case HostPlatform::Linux:
-			paths.dataDirectory = SelectAbsoluteOrFallback(
+			paths.dataDirectory = SelectPosixAbsoluteOrFallback(
 				environment.xdgDataHome, environment.homeDirectory / ".local" / "share")
 				/ "pokabbie" / "rogue-assistant";
-			paths.configDirectory = SelectAbsoluteOrFallback(
+			paths.configDirectory = SelectPosixAbsoluteOrFallback(
 				environment.xdgConfigHome, environment.homeDirectory / ".config")
 				/ "pokabbie" / "rogue-assistant";
 			break;

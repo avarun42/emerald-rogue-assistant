@@ -27,7 +27,7 @@ class TemporaryDirectory
 		path = fs::temp_directory_path() / ("rogue-home-box-tests-" + std::to_string(id));
 		std::error_code ec;
 		fs::create_directories(path, ec);
-		REQUIRE_FALSE(ec);
+		REQUIRE(!ec);
 	}
 
 	~TemporaryDirectory()

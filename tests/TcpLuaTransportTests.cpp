@@ -223,7 +223,7 @@ TEST_CASE("TcpLuaTransport remains bounded while mGBA is paused and then reconne
 	std::size_t disconnected = 0;
 	for (std::size_t index = 0; index < MaximumOutstandingMemoryRequests; ++index)
 	{
-		REQUIRE(session.Read(0x02000000U, 1, [&](MemoryResult result) {
+		REQUIRE(session.Read(0x02000000U, 1, [&](MemoryResult const& result) {
 			if (result.status == MemoryResult::Status::Disconnected)
 				++disconnected;
 		}));

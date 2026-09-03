@@ -274,7 +274,7 @@ TEST_CASE("CommonBehaviour accepts only ROM Assistant API 3 and keeps Vanilla an
 		auto common = harness.game.FindBehaviour<CommonBehaviour>();
 		REQUIRE(common != nullptr);
 		common->OnUpdate(harness.game);
-		REQUIRE_FALSE(harness.game.HasDisconnected());
+		REQUIRE(!harness.game.HasDisconnected());
 
 		MemoryRequest const keepalive = harness.transport->TakeRequest(
 			MemoryRequest::Operation::Write, header.assistantState + header.assistantConfirmOffset);
