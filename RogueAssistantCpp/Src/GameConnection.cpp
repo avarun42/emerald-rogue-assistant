@@ -59,7 +59,7 @@ void GameConnection::Update()
 		// Make a copy, so behaviours can add new ones for next frame
 		std::vector<GameConnectionBehaviourRef> behavioursToUpdate = m_Behaviours;
 
-		for (auto behaviour : behavioursToUpdate)
+		for (auto const& behaviour : behavioursToUpdate)
 		{
 			if (HasDisconnected())
 				break;
@@ -71,7 +71,7 @@ void GameConnection::Update()
 				behaviour->OnUpdate(*this);
 		}
 
-		for (auto behaviour : m_BehavioursToRemove)
+		for (auto const& behaviour : m_BehavioursToRemove)
 			RemoveBehaviourInternal(behaviour.get());
 
 		m_BehavioursToRemove.clear();
@@ -88,7 +88,7 @@ void GameConnection::Disconnect()
 	m_Behaviours.clear();
 	m_BehavioursToRemove.clear();
 
-	for (auto behaviour : behaviours)
+	for (auto const& behaviour : behaviours)
 		behaviour->OnDetach(*this);
 
 	if (m_GameSession)

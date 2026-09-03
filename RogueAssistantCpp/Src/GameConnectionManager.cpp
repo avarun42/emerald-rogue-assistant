@@ -146,7 +146,7 @@ rogue::app::UiSnapshot GameConnectionManager::Snapshot() const
 			connection.multiplayer.port = multiplayer->GetPort();
 		}
 
-		snapshot.connections.push_back(std::move(connection));
+		snapshot.connections.push_back(connection);
 	}
 	return snapshot;
 }

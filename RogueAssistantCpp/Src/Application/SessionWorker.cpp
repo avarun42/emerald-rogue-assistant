@@ -14,7 +14,7 @@ SessionWorker::SessionWorker(std::unique_ptr<ISessionRuntime> runtime, std::chro
 	if (m_TickInterval <= std::chrono::milliseconds::zero())
 		throw std::invalid_argument("SessionWorker requires a positive tick interval");
 
-	m_Thread = std::jthread([this](std::stop_token stopToken) { Run(stopToken); });
+	m_Thread = std::jthread([this](std::stop_token stopToken) { Run(std::move(stopToken)); });
 }
 
 SessionWorker::~SessionWorker()
