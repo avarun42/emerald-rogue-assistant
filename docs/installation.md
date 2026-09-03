@@ -8,7 +8,7 @@ to use.
 
 - mGBA 0.10.5 or newer with Lua scripting enabled
 - an Emerald Rogue Vanilla or EX ROM exposing Assistant API 3
-- Windows x64, macOS 11 or newer on Apple silicon or Intel, or Linux x86_64
+- Windows x64, macOS 11 or newer on Apple silicon, or Linux x86_64
 - one free loopback TCP port, `30125` by default
 
 The bridge protocol is local-only. Multiplayer separately uses the configured
@@ -26,7 +26,7 @@ Get-FileHash .\RogueAssistant-1.0.0-windows-x64.zip -Algorithm SHA256
 
 ```sh
 # macOS
-shasum -a 256 RogueAssistant-1.0.0-macos-universal.dmg
+shasum -a 256 RogueAssistant-1.0.0-macos-arm64.dmg
 
 # Linux
 sha256sum RogueAssistant-1.0.0-linux-x86_64.AppImage
@@ -47,9 +47,9 @@ require a separate Visual C++ Redistributable installation.
 
 ### macOS
 
-Open `RogueAssistant-1.0.0-macos-universal.dmg` and drag
-`RogueAssistant.app` to Applications. The release candidate is universal and
-must contain both arm64 and x86_64 slices. Public artifacts should be signed
+Open `RogueAssistant-1.0.0-macos-arm64.dmg` and drag
+`RogueAssistant.app` to Applications. The release candidate is Apple silicon
+native and contains only an arm64 slice. Public artifacts should be signed
 and notarized; CI also creates an ad-hoc-signed development artifact when Apple
 credentials are unavailable, which macOS will identify as a development build.
 

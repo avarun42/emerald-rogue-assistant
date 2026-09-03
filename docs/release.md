@@ -13,8 +13,8 @@ and must not be changed merely because the application patch version changes.
 The 1.0.0 release set is:
 
 - `RogueAssistant-1.0.0-windows-x64.zip`
-- `RogueAssistant-1.0.0-macos-universal.zip`
-- `RogueAssistant-1.0.0-macos-universal.dmg`
+- `RogueAssistant-1.0.0-macos-arm64.zip`
+- `RogueAssistant-1.0.0-macos-arm64.dmg`
 - `RogueAssistant-1.0.0-linux-x86_64.AppImage`
 - `RogueAssistant-1.0.0-linux-x86_64.tar.gz`
 - `THIRD_PARTY_NOTICES.md`
@@ -35,10 +35,10 @@ cmake --build --preset release-windows-x64 --parallel
 ctest --preset release-windows-x64
 cpack --preset release-windows-x64
 
-cmake --preset release-macos-universal --fresh -G Ninja
-cmake --build --preset release-macos-universal --parallel
-ctest --preset release-macos-universal
-bash packaging/macos/package.sh build/release-macos-universal dist 1.0.0
+cmake --preset release-macos-arm64 --fresh -G Ninja
+cmake --build --preset release-macos-arm64 --parallel
+ctest --preset release-macos-arm64
+bash packaging/macos/package.sh build/release-macos-arm64 dist 1.0.0
 
 cmake --preset release-linux-x86_64 --fresh -G Ninja
 cmake --build --preset release-linux-x86_64 --parallel
@@ -53,10 +53,10 @@ The release workflow downloads and verifies that exact input before invoking
 `packaging/linux/build-appimage.sh`.
 
 All release presets enable warnings as errors and tests. The macOS preset sets
-the deployment target to macOS 11 and builds arm64 plus x86_64. Confirm with:
+the deployment target to macOS 11 and builds arm64 only. Confirm with:
 
 ```sh
-lipo -archs build/release-macos-universal/RogueAssistant.app/Contents/MacOS/RogueAssistant
+lipo -archs build/release-macos-arm64/RogueAssistant.app/Contents/MacOS/RogueAssistant
 ```
 
 MSVC builds use the static C/C++ runtime because the Windows artifact is a
@@ -103,7 +103,7 @@ Before creating the version tag:
    actual packaged libraries.
 3. Confirm `RogueAssistant --version`, application metadata, protocol hellos,
    package names, and the intended tag all agree.
-4. Inspect the Windows executable signature, both Mach-O architectures,
+4. Inspect the Windows executable signature, the arm64 Mach-O architecture,
    macOS signing/notarization/stapling, and AppImage contents.
 5. Install each artifact on a clean supported machine or VM, run the complete
    acceptance matrix, and record versions and results in the release notes.

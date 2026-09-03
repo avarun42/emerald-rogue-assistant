@@ -31,7 +31,7 @@ Linux source builds require development packages for FreeType, OpenGL, udev,
 X11, Xcursor, Xext, Xi, and Xrandr. CI installs these explicitly.
 
 Platform release builds use `release-windows-x64`,
-`release-macos-universal`, and `release-linux-x86_64`. Their archive and signing
+`release-macos-arm64`, and `release-linux-x86_64`. Their archive and signing
 workflow is documented in [release.md](release.md). Application SemVer has one
 source in `cmake/Version.cmake`; bridge, multiplayer, storage, and ROM API
 versions remain independent.

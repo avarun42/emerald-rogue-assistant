@@ -14,7 +14,7 @@ remains in C++.
 - Emulator: mGBA 0.10.5 or newer
 - ROM Assistant API: exactly version 3
 - ROM editions: Vanilla and EX
-- Initial desktop targets: Windows x64, macOS arm64/x86_64, Linux x86_64
+- Initial desktop targets: Windows x64, macOS arm64, Linux x86_64
 
 The application version, mGBA bridge protocol, multiplayer protocol, Home Box
 format, and ROM Assistant API are versioned independently. See

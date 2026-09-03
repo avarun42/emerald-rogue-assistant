@@ -54,8 +54,8 @@ if [[ ! -x "$executable" ]]; then
   echo "installed application bundle is missing its executable" >&2
   exit 1
 fi
-if ! lipo "$executable" -verify_arch arm64 x86_64; then
-  echo "application executable is not universal arm64/x86_64" >&2
+if [[ "$(lipo -archs "$executable")" != arm64 ]]; then
+  echo "application executable is not arm64-only" >&2
   exit 1
 fi
 
@@ -103,8 +103,8 @@ else
 fi
 codesign --verify --deep --strict --verbose=2 "$app"
 
-zip_output="$output_dir/RogueAssistant-$version-macos-universal.zip"
-dmg_output="$output_dir/RogueAssistant-$version-macos-universal.dmg"
+zip_output="$output_dir/RogueAssistant-$version-macos-arm64.zip"
+dmg_output="$output_dir/RogueAssistant-$version-macos-arm64.dmg"
 notary_zip="$output_dir/.RogueAssistant-$version-notarization.zip"
 cmake -E rm -f "$zip_output" "$dmg_output" "$notary_zip"
 
@@ -154,6 +154,8 @@ cmake \
   "-DROGUE_EXPECTED_VERSION=$version" \
   -P "$repo_root/cmake/VerifyInstall.cmake"
 codesign --verify --deep --strict --verbose=2 "$zip_verify_root/RogueAssistant.app"
-lipo "$zip_verify_root/RogueAssistant.app/Contents/MacOS/RogueAssistant" \
-  -verify_arch arm64 x86_64
+if [[ "$(lipo -archs "$zip_verify_root/RogueAssistant.app/Contents/MacOS/RogueAssistant")" != arm64 ]]; then
+  echo "archived application executable is not arm64-only" >&2
+  exit 1
+fi
 cmake -E rm -rf "$zip_verify_root"

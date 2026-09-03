@@ -99,7 +99,7 @@ jobs:
           path: build/release-windows-x64/packages/RogueAssistant-${{ needs.metadata.outputs.version }}-windows-x64.zip
 
   macos:
-    name: Universal macOS package
+    name: macOS arm64 package
     needs: metadata
     runs-on: macos-15
     env:
@@ -111,16 +111,18 @@ jobs:
       APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Select C++20-capable Xcode
+        run: sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
       - name: Configure
-        run: cmake --preset release-macos-universal --fresh -G Ninja
+        run: cmake --preset release-macos-arm64 --fresh -G Ninja
       - name: Build
-        run: cmake --build --preset release-macos-universal --parallel
+        run: cmake --build --preset release-macos-arm64 --parallel
       - name: Test
-        run: ctest --preset release-macos-universal --output-on-failure
+        run: ctest --preset release-macos-arm64 --output-on-failure
       - name: Verify installed application
         run: |
           stage="$RUNNER_TEMP/rogue-install"
-          cmake --install build/release-macos-universal \
+          cmake --install build/release-macos-arm64 \
             --prefix "$stage" \
             --component RogueAssistant \
             --strip
@@ -129,8 +131,7 @@ jobs:
             -DROGUE_INSTALL_PLATFORM=macos \
             -DROGUE_EXPECTED_VERSION=${{ needs.metadata.outputs.version }} \
             -P cmake/VerifyInstall.cmake
-          lipo "$stage/RogueAssistant.app/Contents/MacOS/RogueAssistant" \
-            -verify_arch arm64 x86_64
+          test "$(lipo -archs "$stage/RogueAssistant.app/Contents/MacOS/RogueAssistant")" = arm64
       - name: Validate Apple credential set
         shell: bash
         run: |
@@ -183,17 +184,17 @@ jobs:
       - name: Package, sign, and conditionally notarize
         run: >-
           bash packaging/macos/package.sh
-          build/release-macos-universal
+          build/release-macos-arm64
           dist
           ${{ needs.metadata.outputs.version }}
       - name: Upload macOS packages
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: macos-universal
+          name: macos-arm64
           if-no-files-found: error
           path: |
-            dist/RogueAssistant-${{ needs.metadata.outputs.version }}-macos-universal.zip
-            dist/RogueAssistant-${{ needs.metadata.outputs.version }}-macos-universal.dmg
+            dist/RogueAssistant-${{ needs.metadata.outputs.version }}-macos-arm64.zip
+            dist/RogueAssistant-${{ needs.metadata.outputs.version }}-macos-arm64.dmg
       - name: Remove temporary keychain
         if: always() && env.MACOS_CERTIFICATE_P12 != ''
         run: |
@@ -294,7 +295,7 @@ jobs:
       - name: Download macOS packages
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: macos-universal
+          name: macos-arm64
           path: dist
       - name: Verify inventory and write checksums
         shell: bash
@@ -302,8 +303,8 @@ jobs:
           version="${{ needs.metadata.outputs.version }}"
           artifacts=(
             "RogueAssistant-$version-windows-x64.zip"
-            "RogueAssistant-$version-macos-universal.zip"
-            "RogueAssistant-$version-macos-universal.dmg"
+            "RogueAssistant-$version-macos-arm64.zip"
+            "RogueAssistant-$version-macos-arm64.dmg"
             "RogueAssistant-$version-linux-x86_64.AppImage"
             "RogueAssistant-$version-linux-x86_64.tar.gz"
           )

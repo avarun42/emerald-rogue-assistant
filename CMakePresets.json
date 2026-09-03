@@ -81,8 +81,8 @@
       }
     },
     {
-      "name": "release-macos-universal",
-      "displayName": "Release - universal macOS",
+      "name": "release-macos-arm64",
+      "displayName": "Release - macOS arm64",
       "inherits": "release-base",
       "condition": {
         "type": "equals",
@@ -90,9 +90,9 @@
         "rhs": "Darwin"
       },
       "cacheVariables": {
-        "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
         "CMAKE_OSX_DEPLOYMENT_TARGET": "11.0",
-        "ROGUE_PACKAGE_PLATFORM": "macos-universal"
+        "ROGUE_PACKAGE_PLATFORM": "macos-arm64"
       }
     },
     {
@@ -135,8 +135,8 @@
       "configurePreset": "release-windows-x64"
     },
     {
-      "name": "release-macos-universal",
-      "configurePreset": "release-macos-universal"
+      "name": "release-macos-arm64",
+      "configurePreset": "release-macos-arm64"
     },
     {
       "name": "release-linux-x86_64",
@@ -187,8 +187,8 @@
       }
     },
     {
-      "name": "release-macos-universal",
-      "configurePreset": "release-macos-universal",
+      "name": "release-macos-arm64",
+      "configurePreset": "release-macos-arm64",
       "output": {
         "outputOnFailure": true
       }

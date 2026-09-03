@@ -35,7 +35,7 @@ This run found an mGBA-specific Lua lifecycle defect: a top-level script return 
 
 These checks require clean machines or VMs and remain release blockers rather than claims made by a single-host development run:
 
-- launch packaged Windows x64, universal macOS arm64 and x86_64, and Linux x86_64 artifacts;
+- launch packaged Windows x64, macOS arm64, and Linux x86_64 artifacts;
 - verify resource discovery, script export, settings persistence, and documented filesystem roots on every platform;
 - exercise Home Box load/save/migration with representative existing user data;
 - exercise multiplayer in both host/client directions for Windows to macOS and at least one Linux pairing;
