@@ -250,7 +250,8 @@ local function closeSocket(state)
 end
 
 local function failConnection(state, diagnostic)
-    if diagnostic and diagnostic ~= state.lastConnectionError then
+    local expectedClose = state.phase == "closing" or state.stopped
+    if not expectedClose and diagnostic and diagnostic ~= state.lastConnectionError then
         console:error("Rogue Assistant connection error: " .. tostring(diagnostic))
         state.lastConnectionError = diagnostic
     end

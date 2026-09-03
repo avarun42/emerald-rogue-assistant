@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <stdexcept>
+#include <thread>
 #include <utility>
 
 namespace
@@ -13,6 +15,7 @@ constexpr std::size_t ReceiveChunkSize = 64U * 1024U;
 constexpr std::size_t MaximumIoBytesPerPoll = 256U * 1024U;
 constexpr std::size_t MaximumAcceptsPerPoll = 8;
 constexpr std::size_t MaximumClosingPeers = 8;
+constexpr std::chrono::milliseconds ShutdownFlushTimeout{50};
 
 MemoryResult::Status ToMemoryStatus(rogue::bridge::ProtocolErrorCode code)
 {
@@ -136,8 +139,21 @@ void TcpLuaTransport::Stop()
 	{
 		if (m_Client->handshakeAccepted)
 		{
-			(void)QueueFrame(*m_Client, rogue::bridge::EncodeClose());
-			FlushClient();
+			// Pending memory requests no longer have a consumer during shutdown. Drop
+			// them so the control message cannot sit behind up to 4 MiB of queued data.
+			m_Client->writer.Reset();
+			if (QueueFrame(*m_Client, rogue::bridge::EncodeClose()))
+			{
+				auto const deadline = std::chrono::steady_clock::now() + ShutdownFlushTimeout;
+				while (m_Client && !m_Client->writer.PendingBytes().empty() &&
+					   std::chrono::steady_clock::now() < deadline)
+				{
+					std::size_t const pendingBefore = m_Client->writer.QueuedByteCount();
+					FlushClient();
+					if (m_Client && m_Client->writer.QueuedByteCount() == pendingBefore)
+						std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				}
+			}
 		}
 		if (m_Client)
 			m_Client->socket.Close();

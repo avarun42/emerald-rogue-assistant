@@ -2,9 +2,10 @@ local scriptPath = assert(arg[1], "expected bridge script path")
 local goldenPath = assert(arg[2], "expected golden-vector path")
 
 ROGUE_ASSISTANT_TEST = true
+local consoleErrors = {}
 console = {
     log = function() end,
-    error = function() end,
+    error = function(message) table.insert(consoleErrors, message) end,
 }
 socket = {ERRORS = {AGAIN = "temporary failure"}}
 
@@ -148,6 +149,18 @@ retiredConnection.handlers.error(retiredConnection, "late close notification")
 assert(resetState.socket == replacementConnection)
 replacementConnection.handlers.error(replacementConnection, "active socket failure")
 assert(resetState.socket == nil)
+assert(#consoleErrors == 1)
+
+local orderlyState = Bridge.newState()
+Bridge.connect(orderlyState)
+local orderlyConnection = assert(orderlyState.socket)
+orderlyState.phase = "connected"
+Bridge.processReceivedBytes(orderlyState,
+    assert(Bridge.encodeFrame(Bridge.message.CLOSE, 0, "")))
+assert(orderlyState.phase == "closing")
+orderlyConnection.handlers.error(orderlyConnection, "peer closed the connection")
+assert(orderlyState.socket == nil)
+assert(#consoleErrors == 1)
 
 -- mGBA 0.10.5 does not discard top-level script results before dispatching
 -- callbacks. The production script must therefore return no values even though

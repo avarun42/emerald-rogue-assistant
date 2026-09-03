@@ -87,6 +87,35 @@ std::vector<rogue::bridge::Frame> ReceiveFrames(rogue::bridge::TcpSocket& client
 	return frames;
 }
 
+std::vector<rogue::bridge::Frame> ReceiveFramesUntilClosed(rogue::bridge::TcpSocket& client)
+{
+	rogue::bridge::FrameDecoder decoder;
+	std::vector<rogue::bridge::Frame> frames;
+	std::array<std::byte, 4096> buffer{};
+	auto const deadline = std::chrono::steady_clock::now() + 2s;
+	bool closed = false;
+	while (!closed && std::chrono::steady_clock::now() < deadline)
+	{
+		auto const received = client.Receive(buffer);
+		if (received.status == rogue::bridge::SocketStatus::WouldBlock)
+		{
+			std::this_thread::sleep_for(1ms);
+			continue;
+		}
+		if (received.status == rogue::bridge::SocketStatus::Closed)
+		{
+			closed = true;
+			continue;
+		}
+		REQUIRE(received.status == rogue::bridge::SocketStatus::Ok);
+		REQUIRE(decoder.Append(std::span(buffer).first(received.byteCount)));
+		auto decoded = decoder.PollFrames();
+		frames.insert(frames.end(), std::make_move_iterator(decoded.begin()), std::make_move_iterator(decoded.end()));
+	}
+	REQUIRE(closed);
+	return frames;
+}
+
 rogue::bridge::TcpSocket ConnectClient(TcpLuaTransport& transport)
 {
 	rogue::bridge::TcpSocket client;
@@ -211,6 +240,28 @@ TEST_CASE("TcpLuaTransport rejects incompatible bridge handshakes", "[bridge][tc
 	REQUIRE(message.code == ProtocolErrorCode::UnsupportedProtocol);
 	REQUIRE(frames[2].type == MessageType::Close);
 	REQUIRE(transport.State() == TransportState::Listening);
+}
+
+TEST_CASE("TcpLuaTransport prioritizes the close frame during shutdown", "[bridge][tcp][shutdown]")
+{
+	using namespace rogue::bridge;
+	TcpLuaTransport transport(0);
+	auto client = ConnectClient(transport);
+	CompleteHandshake(client, transport);
+
+	for (MemoryRequestId id : {MemoryRequestId{1}, MemoryRequestId{2}})
+	{
+		MemoryRequest request;
+		request.id = id;
+		request.operation = MemoryRequest::Operation::Write;
+		request.address = 0x02000000U;
+		request.data.resize(200U * 1024U, std::byte{0x5A});
+		REQUIRE(transport.Submit(std::move(request)));
+	}
+
+	transport.Stop();
+	auto const frames = ReceiveFramesUntilClosed(client);
+	REQUIRE(std::ranges::any_of(frames, [](Frame const& frame) { return frame.type == MessageType::Close; }));
 }
 
 TEST_CASE("TcpLuaTransport remains bounded while mGBA is paused and then reconnects", "[bridge][tcp]")
