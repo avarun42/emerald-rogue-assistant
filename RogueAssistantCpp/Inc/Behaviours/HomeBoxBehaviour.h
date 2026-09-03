@@ -60,7 +60,7 @@ class HomeBoxBehaviour : public IGameConnectionBehaviour
 	void InitialiseLocalBoxData(GameConnection& game, std::uint32_t boxId);
 	void HandlePendingFileWrite(GameConnection& game, bool force = false);
 
-	void WriteMinimalBox(GameConnection& game, std::uint32_t boxId, std::uint8_t const* data);
+	[[nodiscard]] bool WriteMinimalBox(GameConnection& game, std::uint32_t boxId, std::uint8_t const* data);
 	[[nodiscard]] std::uint8_t const* GetMinimalBoxPtr(GameConnection& game, std::uint32_t boxId);
 
 	void BeginWriteMonBox(GameConnection& game, std::uint32_t boxId, std::uint8_t const* data);
@@ -74,6 +74,7 @@ class HomeBoxBehaviour : public IGameConnectionBehaviour
 	std::vector<BoxData> m_ActiveBoxData;
 	std::vector<BoxData> m_StoredBoxData;
 	std::queue<BoxWriteRequest> m_BoxWriteRequests;
+	std::uint32_t m_InitialiseBoxWriteIndex = 0;
 
 	std::filesystem::path m_WriteFilePath;
 	bool m_HasPendingFileWrite = false;

@@ -188,32 +188,32 @@ void GameConnection::OnMemoryResult(GameMessageID messageId, MemoryResult result
 	OnRecieveMessage(messageId, bytes.data(), bytes.size());
 }
 
-void GameConnection::WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size)
+bool GameConnection::WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size)
 {
 	ASSERT_MSG(IsReady(), "Attempting to write data, but not ready");
 	if (!m_GameSession || size > std::numeric_limits<std::uint32_t>::max() || (size != 0 && data == nullptr))
 	{
 		LOG_ERROR("Invalid game memory write request");
 		Disconnect();
-		return;
+		return false;
 	}
 
 	auto const* bytes = static_cast<std::byte const*>(data);
 	std::span<std::byte const> const payload(bytes, size);
-	(void)m_GameSession->Write(
+	return m_GameSession->Write(
 		addr, payload, [this, messageId](MemoryResult result) { OnMemoryResult(messageId, std::move(result)); });
 }
 
-void GameConnection::ReadRequest(GameMessageID messageId, GameAddress addr, size_t size)
+bool GameConnection::ReadRequest(GameMessageID messageId, GameAddress addr, size_t size)
 {
 	ASSERT_MSG(IsReady(), "Attempting to write data, but not ready");
 	if (!m_GameSession || size > std::numeric_limits<std::uint32_t>::max())
 	{
 		LOG_ERROR("Invalid game memory read request");
 		Disconnect();
-		return;
+		return false;
 	}
 
-	(void)m_GameSession->Read(addr, static_cast<std::uint32_t>(size),
-							  [this, messageId](MemoryResult result) { OnMemoryResult(messageId, std::move(result)); });
+	return m_GameSession->Read(addr, static_cast<std::uint32_t>(size),
+							   [this, messageId](MemoryResult result) { OnMemoryResult(messageId, std::move(result)); });
 }

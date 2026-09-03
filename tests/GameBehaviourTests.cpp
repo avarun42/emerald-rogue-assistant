@@ -29,7 +29,7 @@ class FakeGameTransport final : public IGameMemoryTransport
   public:
 	bool Submit(MemoryRequest request) override
 	{
-		if (state != TransportState::Connected)
+		if (!acceptRequests || state != TransportState::Connected)
 			return false;
 		submitted.push_back(std::move(request));
 		return true;
@@ -71,6 +71,7 @@ class FakeGameTransport final : public IGameMemoryTransport
 	}
 
 	TransportState state = TransportState::Connected;
+	bool acceptRequests = true;
 	std::vector<MemoryRequest> submitted;
 	std::vector<MemoryResult> results;
 };
@@ -157,7 +158,8 @@ struct GameHarness
 	}
 
 	void AcceptFeatureState(GameStructures::RogueAssistantHeader const& header, GameAddress multiplayerStateAddress,
-							GameAddress homeBoxStateAddress)
+							GameAddress homeBoxStateAddress,
+							std::span<std::uint8_t const> homeBoxOrder = {})
 	{
 		auto& observed = game.GetObservedGameMemory();
 		observed.Update();
@@ -172,6 +174,17 @@ struct GameHarness
 		std::vector<std::byte> homeBoxState(header.homeBoxSize, std::byte{0});
 		REQUIRE(rogue::endian::WriteLittle(homeBoxState, header.homeDestMonOffset, GameAddress{0x02003000}));
 		REQUIRE(rogue::endian::WriteLittle(homeBoxState, header.homeTrainerIdOffset, std::uint32_t{0xDEADBEEF}));
+		if (homeBoxOrder.empty())
+		{
+			for (std::uint32_t index = 0; index < header.homeTotalBoxCount; ++index)
+				homeBoxState[header.homeRemoteIndexOrderOffset + index] = static_cast<std::byte>(index);
+		}
+		else
+		{
+			REQUIRE(homeBoxOrder.size() == header.homeTotalBoxCount);
+			for (std::size_t index = 0; index < homeBoxOrder.size(); ++index)
+				homeBoxState[header.homeRemoteIndexOrderOffset + index] = static_cast<std::byte>(homeBoxOrder[index]);
+		}
 
 		observed.Update();
 		transport->CompleteRead(header.multiplayerPtr, multiplayerAddressBytes);
@@ -302,4 +315,57 @@ TEST_CASE("observed dynamic state activates multiplayer and advances Home Box in
 															   HomeBoxStateAddress + header.homeRemoteIndexOrderOffset);
 	REQUIRE(order.data == std::vector<std::byte>{std::byte{0}});
 	REQUIRE(harness.transport->submitted.empty());
+}
+
+TEST_CASE("Home Box retries a rejected transfer chunk without skipping bytes", "[home-box][backpressure]")
+{
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	header.homeLocalBoxCount = 1;
+	header.homeTotalBoxCount = 2;
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	std::array<std::uint8_t, 2> const swappedOrder{1, 0};
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress, swappedOrder);
+
+	harness.transport->submitted.clear();
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	common->OnUpdate(harness.game);
+	auto homeBox = harness.game.FindBehaviour<HomeBoxBehaviour>();
+	REQUIRE(homeBox != nullptr);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 header.assistantState + header.assistantConfirmOffset);
+
+	homeBox->OnUpdate(harness.game);
+	harness.transport->acceptRequests = false;
+	homeBox->OnUpdate(harness.game);
+	REQUIRE(harness.transport->submitted.empty());
+	harness.transport->acceptRequests = true;
+	homeBox->OnUpdate(harness.game);
+	std::array<std::byte, 5> const localPokemon{
+		std::byte{1}, std::byte{2}, std::byte{3}, std::byte{4}, std::byte{5},
+	};
+	harness.transport->CompleteRead(0x02003000, localPokemon);
+	harness.game.Update();
+	homeBox->OnUpdate(harness.game);
+	homeBox->OnUpdate(harness.game);
+	homeBox->OnUpdate(harness.game);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 HomeBoxStateAddress + header.homeMinimalBoxOffset + header.homeMinimalBoxSize);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 HomeBoxStateAddress + header.homeRemoteIndexOrderOffset);
+	homeBox->OnUpdate(harness.game);
+	homeBox->OnUpdate(harness.game);
+
+	harness.transport->acceptRequests = false;
+	homeBox->OnUpdate(harness.game);
+	REQUIRE(harness.transport->submitted.empty());
+	harness.transport->acceptRequests = true;
+	homeBox->OnUpdate(harness.game);
+	MemoryRequest const retried =
+		harness.transport->TakeRequest(MemoryRequest::Operation::Write, GameAddress{0x02003000});
+	REQUIRE(retried.data == std::vector<std::byte>(header.homeDestMonSize, std::byte{0}));
 }

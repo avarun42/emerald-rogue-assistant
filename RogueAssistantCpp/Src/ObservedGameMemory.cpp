@@ -248,8 +248,11 @@ bool ObservedGameMemory::RequestPokemonStorageData(u32 boxId)
 		GameMessageID messageId =
 			CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::GamePokemonStorageData);
 
-		m_Game.ReadRequest(messageId, GetPokemonStoragePtr() + rogueHeader.homeDestMonSize * boxId,
-						   rogueHeader.homeDestMonSize);
+		if (!m_Game.ReadRequest(messageId, GetPokemonStoragePtr() + rogueHeader.homeDestMonSize * boxId,
+						 rogueHeader.homeDestMonSize))
+		{
+			return false;
+		}
 		m_PokemonStorageData.Resize(rogueHeader.homeDestMonSize);
 		return true;
 	}

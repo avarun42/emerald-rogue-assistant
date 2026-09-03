@@ -23,6 +23,7 @@ void HomeBoxBehaviour::OnAttach(GameConnection&)
 	m_ActiveBoxData.clear();
 	m_StoredBoxData.clear();
 	m_BoxWriteRequests = {};
+	m_InitialiseBoxWriteIndex = 0;
 	m_WriteFilePath.clear();
 	m_HasPendingFileWrite = false;
 	m_NextSaveAttempt = {};
@@ -114,6 +115,7 @@ void HomeBoxBehaviour::LoadOfflineData(GameConnection& game, std::uint32_t train
 
 	m_ActiveBoxData.clear();
 	m_ActiveBoxData.reserve(m_LocalBoxCount + m_Dimensions.remoteBoxCount);
+	m_InitialiseBoxWriteIndex = m_LocalBoxCount;
 	m_State = State::InitialiseBoxData;
 }
 
@@ -184,8 +186,17 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 		break;
 
 	case State::SendGameDataInit:
-		for (std::uint32_t boxId = header.homeLocalBoxCount; boxId < header.homeTotalBoxCount; ++boxId)
-			WriteMinimalBox(game, boxId, m_ActiveBoxData[boxId].minimalData.data());
+		if (m_InitialiseBoxWriteIndex < header.homeTotalBoxCount)
+		{
+			if (!WriteMinimalBox(game, m_InitialiseBoxWriteIndex,
+							 m_ActiveBoxData[m_InitialiseBoxWriteIndex].minimalData.data()))
+			{
+				break;
+			}
+			++m_InitialiseBoxWriteIndex;
+			if (m_InitialiseBoxWriteIndex < header.homeTotalBoxCount)
+				break;
+		}
 
 		m_LocalActiveBoxIndices.resize(header.homeTotalBoxCount);
 		m_RemoteActiveBoxIndices.resize(header.homeTotalBoxCount);
@@ -194,8 +205,11 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 			m_LocalActiveBoxIndices[index] = static_cast<std::uint8_t>(index);
 			m_RemoteActiveBoxIndices[index] = static_cast<std::uint8_t>(index);
 		}
-		game.WriteRequest(CreateAnonymousMessageId(), writeAddress + header.homeRemoteIndexOrderOffset,
-						  m_RemoteActiveBoxIndices.data(), m_RemoteActiveBoxIndices.size());
+		if (!game.WriteRequest(CreateAnonymousMessageId(), writeAddress + header.homeRemoteIndexOrderOffset,
+						   m_RemoteActiveBoxIndices.data(), m_RemoteActiveBoxIndices.size()))
+		{
+			break;
+		}
 		m_State = State::WaitForInit;
 		break;
 
@@ -242,13 +256,13 @@ void HomeBoxBehaviour::InitialiseLocalBoxData(GameConnection& game, std::uint32_
 							  game.GetObservedGameMemory().GetPokemonStorageBlob() + header.homeDestMonSize);
 }
 
-void HomeBoxBehaviour::WriteMinimalBox(GameConnection& game, std::uint32_t boxId, std::uint8_t const* data)
+bool HomeBoxBehaviour::WriteMinimalBox(GameConnection& game, std::uint32_t boxId, std::uint8_t const* data)
 {
 	auto const& header = game.GetObservedGameMemory().GetRogueHeader();
 	GameAddress const writeAddress = game.GetObservedGameMemory().GetHomeBoxStatePtr();
-	game.WriteRequest(CreateAnonymousMessageId(),
-					  writeAddress + header.homeMinimalBoxOffset + header.homeMinimalBoxSize * boxId, data,
-					  header.homeMinimalBoxSize);
+	return game.WriteRequest(CreateAnonymousMessageId(),
+						 writeAddress + header.homeMinimalBoxOffset + header.homeMinimalBoxSize * boxId, data,
+						 header.homeMinimalBoxSize);
 }
 
 std::uint8_t const* HomeBoxBehaviour::GetMinimalBoxPtr(GameConnection& game, std::uint32_t boxId)
@@ -278,9 +292,12 @@ bool HomeBoxBehaviour::PumpWriteMonBox(GameConnection& game)
 	auto const& header = game.GetObservedGameMemory().GetRogueHeader();
 	GameAddress const writeAddress = game.GetObservedGameMemory().GetPokemonStoragePtr();
 	std::size_t const writeSize = std::min<std::size_t>(request.bytesRemaining, 1024);
-	game.WriteRequest(CreateAnonymousMessageId(),
-					  writeAddress + header.homeDestMonSize * request.boxId + static_cast<GameAddress>(request.offset),
-					  request.data + request.offset, writeSize);
+	if (!game.WriteRequest(CreateAnonymousMessageId(),
+					   writeAddress + header.homeDestMonSize * request.boxId + static_cast<GameAddress>(request.offset),
+					   request.data + request.offset, writeSize))
+	{
+		return true;
+	}
 	request.bytesRemaining -= writeSize;
 	request.offset += writeSize;
 	return true;
