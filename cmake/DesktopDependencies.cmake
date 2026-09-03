@@ -18,12 +18,27 @@ if(MSVC)
     set(SFML_USE_STATIC_STD_LIBS ON CACHE BOOL "" FORCE)
 endif()
 
+set(ROGUE_SFML_PATCH_ARGUMENTS)
+if(APPLE)
+    # SFML 3.1.0 has Retina coordinate conversion internally but disables the
+    # high-resolution OpenGL surface that Rogue Assistant's scaled UI needs.
+    list(
+        APPEND ROGUE_SFML_PATCH_ARGUMENTS
+        PATCH_COMMAND
+            "${CMAKE_COMMAND}"
+            "-DSOURCE_DIR=<SOURCE_DIR>"
+            -P "${CMAKE_CURRENT_LIST_DIR}/patches/EnableSfmlMacosHighDpi.cmake"
+    )
+endif()
+
 FetchContent_Declare(
     SFML
     URL https://github.com/SFML/SFML/archive/refs/tags/3.1.0.tar.gz
     URL_HASH SHA256=91209a112c2bd0bc6f4ce0d5f3e413cfb48b57c0de59f5507dc81f71b1ad7a5c
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    ${ROGUE_SFML_PATCH_ARGUMENTS}
 )
+unset(ROGUE_SFML_PATCH_ARGUMENTS)
 
 FetchContent_Declare(
     ENet

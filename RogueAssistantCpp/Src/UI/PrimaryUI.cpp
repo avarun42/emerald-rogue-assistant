@@ -11,6 +11,7 @@
 #include <SFML/Window.hpp>
 #include <SFML/Window/Clipboard.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <stdexcept>
@@ -82,7 +83,7 @@ struct AssetCollection
 		{
 			throw std::runtime_error("cannot load Rogue Assistant font");
 		}
-		m_Font.setSmooth(false);
+		m_Font.setSmooth(true);
 
 		bool frameLoaded = LoadFrame(m_PoketchOverlay, resourceDirectory);
 		if (!frameLoaded)
@@ -92,10 +93,30 @@ struct AssetCollection
 		m_PoketchOverlay.setSmooth(false);
 	}
 
+	sf::Text CreateText(sf::RenderWindow const& gfx, std::string const& msg, int fontSize)
+	{
+		// UI positions are authored in a 256x192 view. Rasterize glyphs near the
+		// framebuffer resolution, then scale their geometry back into view units.
+		// The cap bounds the font pages cached while a window is being resized.
+		sf::Vector2u const framebufferSize = gfx.getSize();
+		sf::Vector2f const viewSize = gfx.getView().getSize();
+		float rasterScale = 1.0F;
+		if (viewSize.x > 0.0F && viewSize.y > 0.0F)
+		{
+			rasterScale = std::clamp(
+				std::ceil(std::max(framebufferSize.x / viewSize.x, framebufferSize.y / viewSize.y)), 1.0F, 8.0F);
+		}
+
+		unsigned int const rasterSize = static_cast<unsigned int>(std::ceil(fontSize * rasterScale));
+		sf::Text text(m_Font, msg, rasterSize);
+		text.setScale(sf::Vector2f(1.0F / rasterScale, 1.0F / rasterScale));
+		return text;
+	}
+
 	void DrawCenteredText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
 						  sf::Color const& colour)
 	{
-		sf::Text text(m_Font, msg, static_cast<unsigned int>(fontSize));
+		sf::Text text = CreateText(gfx, msg, fontSize);
 		text.setFillColor(colour);
 		text.setOrigin(sf::Vector2f(text.getLocalBounds().size.x / 2, 0));
 		text.setPosition(pos);
@@ -105,7 +126,7 @@ struct AssetCollection
 	void DrawLeftAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
 							 sf::Color const& colour)
 	{
-		sf::Text text(m_Font, msg, static_cast<unsigned int>(fontSize));
+		sf::Text text = CreateText(gfx, msg, fontSize);
 		text.setFillColor(colour);
 		text.setOrigin(sf::Vector2f(0, 0));
 		text.setPosition(pos);
@@ -115,7 +136,7 @@ struct AssetCollection
 	void DrawRightAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
 							  sf::Color const& colour)
 	{
-		sf::Text text(m_Font, msg, static_cast<unsigned int>(fontSize));
+		sf::Text text = CreateText(gfx, msg, fontSize);
 		text.setFillColor(colour);
 		text.setOrigin(sf::Vector2f(text.getLocalBounds().size.x, 0));
 		text.setPosition(pos);
