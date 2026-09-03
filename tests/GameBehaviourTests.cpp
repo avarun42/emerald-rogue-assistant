@@ -32,7 +32,10 @@ class FakeGameTransport final : public IGameMemoryTransport
 	bool Submit(MemoryRequest request) override
 	{
 		if (!acceptRequests || state != TransportState::Connected)
+		{
+			rejected.push_back(std::move(request));
 			return false;
+		}
 		submitted.push_back(std::move(request));
 		return true;
 	}
@@ -75,6 +78,7 @@ class FakeGameTransport final : public IGameMemoryTransport
 	TransportState state = TransportState::Connected;
 	bool acceptRequests = true;
 	std::vector<MemoryRequest> submitted;
+	std::vector<MemoryRequest> rejected;
 	std::vector<MemoryResult> results;
 };
 
@@ -161,7 +165,8 @@ struct GameHarness
 
 	void AcceptFeatureState(GameStructures::RogueAssistantHeader const& header, GameAddress multiplayerStateAddress,
 							GameAddress homeBoxStateAddress,
-							std::span<std::uint8_t const> homeBoxOrder = {})
+							std::span<std::uint8_t const> homeBoxOrder = {}, std::uint8_t multiplayerRequestFlags = 2,
+							std::span<std::uint8_t const> multiplayerHandshake = {})
 	{
 		auto& observed = game.GetObservedGameMemory();
 		observed.Update();
@@ -172,7 +177,16 @@ struct GameHarness
 		game.Update();
 
 		std::vector<std::byte> multiplayerState(header.netMultiplayerSize, std::byte{0});
-		multiplayerState[header.netRequestStateOffset] = std::byte{2};
+		multiplayerState[header.netRequestStateOffset] = static_cast<std::byte>(multiplayerRequestFlags);
+		if (!multiplayerHandshake.empty())
+		{
+			REQUIRE(multiplayerHandshake.size() == header.netHandshakeSize);
+			for (std::size_t index = 0; index < multiplayerHandshake.size(); ++index)
+			{
+				multiplayerState[header.netHandshakeOffset + index] =
+					static_cast<std::byte>(multiplayerHandshake[index]);
+			}
+		}
 		std::vector<std::byte> homeBoxState(header.homeBoxSize, std::byte{0});
 		REQUIRE(rogue::endian::WriteLittle(homeBoxState, header.homeDestMonOffset, GameAddress{0x02003000}));
 		REQUIRE(rogue::endian::WriteLittle(homeBoxState, header.homeTrainerIdOffset, std::uint32_t{0xDEADBEEF}));
@@ -532,5 +546,107 @@ TEST_CASE("Multiplayer retries a rejected host ROM handshake write", "[multiplay
 	REQUIRE(retried.data == std::vector<std::byte>(AsBytes(handshake)));
 
 	client.reset();
+	harness.game.Disconnect();
+}
+
+TEST_CASE("Multiplayer retries a rejected client ROM handshake write", "[multiplayer][backpressure]")
+{
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	std::array<std::uint8_t, 4> const clientHandshake{1, 0, 0x11, 0x22};
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress, {}, 1, clientHandshake);
+
+	harness.transport->submitted.clear();
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	common->OnUpdate(harness.game);
+	auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	REQUIRE(multiplayer != nullptr);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 header.assistantState + header.assistantConfirmOffset);
+
+	multiplayer->ProvideConnectionAddress("127.0.0.1:30026");
+	multiplayer->OnUpdate(harness.game);
+
+	ENetAddress address{};
+	address.host = ENET_HOST_ANY;
+	address.port = 30026;
+	auto server = std::unique_ptr<ENetHost, decltype(&enet_host_destroy)>(
+		enet_host_create(&address, 1, 5, 0, 0), &enet_host_destroy);
+	REQUIRE(server != nullptr);
+
+	rogue::multiplayer::Hello hello;
+	hello.edition = header.rogueVersion;
+	hello.playerCount = header.netPlayerCount;
+	hello.multiplayerStateSize = header.netMultiplayerSize;
+	hello.handshakeSize = header.netHandshakeSize;
+	hello.gameStateSize = header.netGameStateSize;
+	hello.playerProfileSize = header.netPlayerProfileSize;
+	hello.playerStateSize = header.netPlayerStateSize;
+	std::vector<std::byte> encodedHello;
+	std::string error;
+	REQUIRE(rogue::multiplayer::EncodeHello(hello, encodedHello, error));
+
+	std::array<std::uint8_t, 4> const serverHandshake{2, 1, 0xA5, 0x5A};
+	bool responseSent = false;
+	auto const responseDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+	while (harness.transport->rejected.empty() && std::chrono::steady_clock::now() < responseDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		ENetEvent event{};
+		while (enet_host_service(server.get(), &event, 0) > 0)
+		{
+			if (event.type == ENET_EVENT_TYPE_CONNECT)
+			{
+				ENetPacket* helloPacket =
+					enet_packet_create(encodedHello.data(), encodedHello.size(), ENET_PACKET_FLAG_RELIABLE);
+				REQUIRE(helloPacket != nullptr);
+				REQUIRE(enet_peer_send(event.peer, 0, helloPacket) == 0);
+				enet_host_flush(server.get());
+			}
+			if (event.type == ENET_EVENT_TYPE_RECEIVE)
+			{
+				if (event.channelID == 1 && !responseSent)
+				{
+					harness.transport->acceptRequests = false;
+					ENetPacket* response =
+						enet_packet_create(serverHandshake.data(), serverHandshake.size(), ENET_PACKET_FLAG_RELIABLE);
+					REQUIRE(response != nullptr);
+					REQUIRE(enet_peer_send(event.peer, 1, response) == 0);
+					enet_host_flush(server.get());
+					responseSent = true;
+				}
+				enet_packet_destroy(event.packet);
+			}
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(responseSent);
+
+	auto const rejected = std::find_if(
+		harness.transport->rejected.begin(), harness.transport->rejected.end(), [&](MemoryRequest const& request) {
+			return request.operation == MemoryRequest::Operation::Write &&
+				   request.address == MultiplayerStateAddress + header.netHandshakeOffset;
+		});
+	REQUIRE(rejected != harness.transport->rejected.end());
+	REQUIRE(rejected->data == std::vector<std::byte>(AsBytes(serverHandshake)));
+	REQUIRE(!multiplayer->IsConnected());
+
+	harness.transport->rejected.clear();
+	harness.transport->acceptRequests = true;
+	multiplayer->OnUpdate(harness.game);
+	MemoryRequest const retried = harness.transport->TakeRequest(
+		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netHandshakeOffset);
+	REQUIRE(retried.data == std::vector<std::byte>(AsBytes(serverHandshake)));
+	MemoryRequest const confirmation = harness.transport->TakeRequest(
+		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netCurrentStateOffset);
+	REQUIRE(confirmation.data == std::vector<std::byte>{std::byte{1}});
+	REQUIRE(multiplayer->IsConnected());
+
+	server.reset();
 	harness.game.Disconnect();
 }

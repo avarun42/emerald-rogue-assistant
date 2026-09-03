@@ -193,6 +193,7 @@ void MultiplayerBehaviour::OnAttach(GameConnection& game)
 	m_ServerState.m_PendingHandshake = nullptr;
 	m_ServerState.m_PendingHandshakeData.clear();
 	m_ServerState.m_PlayerProfiles.clear();
+	m_ClientState.m_PendingHandshakeData.clear();
 
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
 
@@ -414,6 +415,8 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 
 	// ENet must keep being serviced while the ROM is preparing a handshake
 	// response, otherwise a disconnect or a queued compatibility hello can stall.
+	if (!m_ClientState.m_PendingHandshakeData.empty())
+		(void)TrySubmitClientHandshake(game);
 	bool const hadPendingHandshakeData = !m_ServerState.m_PendingHandshakeData.empty();
 	if (hadPendingHandshakeData)
 		(void)TrySubmitHostHandshake(game);
@@ -662,6 +665,7 @@ void MultiplayerBehaviour::CloseConnection(GameConnection&)
 
 	m_ServerState.m_PendingHandshake = nullptr;
 	m_ServerState.m_PendingHandshakeData.clear();
+	m_ClientState.m_PendingHandshakeData.clear();
 	m_PeerStates.clear();
 	if (m_EnetInitialised)
 	{
@@ -822,7 +826,6 @@ void MultiplayerBehaviour::HandleRomHandshake(GameConnection& game, ENetPeer* pe
 		return;
 	}
 
-	GameAddress const multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
 	if (IsHost())
 	{
 		if (peerIt->second.m_RomConnected)
@@ -846,6 +849,11 @@ void MultiplayerBehaviour::HandleRomHandshake(GameConnection& game, ENetPeer* pe
 		RejectPeer(game, peer, "host sent an unexpected ROM multiplayer handshake");
 		return;
 	}
+	if (!m_ClientState.m_PendingHandshakeData.empty())
+	{
+		RejectPeer(game, peer, "host repeated the ROM multiplayer handshake response");
+		return;
+	}
 	u8 const playerId = data[rogueHeader.netHandshakePlayerIdOffset];
 	if (!IsValidClientPlayerId(rogueHeader, playerId))
 	{
@@ -853,12 +861,8 @@ void MultiplayerBehaviour::HandleRomHandshake(GameConnection& game, ENetPeer* pe
 		return;
 	}
 
-	game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + rogueHeader.netHandshakeOffset, data.data(),
-					  data.size());
-	m_PlayerId = playerId;
-	peerIt->second.m_PlayerId = playerId;
-	peerIt->second.m_RomConnected = true;
-	m_ConnState = ConnectionState::ConnectionConfirmed;
+	m_ClientState.m_PendingHandshakeData.assign(data.begin(), data.end());
+	(void)TrySubmitClientHandshake(game);
 }
 
 bool MultiplayerBehaviour::TrySubmitHostHandshake(GameConnection& game)
@@ -875,6 +879,32 @@ bool MultiplayerBehaviour::TrySubmitHostHandshake(GameConnection& game)
 	}
 
 	m_ServerState.m_PendingHandshakeData.clear();
+	return true;
+}
+
+bool MultiplayerBehaviour::TrySubmitClientHandshake(GameConnection& game)
+{
+	if (m_NetPeer == nullptr || m_ClientState.m_PendingHandshakeData.empty())
+		return false;
+
+	auto peerIt = m_PeerStates.find(m_NetPeer);
+	if (peerIt == m_PeerStates.end() || !peerIt->second.m_Compatible)
+		return false;
+
+	auto const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
+	GameAddress const multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
+	if (!game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + rogueHeader.netHandshakeOffset,
+						   m_ClientState.m_PendingHandshakeData.data(), m_ClientState.m_PendingHandshakeData.size()))
+	{
+		return false;
+	}
+
+	u8 const playerId = m_ClientState.m_PendingHandshakeData[rogueHeader.netHandshakePlayerIdOffset];
+	m_ClientState.m_PendingHandshakeData.clear();
+	m_PlayerId = playerId;
+	peerIt->second.m_PlayerId = playerId;
+	peerIt->second.m_RomConnected = true;
+	m_ConnState = ConnectionState::ConnectionConfirmed;
 	return true;
 }
 
