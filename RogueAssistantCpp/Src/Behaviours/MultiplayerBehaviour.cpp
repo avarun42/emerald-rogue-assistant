@@ -928,7 +928,8 @@ void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent
 			else
 				game.WriteRequest(CreateAnonymousMessageId(),
 								  multiplayerAddress + rogueHeader.netPlayerStateOffset +
-									  static_cast<std::size_t>(rogueHeader.netPlayerStateSize) * playerId,
+									  static_cast<GameAddress>(
+										  static_cast<std::size_t>(rogueHeader.netPlayerStateSize) * playerId),
 								  packet->data, rogueHeader.netPlayerStateSize);
 		}
 		else
@@ -944,7 +945,8 @@ void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent
 			{
 				if (playerId == m_PlayerId)
 					continue;
-				std::size_t const playerOffset = static_cast<std::size_t>(rogueHeader.netPlayerStateSize) * playerId;
+				GameAddress const playerOffset = static_cast<GameAddress>(
+					static_cast<std::size_t>(rogueHeader.netPlayerStateSize) * playerId);
 				game.WriteRequest(CreateAnonymousMessageId(),
 								  multiplayerAddress + rogueHeader.netPlayerStateOffset + playerOffset,
 								  packet->data + playerOffset, rogueHeader.netPlayerStateSize);

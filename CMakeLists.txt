@@ -27,6 +27,9 @@ option(ROGUE_ENABLE_CLANG_TIDY "Run clang-tidy on Rogue Assistant targets" OFF)
 
 add_library(rogue_project_options INTERFACE)
 target_compile_features(rogue_project_options INTERFACE cxx_std_20)
+if(WIN32)
+    target_compile_definitions(rogue_project_options INTERFACE WIN32_LEAN_AND_MEAN NOMINMAX)
+endif()
 
 add_library(rogue_project_warnings INTERFACE)
 if(MSVC)

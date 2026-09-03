@@ -54,7 +54,7 @@ class TcpLuaTransport final : public IGameMemoryTransport
 
 	void AcceptClients();
 	void ReceiveClient();
-	void ProcessFrames(std::vector<rogue::bridge::Frame> frames);
+	void ProcessFrames(std::vector<rogue::bridge::Frame> const& frames);
 	void ProcessFrame(rogue::bridge::Frame const& frame);
 	void FlushClient();
 	void FlushClosingPeers();

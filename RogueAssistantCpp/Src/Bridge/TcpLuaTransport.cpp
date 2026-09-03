@@ -223,7 +223,7 @@ void TcpLuaTransport::ReceiveClient()
 	}
 }
 
-void TcpLuaTransport::ProcessFrames(std::vector<rogue::bridge::Frame> frames)
+void TcpLuaTransport::ProcessFrames(std::vector<rogue::bridge::Frame> const& frames)
 {
 	for (rogue::bridge::Frame const& frame : frames)
 	{
