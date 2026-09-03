@@ -4,6 +4,11 @@ Rogue Assistant is a companion application for Pokemon Emerald Rogue. It reads
 and writes the running game's emulated GBA memory through mGBA, provides the
 Home Box persistence feature, and relays Emerald Rogue multiplayer state.
 
+Varun Arora ([`avarun42`](https://github.com/avarun42)) maintains this
+cross-platform fork. It is based on
+[Pokabbie's original Rogue Assistant](https://github.com/Pokabbie/pokeemerald-rogue-assistant),
+which is preserved in the Git history. Pokabbie does not maintain this fork.
+
 The legacy 2.2-era application was Windows-only and loaded a native DLL inside
 mGBA. The `1.0.0` line is one standalone C++20 application and one portable
 mGBA Lua bridge for Windows, macOS, and Linux. The game-facing feature logic

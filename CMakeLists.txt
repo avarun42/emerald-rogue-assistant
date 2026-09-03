@@ -268,7 +268,7 @@ if(ROGUE_BUILD_DESKTOP)
         PROPERTIES
             OUTPUT_NAME RogueAssistant
             MACOSX_BUNDLE_BUNDLE_NAME "Rogue Assistant"
-            MACOSX_BUNDLE_GUI_IDENTIFIER "com.pokabbie.rogue-assistant"
+            MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.avarun42.rogue-assistant"
             MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
             MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
     )
@@ -372,14 +372,14 @@ if(ROGUE_BUILD_DESKTOP)
 
     if(UNIX AND NOT APPLE)
         install(
-            FILES packaging/linux/com.pokabbie.rogue-assistant.desktop
+            FILES packaging/linux/io.github.avarun42.rogue-assistant.desktop
             DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
             COMPONENT RogueAssistant
         )
         install(
             FILES RogueAssistantCpp/Assets/WobbuffetImage.png
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps
-            RENAME com.pokabbie.rogue-assistant.png
+            RENAME io.github.avarun42.rogue-assistant.png
             COMPONENT RogueAssistant
         )
     endif()

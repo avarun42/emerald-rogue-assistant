@@ -8,9 +8,9 @@ boundaries is validated UTF-8.
 
 | Platform | Data | Configuration |
 | --- | --- | --- |
-| Windows | `%APPDATA%\Pokabbie\Rogue Assistant` | same as data |
-| macOS | `~/Library/Application Support/Pokabbie/Rogue Assistant` | same as data |
-| Linux | `$XDG_DATA_HOME/pokabbie/rogue-assistant`, or `~/.local/share/pokabbie/rogue-assistant` | `$XDG_CONFIG_HOME/pokabbie/rogue-assistant`, or `~/.config/pokabbie/rogue-assistant` |
+| Windows | `%APPDATA%\avarun42\Rogue Assistant` | same as data |
+| macOS | `~/Library/Application Support/avarun42/Rogue Assistant` | same as data |
+| Linux | `$XDG_DATA_HOME/avarun42/rogue-assistant`, or `~/.local/share/avarun42/rogue-assistant` | `$XDG_CONFIG_HOME/avarun42/rogue-assistant`, or `~/.config/avarun42/rogue-assistant` |
 
 Logs are stored below the data directory in `logs/RogueAssistant.log`. Exported
 mGBA scripts use the data directory's `scripts` child. Installed resources are
