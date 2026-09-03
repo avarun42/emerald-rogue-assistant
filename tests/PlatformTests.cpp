@@ -83,19 +83,19 @@ TEST_CASE("application paths follow each platform convention", "[platform][paths
 	REQUIRE(macPaths.configDirectory == macPaths.dataDirectory);
 	REQUIRE(macPaths.resourceDirectory == fs::path("/Applications/Rogue Assistant.app/Contents/Resources"));
 
-	PathEnvironment linux;
-	linux.platform = HostPlatform::Linux;
-	linux.homeDirectory = "/home/misty";
-	linux.xdgDataHome = "/srv/misty/data";
-	linux.xdgConfigHome = "/srv/misty/config";
-	linux.executablePath = "/opt/rogue-assistant/RogueAssistant";
-	auto const linuxPaths = BuildAppPaths(linux);
+	PathEnvironment linuxEnvironment;
+	linuxEnvironment.platform = HostPlatform::Linux;
+	linuxEnvironment.homeDirectory = "/home/misty";
+	linuxEnvironment.xdgDataHome = "/srv/misty/data";
+	linuxEnvironment.xdgConfigHome = "/srv/misty/config";
+	linuxEnvironment.executablePath = "/opt/rogue-assistant/RogueAssistant";
+	auto const linuxPaths = BuildAppPaths(linuxEnvironment);
 	REQUIRE(linuxPaths.dataDirectory == fs::path("/srv/misty/data/pokabbie/rogue-assistant"));
 	REQUIRE(linuxPaths.configDirectory == fs::path("/srv/misty/config/pokabbie/rogue-assistant"));
 
-	linux.xdgDataHome = "relative/data";
-	linux.xdgConfigHome.clear();
-	auto const fallbackPaths = BuildAppPaths(linux);
+	linuxEnvironment.xdgDataHome = "relative/data";
+	linuxEnvironment.xdgConfigHome.clear();
+	auto const fallbackPaths = BuildAppPaths(linuxEnvironment);
 	REQUIRE(fallbackPaths.dataDirectory == fs::path("/home/misty/.local/share/pokabbie/rogue-assistant"));
 	REQUIRE(fallbackPaths.configDirectory == fs::path("/home/misty/.config/pokabbie/rogue-assistant"));
 }

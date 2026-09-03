@@ -1,11 +1,12 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <string_view>
 
 namespace rogue::platform
 {
-	enum class Resource
+	enum class Resource : std::uint8_t
 	{
 		Font,
 		Frame,

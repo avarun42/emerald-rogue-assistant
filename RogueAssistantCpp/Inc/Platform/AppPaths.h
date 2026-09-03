@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -7,7 +8,7 @@
 
 namespace rogue::platform
 {
-	enum class HostPlatform
+	enum class HostPlatform : std::uint8_t
 	{
 		Windows,
 		MacOS,

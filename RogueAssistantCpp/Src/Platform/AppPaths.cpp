@@ -87,7 +87,7 @@ namespace rogue::platform
 				return {};
 			}
 			std::error_code ec;
-			fs::path const path = fs::weakly_canonical(PathFromUtf8(buffer.data()), ec);
+			fs::path path = fs::weakly_canonical(PathFromUtf8(buffer.data()), ec);
 			if (ec)
 			{
 				error = "cannot canonicalize the executable path: " + ec.message();
@@ -96,7 +96,7 @@ namespace rogue::platform
 			return path;
 #else
 			std::error_code ec;
-			fs::path const path = fs::read_symlink("/proc/self/exe", ec);
+			fs::path path = fs::read_symlink("/proc/self/exe", ec);
 			if (ec)
 			{
 				error = "cannot resolve /proc/self/exe: " + ec.message();

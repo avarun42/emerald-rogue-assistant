@@ -107,7 +107,7 @@ bool DataStream::Serialize(u8* data, std::size_t size)
 	std::size_t const copySize = std::min(size, available);
 	if (copySize != 0)
 		std::copy_n(m_Data.data() + m_Pos, copySize, data);
-	std::fill(data + copySize, data + size, 0);
+	std::fill(data + copySize, data + size, u8{0});
 	m_Pos += copySize;
 	return copySize == size;
 }

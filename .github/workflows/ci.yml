@@ -23,7 +23,7 @@ jobs:
             cc: cl
             cxx: cl
           - name: Apple Clang
-            os: macos-14
+            os: macos-15
             cc: clang
             cxx: clang++
           - name: GCC

@@ -37,6 +37,8 @@ class TcpLuaTransport final : public IGameMemoryTransport
 
 	struct Peer
 	{
+		Peer() = default;
+
 		rogue::bridge::TcpSocket socket;
 		rogue::bridge::FrameDecoder decoder;
 		rogue::bridge::FrameWriter writer;
