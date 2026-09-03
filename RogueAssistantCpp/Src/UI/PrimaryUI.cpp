@@ -211,15 +211,15 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 	if (snapshot.connections.empty())
 	{
 		m_Assets->DrawLeftAlignedText(gfx, "Please launch the Game " + m_Assets->m_LoadingSpinnerAnimText,
-									  c_CentreOffset + sf::Vector2f(-74, -55), 16, m_Assets->m_LightFontColour);
+									  c_CentreOffset + sf::Vector2f(-74, -55), 14, m_Assets->m_LightFontColour);
 
 		m_Assets->DrawLeftAlignedText(gfx,
-									  "How to connect to mGBA:\n"
-									  "1. Make sure Emerald Rogue is running\n\tin mGBA v0.10.5 or greater\n"
-									  "2. In mGBA select Tools > Scripting...\n"
-									  "3. In the new Window, Select\n\tFile > Load Script...\n"
-									  "4. Locate and select\n\tRogueAssistant_mGBA.lua\n",
-									  c_CentreOffset + sf::Vector2f(-90, -40), 16, m_Assets->m_LightFontColour);
+									  "Connect mGBA v0.10.5+:\n"
+									  "1. Open Emerald Rogue in mGBA\n"
+									  "2. Select Tools > Scripting...\n"
+									  "3. Select File > Load Script...\n"
+									  "4. Open RogueAssistant_mGBA.lua",
+									  c_CentreOffset + sf::Vector2f(-90, -38), 11, m_Assets->m_LightFontColour);
 
 		// m_Assets->DrawCenteredText(
 		//	gfx,
@@ -254,7 +254,7 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 				" " + std::to_string(m_CurrentConnectionIdx + 1) + " / " + std::to_string(connectionCount) + " [TAB]";
 		}
 
-		m_Assets->DrawCenteredText(gfx, connectionText, c_CentreOffset + sf::Vector2f(0, 60), 16, sf::Color::Green);
+		m_Assets->DrawCenteredText(gfx, connectionText, c_CentreOffset + sf::Vector2f(0, 52), 14, sf::Color::Green);
 
 		// Determine current page
 
@@ -301,6 +301,9 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot const& snapshot,
 									 CommandSink const& submitCommand)
 {
+	if (!snapshot.connections.empty())
+		return;
+
 	sf::RenderWindow& gfx = *window.GetHandle();
 	std::string bridgeState;
 	switch (snapshot.transportState)
@@ -318,11 +321,6 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 		bridgeState = "Bridge :" + std::to_string(snapshot.bridgePort) + " connected";
 		break;
 	}
-	m_Assets->DrawCenteredText(gfx, bridgeState, c_CentreOffset + sf::Vector2f(0, 72), 10, m_Assets->m_DarkFontColour);
-
-	if (!snapshot.connections.empty())
-		return;
-
 	if (!m_EditingBridgePort && window.ButtonJustReleased(sf::Keyboard::Key::P))
 	{
 		m_EditingBridgePort = true;
@@ -331,10 +329,12 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 	if (m_EditingBridgePort)
 	{
 		window.SetInputText(SanitiseConnectionAddress(window.GetInputText(), true));
-		m_Assets->DrawCenteredText(gfx,
-								   "Bridge port: " + window.GetInputText() + m_Assets->m_CursorPosAnimText +
-									   "  [ENTER] save  [ESC] cancel",
-								   c_CentreOffset + sf::Vector2f(0, 84), 9, m_Assets->m_DarkFontColour);
+		m_Assets->DrawCenteredText(gfx, bridgeState, c_CentreOffset + sf::Vector2f(0, 44), 9,
+								   m_Assets->m_DarkFontColour);
+		m_Assets->DrawCenteredText(gfx, "Bridge port: " + window.GetInputText() + m_Assets->m_CursorPosAnimText,
+								   c_CentreOffset + sf::Vector2f(0, 57), 9, m_Assets->m_DarkFontColour);
+		m_Assets->DrawCenteredText(gfx, "[ENTER] save  [ESC] cancel", c_CentreOffset + sf::Vector2f(0, 69), 8,
+								   m_Assets->m_LightFontColour);
 		if (window.ButtonJustReleased(sf::Keyboard::Key::Enter))
 		{
 			rogue::app::UiCommand command;
@@ -389,10 +389,15 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 	}
 
 	std::string const& action = m_ActionMessage.empty() ? snapshot.bridgeMessage : m_ActionMessage;
-	std::string controls = "[P] port  [E] export  [C] copy path  [R] reveal";
+	m_Assets->DrawCenteredText(gfx, bridgeState, c_CentreOffset + sf::Vector2f(0, 37), 9,
+								   m_Assets->m_DarkFontColour);
 	if (!action.empty())
-		controls += "  -  " + action;
-	m_Assets->DrawCenteredText(gfx, controls, c_CentreOffset + sf::Vector2f(0, 84), 8, m_Assets->m_LightFontColour);
+		m_Assets->DrawCenteredText(gfx, action, c_CentreOffset + sf::Vector2f(0, 49), 8,
+								   m_Assets->m_DarkFontColour);
+	m_Assets->DrawCenteredText(gfx, "[P] port  [E] export script", c_CentreOffset + sf::Vector2f(0, 59), 8,
+								   m_Assets->m_LightFontColour);
+	m_Assets->DrawCenteredText(gfx, "[C] copy path  [R] reveal folder", c_CentreOffset + sf::Vector2f(0, 69), 8,
+								   m_Assets->m_LightFontColour);
 }
 
 void PrimaryUI::RenderAwaitingPage(Window& window)
