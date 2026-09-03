@@ -194,6 +194,7 @@ void MultiplayerBehaviour::OnAttach(GameConnection& game)
 	m_ServerState.m_PendingHandshakeData.clear();
 	m_ServerState.m_PlayerProfiles.clear();
 	m_ClientState.m_PendingHandshakeData.clear();
+	m_ClientState.m_PendingPlayerProfiles.clear();
 
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
 
@@ -417,6 +418,8 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 	// response, otherwise a disconnect or a queued compatibility hello can stall.
 	if (!m_ClientState.m_PendingHandshakeData.empty())
 		(void)TrySubmitClientHandshake(game);
+	if (!m_ClientState.m_PendingPlayerProfiles.empty())
+		(void)TrySubmitClientPlayerProfiles(game);
 	bool const hadPendingHandshakeData = !m_ServerState.m_PendingHandshakeData.empty();
 	if (hadPendingHandshakeData)
 		(void)TrySubmitHostHandshake(game);
@@ -666,6 +669,7 @@ void MultiplayerBehaviour::CloseConnection(GameConnection&)
 	m_ServerState.m_PendingHandshake = nullptr;
 	m_ServerState.m_PendingHandshakeData.clear();
 	m_ClientState.m_PendingHandshakeData.clear();
+	m_ClientState.m_PendingPlayerProfiles.clear();
 	m_PeerStates.clear();
 	if (m_EnetInitialised)
 	{
@@ -908,6 +912,24 @@ bool MultiplayerBehaviour::TrySubmitClientHandshake(GameConnection& game)
 	return true;
 }
 
+bool MultiplayerBehaviour::TrySubmitClientPlayerProfiles(GameConnection& game)
+{
+	if (m_ClientState.m_PendingPlayerProfiles.empty())
+		return false;
+
+	auto const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
+	GameAddress const multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
+	if (!game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + rogueHeader.netPlayerProfileOffset,
+						   m_ClientState.m_PendingPlayerProfiles.data(),
+						   m_ClientState.m_PendingPlayerProfiles.size()))
+	{
+		return false;
+	}
+
+	m_ClientState.m_PendingPlayerProfiles.clear();
+	return true;
+}
+
 void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent& netEvent)
 {
 	PacketPtr packet(netEvent.packet);
@@ -961,8 +983,13 @@ void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent
 		else if (packet->dataLength != expectedSize)
 			RejectPeer(game, netEvent.peer, "player-profile payload size differs");
 		else
-			game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + rogueHeader.netPlayerProfileOffset,
-							  packet->data, packet->dataLength);
+		{
+			// Profiles are complete snapshots and the host only sends them after a
+			// change. Retain the latest snapshot until the bounded bridge accepts
+			// it; a newer snapshot safely supersedes an older pending one.
+			m_ClientState.m_PendingPlayerProfiles.assign(packet->data, packet->data + packet->dataLength);
+			(void)TrySubmitClientPlayerProfiles(game);
+		}
 		break;
 	}
 

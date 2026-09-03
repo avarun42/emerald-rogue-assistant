@@ -85,6 +85,7 @@ class MultiplayerBehaviour : public IGameConnectionBehaviour
 	struct ClientState
 	{
 		std::vector<u8> m_PendingHandshakeData;
+		std::vector<u8> m_PendingPlayerProfiles;
 		UpdateTimer m_PlayerStateTimer;
 
 		ClientState() : m_PlayerStateTimer(UpdateTimer::c_30UPS)
@@ -105,6 +106,7 @@ class MultiplayerBehaviour : public IGameConnectionBehaviour
 	void RejectPeer(GameConnection& game, ENetPeer* peer, std::string const& error);
 	bool TrySubmitHostHandshake(GameConnection& game);
 	bool TrySubmitClientHandshake(GameConnection& game);
+	bool TrySubmitClientPlayerProfiles(GameConnection& game);
 	void SendCompatibilityHello(GameConnection& game, ENetPeer* peer);
 	void BroadcastToConnectedPeers(enet_uint8 channel, std::span<u8 const> data, enet_uint32 flags);
 	[[nodiscard]] rogue::multiplayer::Hello BuildCompatibilityHello(GameConnection const& game) const;

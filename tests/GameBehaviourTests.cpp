@@ -549,7 +549,7 @@ TEST_CASE("Multiplayer retries a rejected host ROM handshake write", "[multiplay
 	harness.game.Disconnect();
 }
 
-TEST_CASE("Multiplayer retries a rejected client ROM handshake write", "[multiplayer][backpressure]")
+TEST_CASE("Multiplayer retries rejected client ROM writes", "[multiplayer][backpressure]")
 {
 	GameHarness harness;
 	auto header = BaseHeader();
@@ -593,6 +593,7 @@ TEST_CASE("Multiplayer retries a rejected client ROM handshake write", "[multipl
 
 	std::array<std::uint8_t, 4> const serverHandshake{2, 1, 0xA5, 0x5A};
 	bool responseSent = false;
+	ENetPeer* serverPeer = nullptr;
 	auto const responseDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
 	while (harness.transport->rejected.empty() && std::chrono::steady_clock::now() < responseDeadline)
 	{
@@ -602,6 +603,7 @@ TEST_CASE("Multiplayer retries a rejected client ROM handshake write", "[multipl
 		{
 			if (event.type == ENET_EVENT_TYPE_CONNECT)
 			{
+				serverPeer = event.peer;
 				ENetPacket* helloPacket =
 					enet_packet_create(encodedHello.data(), encodedHello.size(), ENET_PACKET_FLAG_RELIABLE);
 				REQUIRE(helloPacket != nullptr);
@@ -646,6 +648,62 @@ TEST_CASE("Multiplayer retries a rejected client ROM handshake write", "[multipl
 		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netCurrentStateOffset);
 	REQUIRE(confirmation.data == std::vector<std::byte>{std::byte{1}});
 	REQUIRE(multiplayer->IsConnected());
+	REQUIRE(serverPeer != nullptr);
+
+	std::array<std::uint8_t, 4> const playerProfiles{0x10, 0x11, 0x20, 0x21};
+	harness.transport->acceptRequests = false;
+	ENetPacket* profilesPacket =
+		enet_packet_create(playerProfiles.data(), playerProfiles.size(), ENET_PACKET_FLAG_RELIABLE);
+	REQUIRE(profilesPacket != nullptr);
+	REQUIRE(enet_peer_send(serverPeer, 4, profilesPacket) == 0);
+	enet_host_flush(server.get());
+
+	auto const profilesDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (harness.transport->rejected.empty() && std::chrono::steady_clock::now() < profilesDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	auto const rejectedProfiles = std::find_if(
+		harness.transport->rejected.begin(), harness.transport->rejected.end(), [&](MemoryRequest const& request) {
+			return request.operation == MemoryRequest::Operation::Write &&
+				   request.address == MultiplayerStateAddress + header.netPlayerProfileOffset;
+		});
+	REQUIRE(rejectedProfiles != harness.transport->rejected.end());
+	REQUIRE(rejectedProfiles->data == std::vector<std::byte>(AsBytes(playerProfiles)));
+
+	std::array<std::uint8_t, 4> const newerPlayerProfiles{0x30, 0x31, 0x40, 0x41};
+	ENetPacket* newerProfilesPacket =
+		enet_packet_create(newerPlayerProfiles.data(), newerPlayerProfiles.size(), ENET_PACKET_FLAG_RELIABLE);
+	REQUIRE(newerProfilesPacket != nullptr);
+	REQUIRE(enet_peer_send(serverPeer, 4, newerProfilesPacket) == 0);
+	enet_host_flush(server.get());
+
+	auto const expectedNewerProfiles = AsBytes(newerPlayerProfiles);
+	auto rejectedNewerProfiles = harness.transport->rejected.end();
+	auto const newerProfilesDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (rejectedNewerProfiles == harness.transport->rejected.end() &&
+		   std::chrono::steady_clock::now() < newerProfilesDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		rejectedNewerProfiles =
+			std::find_if(harness.transport->rejected.begin(), harness.transport->rejected.end(),
+						 [&](MemoryRequest const& request) {
+							 return request.operation == MemoryRequest::Operation::Write &&
+									request.address ==
+										MultiplayerStateAddress + header.netPlayerProfileOffset &&
+									request.data == expectedNewerProfiles;
+						 });
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(rejectedNewerProfiles != harness.transport->rejected.end());
+
+	harness.transport->rejected.clear();
+	harness.transport->acceptRequests = true;
+	multiplayer->OnUpdate(harness.game);
+	MemoryRequest const retriedProfiles = harness.transport->TakeRequest(
+		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netPlayerProfileOffset);
+	REQUIRE(retriedProfiles.data == expectedNewerProfiles);
 
 	server.reset();
 	harness.game.Disconnect();
