@@ -21,12 +21,12 @@ value commands and renders a copied `UiSnapshot`. Multiplayer input is
 validated, persisted, and applied on the worker. Snapshot publication and the
 command queue are the only general application thread boundaries.
 
-At most 256 UI commands may wait. Once shutdown begins, new commands are
-rejected. The worker then stops the memory transport, disconnects the game,
-detaches behaviors (which completes a pending Home Box save and closes ENet),
-flushes settings, publishes a final snapshot, and joins before its owner is
-destroyed. Runtime exceptions also follow this teardown path and appear in the
-final failed snapshot.
+At most 256 UI commands can wait. When shutdown begins, the worker rejects new
+commands. It then stops the memory transport, disconnects the game, detaches
+behaviors, flushes settings, publishes a final snapshot, and joins before its
+owner is destroyed. Detaching the behaviors completes a pending Home Box save
+and closes ENet. Runtime exceptions follow the same teardown path and appear in
+the final failed snapshot.
 
 ## Process entry point
 

@@ -181,7 +181,7 @@ namespace GameHelpers
 		{
 			u8 c = str[i];
 
-			// This is NULL in game strings
+			// The game uses 0xFF as its string terminator.
 			if (c == 0xFF)
 				break;
 

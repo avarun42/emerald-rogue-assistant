@@ -46,8 +46,7 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 	game.WriteRequest(CreateAnonymousMessageId(), rogueHeader.assistantState + rogueHeader.assistantConfirmOffset,
 					  &value, rogueHeader.assistantConfirmSize);
 
-	// Handle multiplayer connect/disconnect
-	//
+	// Attach or remove multiplayer behavior when the ROM changes its request.
 	if (game.GetObservedGameMemory().IsMultiplayerStateValid())
 	{
 		if (m_MultiplayerBehaviour.expired())
@@ -55,7 +54,6 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 			u8 const* multiplayerBlob = game.GetObservedGameMemory().GetMultiplayerStateBlob();
 
 			u8 requestFlags = multiplayerBlob[rogueHeader.netRequestStateOffset];
-			// u8 currentFlags = multiplayerBlob[rogueHeader.netCurrentStateOffset];
 
 			if (requestFlags != 0)
 			{
@@ -74,8 +72,7 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 		}
 	}
 
-	// Handle home box connect/disconnect
-	//
+	// Attach or remove Home Box behavior when the ROM changes its request.
 	if (game.GetObservedGameMemory().IsHomeBoxStateValid())
 	{
 		if (m_HomeBoxBehaviour.expired())

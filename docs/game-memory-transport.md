@@ -32,16 +32,18 @@ worker or application.
 
 `TcpLuaTransport` owns a nonblocking listener bound specifically to
 `127.0.0.1`. It has no network thread: the session worker drives accept,
-receive, protocol dispatch, and partial sends through `PollResults()`. One peer
-may finish the protocol 1.0 hello. Additional peers receive a rejected hello,
-a stable busy error, and an orderly close.
+receive, protocol dispatch, and partial sends through `PollResults()`. The
+adapter accepts one peer that completes the protocol 1.0 hello. Additional
+peers receive a rejected hello, a stable busy error, and an orderly close.
 
-The adapter preserves request IDs until a strictly matching read result,
-write result, or error arrives. A malformed or unexpected response fails all
-pending work closed and returns the listener to its reconnectable state. There
-is no inactivity timeout, so a paused emulator cannot be mistaken for a lost
-connection.
+The adapter preserves each request ID until a matching read result, write
+result, or error arrives. A malformed or unexpected response marks all pending
+requests as disconnected and returns the listener to its reconnectable state.
+The adapter has no inactivity timeout, so it does not treat a paused emulator
+as a lost connection.
 
-The retired in-process DLL adapter and its queue ABI were removed after the TCP
-path passed the documented parity gate. `TcpLuaTransport` is the sole production
-game-memory transport on every supported platform.
+The project removed the in-process DLL adapter and its queue ABI after the TCP
+path passed its automated tests and the documented macOS smoke test.
+`TcpLuaTransport` is the only production game-memory transport on every
+supported platform. The remaining cross-platform release checks are listed in
+the [Parity gate](parity-gate.md).

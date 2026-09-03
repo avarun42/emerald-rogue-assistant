@@ -5,7 +5,7 @@ include(cmake/Version.cmake)
 project(
     RogueAssistant
     VERSION ${ROGUE_ASSISTANT_VERSION}
-    DESCRIPTION "Cross-platform companion application for Pokemon Emerald Rogue"
+    DESCRIPTION "Cross-platform companion application for Pokémon Emerald Rogue"
     LANGUAGES C CXX
 )
 

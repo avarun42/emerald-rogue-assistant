@@ -56,14 +56,14 @@ void GameConnection::Update()
 			m_ObservedGameMemory->Update();
 		}
 
-		// Make a copy, so behaviours can add new ones for next frame
+		// Copy the list so behaviors can add entries for the next update.
 		std::vector<GameConnectionBehaviourRef> behavioursToUpdate = m_Behaviours;
 
 		for (auto const& behaviour : behavioursToUpdate)
 		{
 			if (HasDisconnected())
 				break;
-			// Only update, if not in the remove queue
+			// Skip behaviors that are waiting for removal.
 			auto findIt =
 				std::find(m_BehavioursToRemove.begin(), m_BehavioursToRemove.end(), behaviour->shared_from_this());
 
@@ -111,11 +111,11 @@ void GameConnection::AddBehaviour(IGameConnectionBehaviour* behaviour)
 
 #ifdef _ASSERTS
 	auto findIt = std::find(m_Behaviours.begin(), m_Behaviours.end(), ref);
-	ASSERT_MSG(findIt == m_Behaviours.end(), "Behaviour already added");
+	ASSERT_MSG(findIt == m_Behaviours.end(), "Behavior already added");
 #endif
 	m_Behaviours.push_back(ref);
 
-	// Behaviours and their callbacks are confined to SessionWorker.
+	// SessionWorker confines behaviors and their callbacks to one thread.
 	behaviour->OnAttach(*this);
 }
 
@@ -137,7 +137,7 @@ bool GameConnection::RemoveBehaviourInternal(IGameConnectionBehaviour* behaviour
 		found = true;
 	}
 
-	// `ref` keeps the behaviour alive until OnDetach returns.
+	// `ref` keeps the behavior alive until OnDetach returns.
 	if (found)
 		behaviour->OnDetach(*this);
 
@@ -146,13 +146,13 @@ bool GameConnection::RemoveBehaviourInternal(IGameConnectionBehaviour* behaviour
 
 ObservedGameMemory& GameConnection::GetObservedGameMemory()
 {
-	ASSERT_MSG(m_ObservedGameMemory != nullptr, "Attempt to use observed game memory before initialise");
+	ASSERT_MSG(m_ObservedGameMemory != nullptr, "Attempt to use observed game memory before initialization");
 	return *m_ObservedGameMemory.get();
 }
 
 ObservedGameMemory const& GameConnection::GetObservedGameMemory() const
 {
-	ASSERT_MSG(m_ObservedGameMemory != nullptr, "Attempt to use observed game memory before initialise");
+	ASSERT_MSG(m_ObservedGameMemory != nullptr, "Attempt to use observed game memory before initialization");
 	return *m_ObservedGameMemory.get();
 }
 

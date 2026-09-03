@@ -1,6 +1,7 @@
 # Development
 
-The required release-validation matrix is documented in [parity-gate.md](parity-gate.md).
+The [Parity gate](parity-gate.md) defines the required release-validation
+matrix.
 
 Rogue Assistant uses CMake 3.25 or newer and C++20. The checked-in presets keep
 local and continuous-integration builds aligned.
@@ -32,9 +33,9 @@ X11, Xcursor, Xext, Xi, and Xrandr. CI installs these explicitly.
 
 Platform release builds use `release-windows-x64`,
 `release-macos-arm64`, and `release-linux-x86_64`. Their archive and signing
-workflow is documented in [release.md](release.md). Application SemVer has one
-source in `cmake/Version.cmake`; bridge, multiplayer, storage, and ROM API
-versions remain independent.
+workflow is documented in [Release engineering](release.md). Application
+SemVer has one source in `cmake/Version.cmake`; bridge, multiplayer, storage,
+and ROM API versions remain independent.
 
 ## Quality gates
 
@@ -55,16 +56,20 @@ cmake --build --preset ci-clang-tidy --parallel
 ctest --preset ci-clang-tidy
 ```
 
-Only touched C++ files should be formatted. Repository-wide formatting and
-dependency upgrades belong in separate changes.
+Format only the C++ files that you change. Keep repository-wide formatting and
+dependency upgrades in separate changes.
 
-## User-facing text
+## Technical writing
 
-Use clear, simple technical English in the application, command-line output,
-and mGBA console messages.
+Follow the [Google developer documentation style guide](https://developers.google.com/style)
+for first-party documentation, application text, command-line output, log
+messages, code comments, and mGBA console messages. Do not edit quoted or
+vendored third-party license text.
 
+- Use US English, active voice, present tense, and sentence-case headings.
+- Address the reader as "you" and use direct commands for instructions.
 - Describe the visible state or the action that the user must take.
-- Use short sentences, active voice, sentence case, and familiar terms.
+- Prefer short sentences and familiar, consistent terms.
 - Do not expose internal architecture terms unless the user needs them to fix
   a problem.
 - Write relationships as words when shorthand can be ambiguous. For example,
@@ -76,6 +81,6 @@ and mGBA console messages.
 
 `THIRD_PARTY_NOTICES.md` is installed with every application. Keep its versions
 aligned with `cmake/DesktopDependencies.cmake` and SFML's transitive revisions.
-Do not publish a binary until the owner-selected project license and every
-inherited asset's provenance are recorded as described in
-[asset-provenance.md](asset-provenance.md).
+Do not publish a binary until a license grant covers the inherited source and
+the project records the provenance of every inherited asset. See
+[Asset provenance and licensing](asset-provenance.md).

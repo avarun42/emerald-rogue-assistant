@@ -24,9 +24,9 @@ send queues each retain at most 256 frames and 4 MiB of wire data. The send
 queue advances only by the byte count actually accepted by the socket. These
 bounds are protocol implementation limits, not flow-control signals.
 
-Because the 1 MiB body ceiling includes headers, a `ReadResult` can carry at
-most 1,048,568 memory bytes and a `WriteRequest` at most 1,048,560 memory bytes.
-The smaller write limit also accounts for its address and byte-count fields.
+Because the 1 MiB body limit includes headers, a `ReadResult` can carry at most
+1,048,568 memory bytes. A `WriteRequest` can carry at most 1,048,560 memory
+bytes because its payload also contains address and byte-count fields.
 
 | ID | Name | Request ID | Payload |
 |---:|---|---|---|
@@ -44,15 +44,15 @@ bytes. Stable error codes are unsupported protocol (1), busy (2), malformed
 frame (3), invalid request ID (4), invalid address (5), invalid size (6), queue
 full (7), and internal error (8).
 
-The handshake must finish before memory messages are accepted. Protocol majors
-must match. The server may accept an older protocol minor only when all used
-features are defined by that minor; the initial implementation negotiates
-exactly 1.0. A rejected hello is followed by `Close`.
+The handshake must finish before the server accepts memory messages. Protocol
+majors must match. The server can accept an older protocol minor only when that
+minor defines every feature in use. The initial implementation negotiates
+exactly 1.0. The server sends `Close` after it rejects a hello.
 
 The canonical byte vectors live in
 `tests/fixtures/bridge_protocol_1.golden`. Both the C++ codec suite and the Lua
-adapter suite consume that file so the two implementations cannot silently
-drift.
+adapter suite read that file, which prevents silent differences between the
+implementations.
 
 ## mGBA execution bounds
 
@@ -65,7 +65,7 @@ allows reads only from documented GBA RAM, video memory, and ROM ranges and
 writes only to EWRAM or IWRAM.
 
 mGBA owns socket event polling. The script buffers received bytes and retains
-the unsent suffix reported by `socket:send`. A failed connection is attempted
-again no more than once per wall-clock second. Pausing emulation performs no
-work and has no timeout; bounded queues provide backpressure until frames
-resume.
+the unsent suffix reported by `socket:send`. After a connection fails, the
+script waits at least one wall-clock second before reconnecting. Pausing
+emulation performs no work and has no timeout. Bounded queues provide
+backpressure until frames resume.

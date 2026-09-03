@@ -47,7 +47,7 @@ bool UpdateTimer::Update()
 		{
 			m_Timer -= m_UpdateInterval;
 
-			// Gotten too far ahead
+			// Discard excess accumulated time to avoid runaway catch-up updates.
 			if (m_Timer >= m_UpdateInterval * 3)
 				m_Timer = m_UpdateInterval;
 

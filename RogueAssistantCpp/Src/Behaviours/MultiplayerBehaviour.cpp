@@ -85,12 +85,9 @@ bool ParsePort(std::string_view text, std::uint16_t& port)
 }
 } // namespace
 
-// Every offset/size below comes out of the game's own RAM, and every packet size
-// comes off the network. Both were previously only sanity-checked with ASSERT_*,
-// which compiles to nothing in Release - so in the shipping build a bad value
-// indexed straight past the end of the observed multiplayer blob. Validate the
-// whole layout up front instead, then the individual accesses are safe by
-// construction.
+// The ROM supplies every offset and size below, and the network supplies every
+// packet size. Validate the complete layout before any code indexes the observed
+// multiplayer state.
 static bool ValidateMultiplayerLayout(GameConnection& game)
 {
 	ObservedGameMemory const& memory = game.GetObservedGameMemory();
@@ -116,7 +113,7 @@ static bool ValidateMultiplayerLayout(GameConnection& game)
 	}
 	if (rogueHeader.netPlayerCount == 0 || rogueHeader.netPlayerCount > 255)
 	{
-		LOG_ERROR("Multiplayer layout invalid: netPlayerCount is outside 1..255");
+		LOG_ERROR("Multiplayer layout invalid: netPlayerCount must be from 1 through 255");
 		return false;
 	}
 	if (rogueHeader.netHandshakeSize == 0 || rogueHeader.netGameStateSize == 0 ||
@@ -127,7 +124,7 @@ static bool ValidateMultiplayerLayout(GameConnection& game)
 	}
 	if (blobSize == 0 || blobSize > MaxRomPayloadSize)
 	{
-		LOG_ERROR("Multiplayer layout invalid: state blob is outside 1..1 MiB");
+		LOG_ERROR("Multiplayer layout invalid: state size must be from 1 through %zu bytes", MaxRomPayloadSize);
 		return false;
 	}
 
@@ -169,8 +166,8 @@ static bool ValidateMultiplayerLayout(GameConnection& game)
 	return true;
 }
 
-// Player IDs arrive over the network. 0 is the host, so a client's own ID must be
-// non-zero and inside the player table.
+// Player IDs arrive over the network. Zero identifies the host, so a client's
+// ID must be nonzero and inside the player table.
 static bool IsValidClientPlayerId(GameStructures::RogueAssistantHeader const& rogueHeader, u8 playerId)
 {
 	return playerId != 0 && playerId < rogueHeader.netPlayerCount;
@@ -229,7 +226,7 @@ std::string MultiplayerBehaviour::SanitiseConnectionAddress(std::string const& a
 
 	if (IsRequestingHostConnection())
 	{
-		// We're only inputing port
+		// A host address contains only the port number.
 		for (char c : address)
 		{
 			if (c >= '0' && c <= '9')
@@ -238,7 +235,7 @@ std::string MultiplayerBehaviour::SanitiseConnectionAddress(std::string const& a
 	}
 	else
 	{
-		// allow anything
+		// Configuration validation checks the client address before using it.
 		outAddress = address;
 	}
 
@@ -404,8 +401,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 	if (!game.GetObservedGameMemory().IsMultiplayerStateValid())
 		return;
 
-	// The blob is re-sized whenever the game reports a different netMultiplayerSize,
-	// so re-check rather than trusting the layout we validated on attach.
+	// Revalidate the layout after the game changes netMultiplayerSize.
 	if (!ValidateMultiplayerLayout(game))
 	{
 		game.RemoveBehaviour(this);
@@ -418,13 +414,13 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 
 	if (m_RequestFlags != requestFlags)
 	{
-		// Restart multiplayer as we're not valid anymore :(
+		// Restart multiplayer because the ROM request changed.
 		game.RemoveBehaviour(this);
 		return;
 	}
 
-	// ENet must keep being serviced while the ROM is preparing a handshake
-	// response, otherwise a disconnect or a queued compatibility hello can stall.
+	// Poll ENet while the ROM prepares a handshake response so disconnects and
+	// queued compatibility messages continue to progress.
 	if (!m_ClientState.m_PendingHandshakeData.empty())
 		(void)TrySubmitClientHandshake(game);
 	if (!m_ClientState.m_PendingPlayerProfiles.empty())
@@ -435,12 +431,12 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 	ENetPeer* const pendingBeforePoll = m_ServerState.m_PendingHandshake;
 	PollConnection(game);
 
-	// A handshake received by PollConnection must not consume stale ROM state in
-	// this same update. Wait for the next observed-memory cycle.
+	// A handshake received by PollConnection cannot use ROM state from the current
+	// update. Wait for the next observed-memory cycle.
 	if (!hadPendingHandshakeData && pendingBeforePoll != nullptr &&
 		m_ServerState.m_PendingHandshake == pendingBeforePoll && m_ServerState.m_PendingHandshakeData.empty())
 	{
-		ASSERT_MSG(IsHost(), "Can only process handshakes if as host");
+		ASSERT_MSG(IsHost(), "Only a host can process client handshakes");
 
 		u8 const handshakeState = multiplayerBlob[rogueHeader.netHandshakeOffset + rogueHeader.netHandshakeStateOffset];
 		if (handshakeState == HandshakeStateSendToClient)
@@ -470,14 +466,13 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 				return;
 			}
 
-			// Force sending out player profiles to all clients
+			// Force the next player-profile broadcast to every client.
 			m_ServerState.m_PlayerProfiles.clear();
 			return;
 		}
 	}
 
-	// Handle handshake
-	//
+	// Advance the ROM handshake.
 	switch (m_ConnState)
 	{
 	case MultiplayerBehaviour::ConnectionState::Connecting:
@@ -528,7 +523,7 @@ void MultiplayerBehaviour::OpenHostConnection(GameConnection& game)
 
 	if (enet_initialize() != 0)
 	{
-		LOG_ERROR("ENet: Failed to initialise");
+		LOG_ERROR("ENet: Failed to initialize");
 		game.ReportError("Rogue Assistant could not start multiplayer.");
 		game.RemoveBehaviour(this);
 		return;
@@ -582,7 +577,7 @@ void MultiplayerBehaviour::OpenClientConnection(GameConnection& game)
 
 	if (enet_initialize() != 0)
 	{
-		LOG_ERROR("ENet: Failed to initialise");
+		LOG_ERROR("ENet: Failed to initialize");
 		game.ReportError("Rogue Assistant could not start multiplayer.");
 		game.RemoveBehaviour(this);
 		return;
@@ -604,7 +599,7 @@ void MultiplayerBehaviour::OpenClientConnection(GameConnection& game)
 		return;
 	}
 
-	// Parse address
+	// Resolve the host address.
 	strutil::trim(m_ConnectionAddressRaw);
 
 	std::size_t const separator = m_ConnectionAddressRaw.rfind(':');
@@ -780,7 +775,7 @@ void MultiplayerBehaviour::ConnectedUpdate(GameConnection& game)
 		std::size_t const playerStatesSize =
 			static_cast<std::size_t>(rogueHeader.netPlayerStateSize) * rogueHeader.netPlayerCount;
 
-		// If player profiles have change, broadcast them out to other players
+		// Broadcast changed player profiles.
 		if (UpdateBinaryBlob(m_ServerState.m_PlayerProfiles, &multiplayerBlob[rogueHeader.netPlayerProfileOffset],
 							 playerProfilesSize))
 		{
@@ -788,7 +783,7 @@ void MultiplayerBehaviour::ConnectedUpdate(GameConnection& game)
 									  ENET_PACKET_FLAG_RELIABLE);
 		}
 
-		// Broadcast out the game state every now and then
+		// Broadcast the game state at its configured interval.
 		if (m_ServerState.m_GameStateTimer.Update())
 		{
 			BroadcastToConnectedPeers(
@@ -797,7 +792,7 @@ void MultiplayerBehaviour::ConnectedUpdate(GameConnection& game)
 				ENET_PACKET_FLAG_RELIABLE);
 		}
 
-		// Broadcast out the player states every now and then
+		// Broadcast all player states at their configured interval.
 		if (m_ServerState.m_PlayerStateTimer.Update())
 		{
 			BroadcastToConnectedPeers(
@@ -808,12 +803,12 @@ void MultiplayerBehaviour::ConnectedUpdate(GameConnection& game)
 	}
 	else
 	{
-		// Send the local player state to the server every now and then
+		// Send the local player state at its configured interval.
 		if (m_ClientState.m_PlayerStateTimer.Update())
 		{
 			if (!IsValidClientPlayerId(rogueHeader, m_PlayerId))
 			{
-				LOG_ERROR("Refusing to send player state for out of range player ID %u", (unsigned)m_PlayerId);
+				LOG_ERROR("Refusing to send player state for out-of-range player ID %u", (unsigned)m_PlayerId);
 				return;
 			}
 
@@ -1024,10 +1019,10 @@ void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent
 				RejectPeer(game, netEvent.peer, "client has an invalid multiplayer player ID");
 			else
 				game.WriteRequest(CreateAnonymousMessageId(),
-								  multiplayerAddress + rogueHeader.netPlayerStateOffset +
+					multiplayerAddress + rogueHeader.netPlayerStateOffset +
 									  static_cast<GameAddress>(
 										  static_cast<std::size_t>(rogueHeader.netPlayerStateSize) * playerId),
-								  packet->data, rogueHeader.netPlayerStateSize);
+					packet->data, rogueHeader.netPlayerStateSize);
 		}
 		else
 		{

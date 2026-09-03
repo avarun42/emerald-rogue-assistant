@@ -78,7 +78,7 @@ TEST_CASE("multiplayer hello rejects malformed and unsupported inputs", "[multip
 	REQUIRE_FALSE(EncodeHello(unsupported, encoded, error));
 }
 
-TEST_CASE("multiplayer compatibility gates protocol ROM edition and layouts", "[multiplayer][protocol]")
+TEST_CASE("multiplayer compatibility gates protocol, ROM API, edition, and layouts", "[multiplayer][protocol]")
 {
 	Hello const local = ExampleHello();
 	Hello remote = local;

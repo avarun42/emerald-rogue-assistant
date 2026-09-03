@@ -21,7 +21,7 @@ TEST_CASE("desktop command line accepts both bridge port forms", "[command-line]
 	REQUIRE(parsed.bridgePort == 51234);
 }
 
-TEST_CASE("desktop command line rejects missing invalid duplicate and unknown options", "[command-line]")
+TEST_CASE("desktop command line rejects missing, invalid, duplicate, and unknown options", "[command-line]")
 {
 	std::array<std::string_view, 1> const missing{"--bridge-port"};
 	REQUIRE_FALSE(ParseDesktopOptions(missing).error.empty());

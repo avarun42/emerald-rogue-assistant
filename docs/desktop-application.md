@@ -1,6 +1,6 @@
 # Standalone desktop application
 
-The modern runtime is a normal desktop process. mGBA does not load native
+The modern runtime is a standalone desktop process. mGBA does not load native
 Rogue Assistant code: it runs the bundled `RogueAssistant_mGBA.lua` adapter,
 which connects to the application over loopback TCP.
 
@@ -10,11 +10,12 @@ which connects to the application over loopback TCP.
    unless configured otherwise.
 2. Start an API-3 Emerald Rogue Vanilla or EX ROM in mGBA 0.10.5 or newer.
 3. Open **Tools > Scripting** in mGBA, choose **File > Load Script**, and load
-   the exported `RogueAssistant_mGBA.lua` file shown by the application.
+   the exported `RogueAssistant_mGBA.lua` file that Rogue Assistant shows.
 
-The application exports the script during startup. The script is stable under
-the platform data directory's `scripts` child and contains the effective port
-for that run. The disconnected screen provides these keyboard actions:
+The application exports the script during startup. It stores the script in the
+`scripts` subdirectory of the platform data directory and writes the effective
+port for that run into the script. The disconnected screen provides these
+keyboard actions:
 
 - `P`: change and save the connection port
 - `E`: export the script again
@@ -32,14 +33,14 @@ exports a matching script, and waits for mGBA to reconnect.
 RogueAssistant [--bridge-port PORT] [--version] [--help]
 ```
 
-`--bridge-port` affects only the current process. Port selection is strictly:
-the command-line value, then `Bridge.Port` in `settings.ini`, then `30125`.
-Ports are decimal integers from 1 through 65535. Repeated or unknown options
-are rejected.
+`--bridge-port` affects only the current process. Rogue Assistant selects the
+first available port value in this order: `--bridge-port`, `Bridge.Port` in
+`settings.ini`, and then `30125`. Ports are decimal integers from 1 through
+65535. Rogue Assistant rejects repeated or unknown options.
 
-The CMake project version supplies the window, UI, log, command-line, and
-bridge-handshake application version. `RogueAssistant --version` therefore
-reports the same version packaged in the application metadata.
+The CMake project version supplies the version in the window, UI, log,
+command-line output, bridge handshake, and package metadata. As a result,
+`RogueAssistant --version` reports the packaged application version.
 
 ## Resources
 

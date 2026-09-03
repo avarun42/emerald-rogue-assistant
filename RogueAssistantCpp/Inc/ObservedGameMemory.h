@@ -10,8 +10,7 @@
 
 class GameConnection;
 
-// Observed game binary blob
-//
+// A validated snapshot of one game-memory region.
 
 class ObservedBlob
 {
@@ -34,8 +33,7 @@ protected:
 	std::vector<u8> m_Data;
 };
 
-// Observed game structure
-//
+// A validated snapshot decoded into a fixed-layout structure.
 
 template<typename T>
 class ObservedStruct : public ObservedBlob
@@ -67,8 +65,7 @@ private:
 	T m_Value{};
 };
 
-// Collection of common observed memory
-//
+// The game-memory regions that Rogue Assistant observes each update.
 
 class ObservedGameMemory
 {

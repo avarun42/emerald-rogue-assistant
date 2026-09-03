@@ -18,7 +18,7 @@
 #include <utility>
 #include <vector>
 
-// Dimension is based on the poketch frame asset
+// The view dimensions match the Poketch frame asset.
 static int const c_ViewWidth = 256;
 static int const c_ViewHeight = 192;
 static double const c_ViewAspectW = 4;
@@ -162,13 +162,13 @@ void PrimaryUI::SetToStubTheme()
 
 void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand)
 {
-	// Calc delta time
+	// Calculate the elapsed frame time.
 	TimeDurationNS deltaTimeNS = UpdateTimer::GetCurrentClock() - m_LastDrawTime;
 	m_Assets->m_DeltaTimeS = (float)((double)deltaTimeNS / 1000000000.0);
 	m_Assets->m_FramesS += m_Assets->m_DeltaTimeS;
 	m_Assets->m_FramesRemainderS = std::fmod(m_Assets->m_FramesRemainderS + m_Assets->m_DeltaTimeS, 1.0);
 
-	// Loading spinner text
+	// Update the loading indicator.
 	m_Assets->m_LoadingSpinnerAnimText = "";
 	if (m_Assets->m_FramesRemainderS >= 0.25)
 		m_Assets->m_LoadingSpinnerAnimText += ".";
@@ -177,7 +177,7 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 	if (m_Assets->m_FramesRemainderS >= 0.75)
 		m_Assets->m_LoadingSpinnerAnimText += ".";
 
-	// Flashing cursor pos
+	// Update the blinking text cursor.
 	m_Assets->m_CursorPosAnimText = "";
 	if (m_Assets->m_FramesRemainderS >= 0.25)
 		m_Assets->m_CursorPosAnimText = "|";
@@ -188,11 +188,11 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 
 	sf::RenderWindow& gfx = *window.GetHandle();
 
-	// Snap window to aspect ratio
+	// Keep the window at the authored aspect ratio.
 	{
 		sf::Vector2u currentWindowSize = gfx.getSize();
 
-		// Snap based on how much window is dragged left or right
+		// Use the width as the source dimension while the user resizes the window.
 		sf::Vector2u snappedWindowSize(
 			currentWindowSize.x, (u32)std::max(1.0, std::round(currentWindowSize.x / c_ViewAspectW) * c_ViewAspectH)
 			//(u32)std::max(1.0, std::round(currentWindowSize.y / c_ViewAspectH) * c_ViewAspectW),
@@ -205,14 +205,14 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 		}
 	}
 
-	// Dimension is based on the poketch frame asset
+	// Match the logical view to the Poketch frame asset.
 	sf::View view(
 		sf::FloatRect(sf::Vector2f(-c_ViewWidth / 2, -c_ViewHeight / 2), sf::Vector2f(c_ViewWidth, c_ViewHeight)));
 	gfx.setView(view);
 
 	gfx.clear(m_Assets->m_ClearColour);
 
-	// Draw title
+	// Draw the title or the latest error.
 	std::string const& errorStr = snapshot.error;
 
 	if (errorStr.empty())
@@ -228,10 +228,10 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 	m_Assets->DrawRightAlignedText(gfx, "v" ROGUE_ASSISTANT_VERSION_STRING, c_CentreOffset + sf::Vector2f(101, -90), 10,
 								   m_Assets->m_LightFontColour);
 
-	// Print awaiting connection screen
+	// Draw the connection instructions.
 	if (snapshot.connections.empty())
 	{
-		m_Assets->DrawLeftAlignedText(gfx, "Please launch the Game " + m_Assets->m_LoadingSpinnerAnimText,
+		m_Assets->DrawLeftAlignedText(gfx, "Waiting for Emerald Rogue" + m_Assets->m_LoadingSpinnerAnimText,
 									  c_CentreOffset + sf::Vector2f(-74, -55), 14, m_Assets->m_LightFontColour);
 
 		m_Assets->DrawLeftAlignedText(gfx,
@@ -241,18 +241,10 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 									  "3. Select File > Load Script...\n"
 									  "4. Open RogueAssistant_mGBA.lua",
 									  c_CentreOffset + sf::Vector2f(-90, -38), 11, m_Assets->m_LightFontColour);
-
-		// m_Assets->DrawCenteredText(
-		//	gfx,
-		//	"disconnected",
-		//	c_CentreOffset + sf::Vector2f(0, 60),
-		//	16,
-		//	sf::Color::Red
-		//);
 	}
 	else
 	{
-		// Print connected text
+		// Draw the active connection status.
 		int const connectionCount = static_cast<int>(snapshot.connections.size());
 		int prevConnIdx = m_CurrentConnectionIdx;
 
@@ -267,17 +259,17 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 			prevConnIdx != m_CurrentConnectionIdx || m_CurrentConnectionId != connection.id;
 		m_CurrentConnectionId = connection.id;
 
-		std::string connectionText = "Connected to Game";
+		std::string connectionText = "Connected to Emerald Rogue";
 
 		if (connectionCount > 1)
 		{
-			connectionText +=
-				" " + std::to_string(m_CurrentConnectionIdx + 1) + " / " + std::to_string(connectionCount) + " [TAB]";
+			connectionText = "Connected: " + std::to_string(m_CurrentConnectionIdx + 1) + " of " +
+							 std::to_string(connectionCount) + " [Tab]";
 		}
 
 		m_Assets->DrawCenteredText(gfx, connectionText, c_CentreOffset + sf::Vector2f(0, 52), 14, sf::Color::Green);
 
-		// Determine current page
+		// Select the page for the active connection.
 
 		rogue::app::UiPage const newPage = connection.page;
 		bool initialLoad = false;
@@ -289,7 +281,7 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 		}
 		m_CurrentPage = newPage;
 
-		// Render specific page
+		// Draw the selected page.
 		switch (m_CurrentPage)
 		{
 		case rogue::app::UiPage::Multiplayer:
@@ -308,12 +300,12 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 
 	RenderBridgeControls(window, snapshot, submitCommand);
 
-	// Draw poketch overlay last
+	// Draw the Poketch overlay last.
 	sf::Sprite sprite(m_Assets->m_PoketchOverlay);
 	sprite.setOrigin(sf::Vector2f(c_ViewWidth / 2, c_ViewHeight / 2));
 	gfx.draw(sprite);
 
-	// End draw
+	// Restore the default view.
 	gfx.setView(gfx.getDefaultView());
 
 	m_LastDrawTime = UpdateTimer::GetCurrentClock();
@@ -330,7 +322,7 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 	switch (snapshot.transportState)
 	{
 	case TransportState::Stopped:
-		bridgeState = "The mGBA connection is stopped";
+		bridgeState = "mGBA connection stopped";
 		break;
 	case TransportState::Disconnected:
 		bridgeState = "mGBA is not connected";
@@ -354,7 +346,7 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 								   m_Assets->m_DarkFontColour);
 		m_Assets->DrawCenteredText(gfx, "Port: " + window.GetInputText() + m_Assets->m_CursorPosAnimText,
 								   c_CentreOffset + sf::Vector2f(0, 57), 9, m_Assets->m_DarkFontColour);
-		m_Assets->DrawCenteredText(gfx, "[ENTER] Save  [ESC] Cancel", c_CentreOffset + sf::Vector2f(0, 69), 8,
+		m_Assets->DrawCenteredText(gfx, "[Enter] Save  [Esc] Cancel", c_CentreOffset + sf::Vector2f(0, 69), 8,
 								   m_Assets->m_LightFontColour);
 		if (window.ButtonJustReleased(sf::Keyboard::Key::Enter))
 		{
@@ -386,20 +378,20 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 	{
 		if (snapshot.bridgeScriptPath.empty())
 		{
-			m_ActionMessage = "Export the mGBA script first";
+			m_ActionMessage = "Export the mGBA script first.";
 		}
 		else
 		{
 			auto const begin = snapshot.bridgeScriptPath.begin();
 			sf::Clipboard::setString(sf::String::fromUtf8(begin, snapshot.bridgeScriptPath.end()));
-			m_ActionMessage = "Script path copied";
+			m_ActionMessage = "Script path copied.";
 		}
 	}
 	if (window.ButtonJustReleased(sf::Keyboard::Key::R))
 	{
 		if (snapshot.bridgeScriptPath.empty())
 		{
-			m_ActionMessage = "Export the mGBA script first";
+			m_ActionMessage = "Export the mGBA script first.";
 		}
 		else
 		{
@@ -407,11 +399,11 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 			if (rogue::platform::RevealDirectory(rogue::platform::PathFromUtf8(snapshot.bridgeScriptPath).parent_path(),
 												 error))
 			{
-				m_ActionMessage = "Script folder opened";
+				m_ActionMessage = "Script folder opened.";
 			}
 			else
 			{
-				m_ActionMessage = "Rogue Assistant cannot open the script folder";
+				m_ActionMessage = "Rogue Assistant cannot open the script folder.";
 				LOG_WARN("Cannot open bridge script folder: %s", error.c_str());
 			}
 		}
@@ -424,26 +416,17 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 		m_Assets->DrawCenteredText(gfx, action, c_CentreOffset + sf::Vector2f(0, 49), 8,
 								   m_Assets->m_DarkFontColour);
 	m_Assets->DrawCenteredText(gfx, "[P] Change port  [E] Export script", c_CentreOffset + sf::Vector2f(0, 59), 8,
-								   m_Assets->m_LightFontColour);
+							   m_Assets->m_LightFontColour);
 	m_Assets->DrawCenteredText(gfx, "[C] Copy path  [R] Open folder", c_CentreOffset + sf::Vector2f(0, 69), 8,
-								   m_Assets->m_LightFontColour);
+							   m_Assets->m_LightFontColour);
 }
 
 void PrimaryUI::RenderAwaitingPage(Window& window)
 {
 	sf::RenderWindow& gfx = *window.GetHandle();
 
-	// Print state
-	m_Assets->DrawCenteredText(gfx, "Ready to go!", c_CentreOffset + sf::Vector2f(0, -55), 16,
-							   m_Assets->m_LightFontColour);
-
-	// m_Assets->DrawLeftAlignedText(
-	//	gfx,
-	//	"When Emerald Rogue needs input\nfrom Rogue Assistant, this screen\nwill update",
-	//	c_CentreOffset + sf::Vector2f(-90, -30),
-	//	16,
-	//	m_Assets->m_LightFontColour
-	//);
+	// Draw the idle state.
+	m_Assets->DrawCenteredText(gfx, "Ready", c_CentreOffset + sf::Vector2f(0, -55), 16, m_Assets->m_LightFontColour);
 }
 
 void PrimaryUI::RenderMultiplayerPage(Window& window, rogue::app::UiSnapshot const& snapshot,
@@ -453,8 +436,8 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, rogue::app::UiSnapshot con
 	sf::RenderWindow& gfx = *window.GetHandle();
 	rogue::app::MultiplayerSnapshot const& multiplayer = connection.multiplayer;
 
-	// Titlt
-	m_Assets->DrawCenteredText(gfx, "=== Multiplayer ===", c_CentreOffset + sf::Vector2f(0, -55), 16,
+	// Draw the page title.
+	m_Assets->DrawCenteredText(gfx, "Multiplayer", c_CentreOffset + sf::Vector2f(0, -55), 16,
 							   m_Assets->m_LightFontColour);
 
 	if (initialLoad)
@@ -476,15 +459,15 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, rogue::app::UiSnapshot con
 		if (multiplayer.requestingHost)
 		{
 			m_Assets->DrawLeftAlignedText(gfx,
-										  "What Port would you like to host on?\n" + window.GetInputText() +
-											  m_Assets->m_CursorPosAnimText + "\n\nPress [ENTER] to continue",
+										  "Enter the host port:\n" + window.GetInputText() +
+											  m_Assets->m_CursorPosAnimText + "\n\nPress [Enter] to continue",
 										  c_CentreOffset + sf::Vector2f(-90, -30), 16, m_Assets->m_LightFontColour);
 		}
 		else
 		{
 			m_Assets->DrawLeftAlignedText(gfx,
-										  "What is the IP address you would like\nto join?\n" + window.GetInputText() +
-											  m_Assets->m_CursorPosAnimText + "\n\nPress [ENTER] to continue",
+										  "Enter the host IP address:\n" + window.GetInputText() +
+											  m_Assets->m_CursorPosAnimText + "\n\nPress [Enter] to continue",
 										  c_CentreOffset + sf::Vector2f(-90, -30), 16, m_Assets->m_LightFontColour);
 		}
 
@@ -502,21 +485,21 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, rogue::app::UiSnapshot con
 	{
 		if (multiplayer.requestingHost)
 		{
-			m_Assets->DrawLeftAlignedText(gfx, "Hosting on Port:" + std::to_string(multiplayer.port),
+			m_Assets->DrawLeftAlignedText(gfx, "Hosting on port " + std::to_string(multiplayer.port),
 										  c_CentreOffset + sf::Vector2f(-90, -40), 16, m_Assets->m_LightFontColour);
 		}
 		else
 		{
 			if (multiplayer.connected)
 			{
-				m_Assets->DrawLeftAlignedText(gfx, "Connected to Host", c_CentreOffset + sf::Vector2f(-90, -40), 16,
+				m_Assets->DrawLeftAlignedText(gfx, "Connected to host", c_CentreOffset + sf::Vector2f(-90, -40), 16,
 											  m_Assets->m_LightFontColour);
 			}
 		}
 
 		if (!multiplayer.connected)
 		{
-			m_Assets->DrawLeftAlignedText(gfx, "Connection being established " + m_Assets->m_LoadingSpinnerAnimText,
+			m_Assets->DrawLeftAlignedText(gfx, "Connecting" + m_Assets->m_LoadingSpinnerAnimText,
 										  c_CentreOffset + sf::Vector2f(-90, -30), 16, m_Assets->m_LightFontColour);
 		}
 	}
@@ -526,8 +509,8 @@ void PrimaryUI::RenderHomeBoxPage(Window& window, rogue::app::HomeBoxSnapshot co
 {
 	sf::RenderWindow& gfx = *window.GetHandle();
 
-	// Print state
-	m_Assets->DrawCenteredText(gfx, "Transferring Pokémon Boxes", c_CentreOffset + sf::Vector2f(0, -55), 16,
+	// Draw the transfer state.
+	m_Assets->DrawCenteredText(gfx, "Transferring Pokémon boxes", c_CentreOffset + sf::Vector2f(0, -55), 16,
 							   m_Assets->m_LightFontColour);
 
 	if (homeBox.loading)

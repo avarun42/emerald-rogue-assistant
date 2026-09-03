@@ -1,7 +1,7 @@
 # Post-1.0 roadmap
 
-These items are intentionally deferred and must not appear as unowned TODOs in
-production code:
+These items are deferred until after 1.0. Track them here instead of leaving
+unowned TODO comments in production code:
 
 - Dynamic local pairing and discovery for multiple simultaneous mGBA sessions.
 - Validated support adapters for ROM Assistant APIs 1 and 2.

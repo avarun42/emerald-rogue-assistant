@@ -191,7 +191,7 @@ void GameConnectionManager::ExportPortableScript()
 		return;
 	}
 	m_BridgeScriptPath = rogue::platform::PathToUtf8(exported.path);
-	m_BridgeMessage = "mGBA script exported";
+	m_BridgeMessage = "mGBA script exported.";
 }
 
 void GameConnectionManager::ChangeBridgePort(std::string const& value)
@@ -258,7 +258,7 @@ void GameConnectionManager::UpdateConnections()
 
 	if (m_ListeningForConnections && m_ActiveConnections.empty() && m_AcceptingConnection)
 	{
-		LOG_INFO("Game: Incoming connection...");
+		LOG_INFO("Game: Accepting connection");
 		m_RecentError.clear();
 		m_ListeningForConnections = false;
 		m_ActiveConnections.push_back({m_NextConnectionId++, std::move(m_AcceptingConnection)});
@@ -271,7 +271,7 @@ void GameConnectionManager::UpdateConnections()
 	{
 		if (active->game->HasDisconnected())
 		{
-			LOG_INFO("Game: Connection disconnected");
+			LOG_INFO("Game: Disconnected");
 			active = m_ActiveConnections.erase(active);
 			if (m_ActiveConnections.empty() && m_Transport->State() != TransportState::Connected &&
 				m_Transport->State() != TransportState::Stopped)

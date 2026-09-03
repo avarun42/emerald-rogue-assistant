@@ -16,9 +16,9 @@ interoperable with version 1.0.
 | 3 | opaque player state | unreliable fragment |
 | 4 | opaque player profiles | reliable |
 
-No opaque ROM or gameplay payload is processed until the sending peer passes
-the compatibility gate. Host broadcasts are sent only to compatible peers that
-have also completed the ROM handshake.
+Rogue Assistant does not process an opaque ROM or gameplay payload until the
+sending peer passes the compatibility gate. The host sends broadcasts only to
+compatible peers that have also completed the ROM handshake.
 
 ## Compatibility hello
 
@@ -41,12 +41,13 @@ unsigned little-endian.
 | 36 | 4 | player-state size |
 
 Both peers must match the protocol major, API, edition, player count, and all
-five structure sizes. Minor negotiation selects the lower compatible minor;
-version 1.0 currently defines no optional minor features. A peer has five
-seconds after ENet connection to provide one valid hello.
+five structure sizes. Minor negotiation selects the lower compatible minor.
+Protocol 1.0 defines no optional minor features. A peer has five seconds after
+the ENet connection to provide one valid hello.
 
-Malformed, duplicate, mismatched, out-of-order, oversized, or directionally
-invalid payloads disconnect the offending peer and produce a visible local
-diagnostic. One correctly sized early ROM handshake may be held until its
-hello arrives because reliable ENet channels are ordered independently. All
-network-derived player IDs are range-checked before indexing ROM state.
+Rogue Assistant disconnects a peer that sends a malformed, duplicate,
+mismatched, out-of-order, oversized, or directionally invalid payload. It also
+shows a local diagnostic. Because ENet orders each reliable channel
+independently, Rogue Assistant can retain one correctly sized early ROM
+handshake until the compatibility hello arrives. It validates every
+network-derived player ID before using the ID to index ROM state.

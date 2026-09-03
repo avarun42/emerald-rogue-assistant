@@ -1,5 +1,5 @@
 -- Rogue Assistant mGBA bridge protocol 1.0
--- This file is portable across every host supported by mGBA 0.10.5+.
+-- This file is portable across every host supported by mGBA 0.10.5 or later.
 
 local BRIDGE_HOST = "127.0.0.1"
 local BRIDGE_PORT = 30125 -- ROGUE_ASSISTANT_BRIDGE_PORT

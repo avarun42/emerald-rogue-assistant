@@ -1,19 +1,19 @@
 # Installation and first run
 
-Rogue Assistant is distributed separately from Pokemon Emerald Rogue and from
+Rogue Assistant is distributed separately from Pokémon Emerald Rogue and from
 mGBA. It does not contain a ROM. Use only a ROM that you are legally entitled
 to use.
 
 ## Requirements
 
 - mGBA 0.10.5 or newer with Lua scripting enabled
-- an Emerald Rogue Vanilla or EX ROM exposing Assistant API 3
-- Windows x64, macOS 11 or newer on Apple silicon, or Linux x86_64
-- one free loopback TCP port, `30125` by default
+- Emerald Rogue Vanilla or EX with Assistant API 3
+- Windows x64, macOS 11 or later on Apple silicon, or Linux x86_64
+- One available loopback TCP port, `30125` by default
 
 The bridge protocol is local-only. Multiplayer separately uses the configured
-ENet host port (`30025` by default) and may require an operating-system firewall
-rule for the player hosting a session.
+ENet host port (`30025` by default). The player who hosts a session might need
+to allow that port through the operating system's firewall.
 
 ## Verify a download
 
@@ -32,8 +32,8 @@ shasum -a 256 RogueAssistant-1.0.0-macos-arm64.dmg
 sha256sum RogueAssistant-1.0.0-linux-x86_64.AppImage
 ```
 
-Compare the entire hexadecimal value with the matching line in
-`SHA256SUMS`. A mismatch means the file must not be used.
+Compare the complete hexadecimal value with the matching line in
+`SHA256SUMS`. Do not use a file if the values differ.
 
 ## Install
 
@@ -48,10 +48,11 @@ require a separate Visual C++ Redistributable installation.
 ### macOS
 
 Open `RogueAssistant-1.0.0-macos-arm64.dmg` and drag
-`RogueAssistant.app` to Applications. The release candidate is Apple silicon
-native and contains only an arm64 slice. Public artifacts should be signed
-and notarized; CI also creates an ad-hoc-signed development artifact when Apple
-credentials are unavailable, which macOS will identify as a development build.
+`RogueAssistant.app` to Applications. The application is native to Apple
+silicon and contains only an arm64 slice. Release builds use a Developer ID
+signature and notarization when credentials are available. Otherwise, CI
+creates an ad hoc signed development build, which macOS identifies as an
+unverified build.
 
 ### Linux x86_64
 
@@ -93,11 +94,11 @@ RogueAssistant [--bridge-port PORT] [--version] [--help]
 
 ## User data and removal
 
-Settings, logs, exported scripts, and Home Box data live in the documented
-platform directories in [platform-services.md](platform-services.md). Removing
-the application does not remove this data. Back it up before deleting it,
-especially Home Box files and their `.bak` companions.
+Settings, logs, exported scripts, and Home Box data remain in the directories
+listed in [Platform services](platform-services.md) after you remove the
+application. Back up this data before you delete it, especially Home Box files
+and their `.bak` files.
 
-To uninstall, remove the extracted application or app bundle. Delete the data
-and configuration directories separately only if their Home Box contents are
-no longer needed.
+To uninstall Rogue Assistant, remove the extracted application or app bundle.
+Delete the data and configuration directories only if you no longer need their
+Home Box contents.

@@ -142,7 +142,7 @@ TEST_CASE("Home Box v1 has a stable little-endian encoding and round trips", "[h
 	REQUIRE(canonical == encoded);
 }
 
-TEST_CASE("Home Box v1 rejects corruption truncation trailing bytes and invalid indices", "[home-box][codec]")
+TEST_CASE("Home Box v1 rejects corruption, truncation, trailing bytes, and invalid indices", "[home-box][codec]")
 {
 	HomeBoxData const expected = ExampleData();
 	std::vector<std::byte> encoded;
@@ -175,7 +175,7 @@ TEST_CASE("Home Box v1 rejects corruption truncation trailing bytes and invalid 
 	REQUIRE(error.find("record index") != std::string::npos);
 }
 
-TEST_CASE("Home Box v1 is bound to ROM API edition trainer and dimensions", "[home-box][codec]")
+TEST_CASE("Home Box v1 is bound to ROM API, edition, trainer, and dimensions", "[home-box][codec]")
 {
 	HomeBoxData const expected = ExampleData();
 	std::vector<std::byte> encoded;
@@ -293,7 +293,7 @@ TEST_CASE("a missing primary recovers from backup and ignores interrupted tempor
 	REQUIRE(*loaded.data == updated);
 }
 
-TEST_CASE("Home Box runtime layout validation checks counts spans and size bounds", "[home-box][layout]")
+TEST_CASE("Home Box runtime layout validation checks counts, spans, and size bounds", "[home-box][layout]")
 {
 	HomeBoxLayout layout{24, 2, 4, 0, 3, 12, 5, 16, 20};
 	std::string error;
