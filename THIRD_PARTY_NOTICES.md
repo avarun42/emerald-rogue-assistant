@@ -1,14 +1,15 @@
 # Third-party notices
 
-These notices cover third-party software and the font incorporated into or used
-to build Rogue Assistant 1.0.0. They do not license Rogue Assistant itself, its
-Lua adapter, or its images. The repository owner must separately choose a
-project license and resolve the remaining asset provenance recorded in
-`docs/asset-provenance.md` before public distribution.
+These notices cover third-party software and the font that Rogue Assistant
+1.0.0 includes or uses during its build. They do not license Rogue Assistant,
+its Lua adapter, or its images. Before public distribution, document a license
+grant that covers the inherited source and resolve the remaining asset
+provenance in `docs/asset-provenance.md`.
 
 Release packages include the upstream, unmodified license texts for SFML,
 ENet, FreeType, HarfBuzz, and SheenBidi in the adjacent `licenses` directory.
-Those texts control if a summary below differs from an upstream license.
+The license for the vendored strutil header appears below. The upstream license
+texts control if a summary differs from a license.
 
 ## Shipped components
 
@@ -24,13 +25,14 @@ Those texts control if a summary below differs from an upstream license.
 | QOI | SFML 3.1.0 vendored snapshot | Compiled into SFML Graphics | MIT |
 | stb_image / stb_image_write | 2.30 / 1.16 | Compiled into SFML Graphics | MIT alternative selected |
 | Vulkan headers | 1.1.83 | Compiled into SFML Window | Apache-2.0 |
+| strutil | 1.0.2-derived vendored header | Trims multiplayer host addresses | MIT |
 | Pokemon Emerald Pro | 1.0 | Bundled application font | CC BY-SA 3.0 |
 
 Portions of this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved. This software is based in part on
 the work of the FreeType Team.
 
-mGBA, the Pokemon Emerald ROM, and Pokemon Emerald Rogue are not bundled.
+mGBA, the Pokémon Emerald ROM, and Pokémon Emerald Rogue are not bundled.
 Platform system libraries remain subject to their own operating-system terms.
 
 ## SFML 3.1.0
@@ -63,6 +65,30 @@ the Software without restriction, including without limitation the rights to
 use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
 the Software, and to permit persons to whom the Software is furnished to do so,
 subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## strutil 1.0.2-derived vendored header
+
+MIT License
+
+Copyright (c) 2020 Tomasz Gałaj
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
