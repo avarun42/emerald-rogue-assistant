@@ -249,15 +249,17 @@ TEST_CASE("TcpLuaTransport prioritizes the close frame during shutdown", "[bridg
 	auto client = ConnectClient(transport);
 	CompleteHandshake(client, transport);
 
-	for (MemoryRequestId id : {MemoryRequestId{1}, MemoryRequestId{2}})
+	auto submitLargeWrite = [&transport](MemoryRequestId id)
 	{
 		MemoryRequest request;
 		request.id = id;
 		request.operation = MemoryRequest::Operation::Write;
 		request.address = 0x02000000U;
 		request.data.resize(200U * 1024U, std::byte{0x5A});
-		REQUIRE(transport.Submit(std::move(request)));
-	}
+		return transport.Submit(std::move(request));
+	};
+	REQUIRE(submitLargeWrite(1));
+	REQUIRE(submitLargeWrite(2));
 
 	transport.Stop();
 	auto const frames = ReceiveFramesUntilClosed(client);
