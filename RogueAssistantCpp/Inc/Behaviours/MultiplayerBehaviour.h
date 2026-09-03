@@ -9,6 +9,7 @@
 #include <queue>
 #include <span>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -103,7 +104,7 @@ class MultiplayerBehaviour : public IGameConnectionBehaviour
 	void HandleCompatibilityHello(GameConnection& game, ENetEvent& netEvent);
 	void HandleRomHandshake(GameConnection& game, ENetPeer* peer, std::span<u8 const> data);
 	void HandlePeerDisconnect(GameConnection& game, ENetPeer* peer);
-	void RejectPeer(GameConnection& game, ENetPeer* peer, std::string const& error);
+	void RejectPeer(GameConnection& game, ENetPeer* peer, std::string const& error, std::string_view userMessage = {});
 	bool TrySubmitHostHandshake(GameConnection& game);
 	bool TrySubmitClientHandshake(GameConnection& game);
 	bool TrySubmitClientPlayerProfiles(GameConnection& game);

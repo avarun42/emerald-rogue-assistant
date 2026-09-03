@@ -16,10 +16,10 @@ The application exports the script during startup. The script is stable under
 the platform data directory's `scripts` child and contains the effective port
 for that run. The disconnected screen provides these keyboard actions:
 
-- `P`: edit and persist the bridge port
+- `P`: change and save the connection port
 - `E`: export the script again
 - `C`: copy the exported script path
-- `R`: reveal the script directory in the platform file manager
+- `R`: open the script folder in the platform file manager
 
 Changing the configured port first binds a replacement listener. If binding
 fails, the working listener and saved setting remain unchanged. A successful

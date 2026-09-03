@@ -81,14 +81,14 @@ struct AssetCollection
 		bool fontLoaded = LoadFont(m_Font, resourceDirectory);
 		if (!fontLoaded)
 		{
-			throw std::runtime_error("cannot load Rogue Assistant font");
+			throw std::runtime_error("Cannot load the application font.");
 		}
 		m_Font.setSmooth(true);
 
 		bool frameLoaded = LoadFrame(m_PoketchOverlay, resourceDirectory);
 		if (!frameLoaded)
 		{
-			throw std::runtime_error("cannot load Rogue Assistant frame texture");
+			throw std::runtime_error("Cannot load the application frame image.");
 		}
 		m_PoketchOverlay.setSmooth(false);
 	}
@@ -235,7 +235,7 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 									  c_CentreOffset + sf::Vector2f(-74, -55), 14, m_Assets->m_LightFontColour);
 
 		m_Assets->DrawLeftAlignedText(gfx,
-									  "Connect mGBA v0.10.5+:\n"
+									  "Connect to mGBA 0.10.5 or later:\n"
 									  "1. Open Emerald Rogue in mGBA\n"
 									  "2. Select Tools > Scripting...\n"
 									  "3. Select File > Load Script...\n"
@@ -330,16 +330,16 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 	switch (snapshot.transportState)
 	{
 	case TransportState::Stopped:
-		bridgeState = "Bridge stopped";
+		bridgeState = "The mGBA connection is stopped";
 		break;
 	case TransportState::Disconnected:
-		bridgeState = "Bridge disconnected";
+		bridgeState = "mGBA is not connected";
 		break;
 	case TransportState::Listening:
-		bridgeState = "Bridge :" + std::to_string(snapshot.bridgePort) + " waiting for mGBA";
+		bridgeState = "Waiting for mGBA on port " + std::to_string(snapshot.bridgePort);
 		break;
 	case TransportState::Connected:
-		bridgeState = "Bridge :" + std::to_string(snapshot.bridgePort) + " connected";
+		bridgeState = "Connected to mGBA on port " + std::to_string(snapshot.bridgePort);
 		break;
 	}
 	if (!m_EditingBridgePort && window.ButtonJustReleased(sf::Keyboard::Key::P))
@@ -352,9 +352,9 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 		window.SetInputText(SanitiseConnectionAddress(window.GetInputText(), true));
 		m_Assets->DrawCenteredText(gfx, bridgeState, c_CentreOffset + sf::Vector2f(0, 44), 9,
 								   m_Assets->m_DarkFontColour);
-		m_Assets->DrawCenteredText(gfx, "Bridge port: " + window.GetInputText() + m_Assets->m_CursorPosAnimText,
+		m_Assets->DrawCenteredText(gfx, "Port: " + window.GetInputText() + m_Assets->m_CursorPosAnimText,
 								   c_CentreOffset + sf::Vector2f(0, 57), 9, m_Assets->m_DarkFontColour);
-		m_Assets->DrawCenteredText(gfx, "[ENTER] save  [ESC] cancel", c_CentreOffset + sf::Vector2f(0, 69), 8,
+		m_Assets->DrawCenteredText(gfx, "[ENTER] Save  [ESC] Cancel", c_CentreOffset + sf::Vector2f(0, 69), 8,
 								   m_Assets->m_LightFontColour);
 		if (window.ButtonJustReleased(sf::Keyboard::Key::Enter))
 		{
@@ -378,13 +378,13 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 		rogue::app::UiCommand command;
 		command.type = rogue::app::UiCommand::Type::ExportBridgeScript;
 		(void)submitCommand(std::move(command));
-		m_ActionMessage = "Export requested";
+		m_ActionMessage = "Exporting the mGBA script";
 	}
 	if (window.ButtonJustReleased(sf::Keyboard::Key::C))
 	{
 		if (snapshot.bridgeScriptPath.empty())
 		{
-			m_ActionMessage = "Script has not been exported";
+			m_ActionMessage = "Export the mGBA script first";
 		}
 		else
 		{
@@ -395,17 +395,23 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 	}
 	if (window.ButtonJustReleased(sf::Keyboard::Key::R))
 	{
-		std::string error;
-		if (snapshot.bridgeScriptPath.empty() ||
-			!rogue::platform::RevealDirectory(rogue::platform::PathFromUtf8(snapshot.bridgeScriptPath).parent_path(),
-											  error))
+		if (snapshot.bridgeScriptPath.empty())
 		{
-			m_ActionMessage = error.empty() ? "Script has not been exported" : error;
-			LOG_WARN("Cannot reveal bridge script: %s", m_ActionMessage.c_str());
+			m_ActionMessage = "Export the mGBA script first";
 		}
 		else
 		{
-			m_ActionMessage = "Script folder revealed";
+			std::string error;
+			if (rogue::platform::RevealDirectory(rogue::platform::PathFromUtf8(snapshot.bridgeScriptPath).parent_path(),
+												 error))
+			{
+				m_ActionMessage = "Script folder opened";
+			}
+			else
+			{
+				m_ActionMessage = "Rogue Assistant cannot open the script folder";
+				LOG_WARN("Cannot open bridge script folder: %s", error.c_str());
+			}
 		}
 	}
 
@@ -415,9 +421,9 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 	if (!action.empty())
 		m_Assets->DrawCenteredText(gfx, action, c_CentreOffset + sf::Vector2f(0, 49), 8,
 								   m_Assets->m_DarkFontColour);
-	m_Assets->DrawCenteredText(gfx, "[P] port  [E] export script", c_CentreOffset + sf::Vector2f(0, 59), 8,
+	m_Assets->DrawCenteredText(gfx, "[P] Change port  [E] Export script", c_CentreOffset + sf::Vector2f(0, 59), 8,
 								   m_Assets->m_LightFontColour);
-	m_Assets->DrawCenteredText(gfx, "[C] copy path  [R] reveal folder", c_CentreOffset + sf::Vector2f(0, 69), 8,
+	m_Assets->DrawCenteredText(gfx, "[C] Copy path  [R] Open folder", c_CentreOffset + sf::Vector2f(0, 69), 8,
 								   m_Assets->m_LightFontColour);
 }
 

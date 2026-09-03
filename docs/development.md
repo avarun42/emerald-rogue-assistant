@@ -58,6 +58,20 @@ ctest --preset ci-clang-tidy
 Only touched C++ files should be formatted. Repository-wide formatting and
 dependency upgrades belong in separate changes.
 
+## User-facing text
+
+Use clear, simple technical English in the application, command-line output,
+and mGBA console messages.
+
+- Describe the visible state or the action that the user must take.
+- Use short sentences, active voice, sentence case, and familiar terms.
+- Do not expose internal architecture terms unless the user needs them to fix
+  a problem.
+- Write relationships as words when shorthand can be ambiguous. For example,
+  write `on port 30125`, not `:30125`.
+- Put detailed protocol and storage diagnostics in the log. Show a concise
+  summary and a useful next action in the UI.
+
 ## Distribution review
 
 `THIRD_PARTY_NOTICES.md` is installed with every application. Keep its versions

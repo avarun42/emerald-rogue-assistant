@@ -25,7 +25,7 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 
 	if (rogueHeader.rogueAssistantCompatVersion != rogue::rom::RequiredAssistantApi)
 	{
-		game.ReportError("Unsupported ROM Assistant API.\nRogue Assistant 1.0 requires API 3.");
+		game.ReportError("This ROM is not compatible.\nUse a ROM with Assistant API 3.");
 		game.Disconnect();
 		return;
 	}
@@ -37,7 +37,7 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 	if (rogueHeader.assistantConfirmSize == 0 || rogueHeader.assistantConfirmSize > sizeof(u32) ||
 		rogueHeader.assistantState > std::numeric_limits<GameAddress>::max() - rogueHeader.assistantConfirmOffset)
 	{
-		game.ReportError("Cannot connect: invalid ROM assistant confirmation layout.");
+		game.ReportError("Rogue Assistant cannot connect.\nThe ROM connection data is invalid.");
 		game.Disconnect();
 		return;
 	}

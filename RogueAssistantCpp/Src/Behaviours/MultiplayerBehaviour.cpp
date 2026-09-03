@@ -271,14 +271,17 @@ void MultiplayerBehaviour::SendCompatibilityHello(GameConnection& game, ENetPeer
 	{
 		if (error.empty())
 			error = "could not send the compatibility hello";
-		RejectPeer(game, peer, error);
+		RejectPeer(game, peer, error, "Rogue Assistant could not start multiplayer.");
 	}
 }
 
-void MultiplayerBehaviour::RejectPeer(GameConnection& game, ENetPeer* peer, std::string const& error)
+void MultiplayerBehaviour::RejectPeer(GameConnection& game, ENetPeer* peer, std::string const& error,
+									  std::string_view userMessage)
 {
 	LOG_ERROR("ENet: Multiplayer compatibility rejected: %s", error.c_str());
-	game.ReportError("Multiplayer connection rejected:\n" + error);
+	game.ReportError(userMessage.empty()
+						 ? "Rogue Assistant rejected the multiplayer connection.\nThe other game sent invalid data."
+						 : std::string(userMessage));
 
 	if (m_ServerState.m_PendingHandshake == peer)
 	{
@@ -320,7 +323,7 @@ void MultiplayerBehaviour::HandleCompatibilityHello(GameConnection& game, ENetEv
 	auto const compatibility = rogue::multiplayer::CheckCompatibility(BuildCompatibilityHello(game), remoteHello);
 	if (!compatibility.compatible)
 	{
-		RejectPeer(game, netEvent.peer, compatibility.error);
+		RejectPeer(game, netEvent.peer, compatibility.error, compatibility.error);
 		return;
 	}
 
@@ -347,7 +350,7 @@ void MultiplayerBehaviour::HandlePeerDisconnect(GameConnection& game, ENetPeer* 
 	if (!knownPeer)
 		return;
 
-	game.ReportError("Multiplayer peer disconnected.");
+	game.ReportError("The other player disconnected.");
 	game.RemoveBehaviour(this);
 }
 
@@ -376,7 +379,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 			{
 				if (!ParsePort(m_ConnectionAddressRaw, m_Port))
 				{
-					game.ReportError("Multiplayer host port must be between 1 and 65535.");
+					game.ReportError("Enter a port from 1 to 65535.");
 					game.RemoveBehaviour(this);
 				}
 				else
@@ -456,7 +459,8 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 			if (!SendPacket(peer, RogueNetChannel::Handshake, &multiplayerBlob[rogueHeader.netHandshakeOffset],
 							rogueHeader.netHandshakeSize, ENET_PACKET_FLAG_RELIABLE))
 			{
-				RejectPeer(game, peer, "could not send the ROM multiplayer handshake response");
+				RejectPeer(game, peer, "could not send the ROM multiplayer handshake response",
+						   "Rogue Assistant could not connect to the other player.");
 				return;
 			}
 
@@ -475,7 +479,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 		if (std::chrono::steady_clock::now() >= m_ConnectDeadline)
 		{
 			LOG_ERROR("ENet: Timed out connecting or negotiating compatibility.");
-			game.ReportError("Timed out connecting to a compatible multiplayer host.");
+			game.ReportError("The multiplayer connection timed out.");
 			game.RemoveBehaviour(this);
 		}
 		break;
@@ -491,7 +495,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 			}
 			else
 			{
-				game.ReportError("Could not send the ROM multiplayer handshake.");
+				game.ReportError("Rogue Assistant could not start multiplayer.");
 				game.RemoveBehaviour(this);
 			}
 		}
@@ -519,7 +523,7 @@ void MultiplayerBehaviour::OpenHostConnection(GameConnection& game)
 	if (enet_initialize() != 0)
 	{
 		LOG_ERROR("ENet: Failed to initialise");
-		game.ReportError("Could not initialise multiplayer networking.");
+		game.ReportError("Rogue Assistant could not start multiplayer.");
 		game.RemoveBehaviour(this);
 		return;
 	}
@@ -542,7 +546,7 @@ void MultiplayerBehaviour::OpenHostConnection(GameConnection& game)
 	if (netServer == nullptr)
 	{
 		LOG_ERROR("ENet: Failed to create host");
-		game.ReportError("Could not listen on the multiplayer port.");
+		game.ReportError("Rogue Assistant cannot use the selected multiplayer port.");
 		game.RemoveBehaviour(this);
 		return;
 	}
@@ -573,7 +577,7 @@ void MultiplayerBehaviour::OpenClientConnection(GameConnection& game)
 	if (enet_initialize() != 0)
 	{
 		LOG_ERROR("ENet: Failed to initialise");
-		game.ReportError("Could not initialise multiplayer networking.");
+		game.ReportError("Rogue Assistant could not start multiplayer.");
 		game.RemoveBehaviour(this);
 		return;
 	}
@@ -589,7 +593,7 @@ void MultiplayerBehaviour::OpenClientConnection(GameConnection& game)
 	if (m_NetClient == nullptr)
 	{
 		LOG_ERROR("ENet: Failed to create client");
-		game.ReportError("Could not create the multiplayer client.");
+		game.ReportError("Rogue Assistant could not start multiplayer.");
 		game.RemoveBehaviour(this);
 		return;
 	}
@@ -610,7 +614,7 @@ void MultiplayerBehaviour::OpenClientConnection(GameConnection& game)
 		}
 		else
 		{
-			game.ReportError("Multiplayer port must be between 1 and 65535.");
+			game.ReportError("Enter a port from 1 to 65535.");
 			game.RemoveBehaviour(this);
 			return;
 		}
@@ -623,7 +627,7 @@ void MultiplayerBehaviour::OpenClientConnection(GameConnection& game)
 	ENetAddress address;
 	if (m_ConnectionAddressRaw.empty() || enet_address_set_host(&address, m_ConnectionAddressRaw.c_str()) != 0)
 	{
-		game.ReportError("Multiplayer host address could not be resolved.");
+		game.ReportError("Rogue Assistant cannot find the multiplayer host.");
 		game.RemoveBehaviour(this);
 		return;
 	}
@@ -634,7 +638,7 @@ void MultiplayerBehaviour::OpenClientConnection(GameConnection& game)
 	if (m_NetPeer == nullptr)
 	{
 		LOG_ERROR("ENet: Failed to create client peer");
-		game.ReportError("Could not begin the multiplayer connection.");
+		game.ReportError("Rogue Assistant could not connect to the multiplayer host.");
 		game.RemoveBehaviour(this);
 		return;
 	}
@@ -727,7 +731,8 @@ void MultiplayerBehaviour::PollConnection(GameConnection& game)
 				expiredPeers.push_back(peer);
 		}
 		for (ENetPeer* peer : expiredPeers)
-			RejectPeer(game, peer, "timed out waiting for the compatibility hello");
+			RejectPeer(game, peer, "timed out waiting for the compatibility hello",
+					   "The multiplayer connection timed out.");
 	}
 }
 

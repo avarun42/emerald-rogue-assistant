@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 		std::string pathError;
 		auto const paths = rogue::platform::DiscoverAppPaths(pathError);
 		if (!paths)
-			throw std::runtime_error("cannot discover application paths: " + pathError);
+			throw std::runtime_error("Cannot find the application folders. " + pathError);
 		std::filesystem::path const resourceDirectory = paths->resourceDirectory;
 
 		WindowConfig windowConfig;
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
 		PrimaryUI ui(resourceDirectory);
 		if (!window.Create())
 		{
-			std::cerr << "Rogue Assistant: cannot create the application window\n";
+			std::cerr << "Rogue Assistant: Cannot open the application window.\n";
 			return 1;
 		}
 

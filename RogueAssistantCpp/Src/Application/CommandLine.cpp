@@ -28,7 +28,7 @@ DesktopOptions ParseDesktopOptions(std::span<std::string_view const> arguments)
 		{
 			if (++index >= arguments.size())
 			{
-				options.error = "--bridge-port requires a value";
+				options.error = "Enter a value after --bridge-port.";
 				return options;
 			}
 			value = arguments[index];
@@ -39,19 +39,22 @@ DesktopOptions ParseDesktopOptions(std::span<std::string_view const> arguments)
 		}
 		else
 		{
-			options.error = "unknown option: " + std::string(argument);
+			options.error = "Unknown option: " + std::string(argument) + ".";
 			return options;
 		}
 
 		if (bridgePortSeen)
 		{
-			options.error = "--bridge-port may be specified only once";
+			options.error = "Use --bridge-port only once.";
 			return options;
 		}
 		bridgePortSeen = true;
 		platform::Settings candidate;
 		if (!platform::TrySetSetting(candidate, platform::BridgePortKey, value, options.error))
+		{
+			options.error = "Set --bridge-port to a number from 1 to 65535.";
 			return options;
+		}
 		options.bridgePort = candidate.bridgePort;
 	}
 	return options;

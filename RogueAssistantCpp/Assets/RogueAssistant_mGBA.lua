@@ -251,7 +251,7 @@ end
 
 local function failConnection(state, diagnostic)
     if diagnostic and diagnostic ~= state.lastConnectionError then
-        console:error("Rogue Assistant bridge: " .. tostring(diagnostic))
+        console:error("Rogue Assistant connection error: " .. tostring(diagnostic))
         state.lastConnectionError = diagnostic
     end
     closeSocket(state)
@@ -293,7 +293,7 @@ local function processServerHello(state, frame)
     end
     if status ~= 0 or major ~= PROTOCOL_MAJOR or minor ~= PROTOCOL_MINOR then
         console:error(string.format(
-            "Rogue Assistant rejected bridge 1.0 (application %d.%d.%d)",
+            "Rogue Assistant did not accept the connection. Application version: %d.%d.%d.",
             appMajor, appMinor, appPatch))
         state.phase = "closing"
         return
@@ -324,7 +324,7 @@ local function processIncomingFrame(state, frame)
             return
         end
         local diagnostic = string.sub(frame.payload, 5)
-        console:error(string.format("Rogue Assistant bridge error %d: %s", code, diagnostic))
+        console:error(string.format("Rogue Assistant connection error %d: %s", code, diagnostic))
         if frame.requestId == 0 then
             state.phase = "closing"
         end
@@ -589,7 +589,7 @@ local function connect(state)
     if not ok then
         pcall(function() connection:close() end)
         if err ~= state.lastConnectionError then
-            console:log("Waiting for Rogue Assistant on 127.0.0.1:" .. BRIDGE_PORT)
+            console:log("Waiting for Rogue Assistant on port " .. BRIDGE_PORT .. ".")
             state.lastConnectionError = err
         end
         return
@@ -645,7 +645,8 @@ local function guardCallback(state, name, callback)
             callback(table.unpack(arguments, 1, arguments.n))
         end, debug.traceback)
         if not ok then
-            console:error("Rogue Assistant " .. name .. " callback failed:\n" .. tostring(diagnostic))
+            console:error("The Rogue Assistant script stopped after an error in " .. name .. ":\n"
+                .. tostring(diagnostic))
             stop(state)
         end
     end
@@ -680,7 +681,7 @@ if rawget(_G, "ROGUE_ASSISTANT_TEST") then
 end
 
 local state = newState()
-console:log("Rogue Assistant bridge script 1 is running.")
+console:log("The Rogue Assistant script is running.")
 callbacks:add("frame", guardCallback(state, "frame", function() onFrame(state) end))
 callbacks:add("start", guardCallback(state, "start", function() restart(state) end))
 callbacks:add("reset", guardCallback(state, "reset", function() restart(state) end))

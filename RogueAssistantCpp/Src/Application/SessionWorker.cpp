@@ -94,7 +94,7 @@ void SessionWorker::Run(std::stop_token stopToken) noexcept
 	catch (...)
 	{
 		finalState = WorkerState::Failed;
-		failure = "unknown session worker failure";
+		failure = "Rogue Assistant stopped after an unknown error.";
 	}
 
 	m_AcceptingCommands.store(false, std::memory_order_release);
@@ -114,7 +114,7 @@ void SessionWorker::Run(std::stop_token stopToken) noexcept
 	{
 		finalState = WorkerState::Failed;
 		if (failure.empty())
-			failure = "unknown session shutdown failure";
+			failure = "Rogue Assistant could not stop correctly.";
 	}
 	Publish(std::move(lastSnapshot), finalState, failure);
 }

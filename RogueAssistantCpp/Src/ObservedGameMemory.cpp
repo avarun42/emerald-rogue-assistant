@@ -105,7 +105,7 @@ void ObservedGameMemory::Update()
 			if (m_RogueHeader->netMultiplayerSize == 0 || m_RogueHeader->netMultiplayerSize > MaximumObservedReadSize)
 			{
 				LOG_ERROR("Multiplayer state size is outside 1..1 MiB");
-				m_Game.ReportError("Cannot use multiplayer: invalid ROM state size.");
+				m_Game.ReportError("Rogue Assistant cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
 				m_Game.Disconnect();
 				return;
 			}
@@ -131,7 +131,7 @@ void ObservedGameMemory::Update()
 			if (m_RogueHeader->homeBoxSize == 0 || m_RogueHeader->homeBoxSize > MaximumObservedReadSize)
 			{
 				LOG_ERROR("Home Box state size is outside 1..1 MiB");
-				m_Game.ReportError("Cannot use Home Box: invalid ROM state size.");
+				m_Game.ReportError("Rogue Assistant cannot use Home Box.\nThe ROM Home Box data is invalid.");
 				m_Game.Disconnect();
 				return;
 			}

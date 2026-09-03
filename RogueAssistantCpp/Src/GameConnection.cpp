@@ -183,7 +183,7 @@ void GameConnection::OnMemoryResult(GameMessageID messageId, MemoryResult result
 	{
 		LOG_ERROR("Game memory request %u failed with status %u", static_cast<unsigned>(result.id),
 				  static_cast<unsigned>(result.status));
-		ReportError("Lost access to mGBA game memory.");
+		ReportError("The connection to mGBA was lost.");
 		Disconnect();
 		return;
 	}

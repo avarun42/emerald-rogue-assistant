@@ -67,18 +67,18 @@ directory and run `bin/RogueAssistant` without separating it from
 `bin/resources`. The archive build uses desktop OpenGL/X11 system interfaces;
 use the AppImage when those runtime dependencies are not already available.
 
-## Connect mGBA
+## Connect to mGBA
 
-1. Start Rogue Assistant. It exports a bridge script into the platform data
-   directory and waits on `127.0.0.1:30125`.
+1. Start Rogue Assistant. It exports the mGBA script to the application data
+   folder and waits for mGBA on port `30125`.
 2. Open the API-3 Emerald Rogue ROM in mGBA.
 3. In mGBA, open **Tools > Scripting**.
 4. Choose **File > Load Script** and select the exported
    `RogueAssistant_mGBA.lua` shown by Rogue Assistant.
 5. Confirm that the assistant changes from waiting to connected.
 
-On the waiting screen, `E` re-exports the script, `C` copies its path, `R`
-reveals its directory, and `P` edits the saved bridge port. If another program
+On the waiting screen, `E` exports the script again, `C` copies its path, `R`
+opens its folder, and `P` changes the saved connection port. If another program
 already owns the port, choose the same replacement port in Rogue Assistant and
 reload the newly exported Lua file in mGBA. The script reconnects automatically
 after normal application restarts and ROM resets.

@@ -314,7 +314,7 @@ TEST_CASE("CommonBehaviour rejects malformed assistant confirmation layouts", "[
 		REQUIRE(common != nullptr);
 		common->OnUpdate(harness.game);
 		REQUIRE(harness.game.HasDisconnected());
-		REQUIRE(harness.manager.Snapshot().error.find("confirmation layout") != std::string::npos);
+		REQUIRE(harness.manager.Snapshot().error.find("connection data") != std::string::npos);
 		REQUIRE(harness.transport->submitted.empty());
 	}
 }

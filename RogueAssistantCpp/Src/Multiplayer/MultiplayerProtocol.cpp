@@ -140,26 +140,31 @@ CompatibilityResult CheckCompatibility(Hello const& local, Hello const& remote)
 	std::string validationError;
 	if (!ValidateHello(local, validationError))
 	{
-		result.error = "local " + validationError;
+		result.error = "Rogue Assistant has invalid multiplayer data.";
 		return result;
 	}
 	if (!ValidateHello(remote, validationError))
 	{
-		result.error = "remote " + validationError;
+		if (remote.romAssistantApi != RequiredRomAssistantApi)
+			result.error = "The other player does not use ROM Assistant API 3.";
+		else if (!rom::IsSupportedEdition(remote.edition))
+			result.error = "The other player uses a different ROM edition.";
+		else
+			result.error = "The other player sent invalid multiplayer data.";
 		return result;
 	}
 	if (local.protocolMajor != remote.protocolMajor)
-		result.error = "multiplayer protocol major differs";
+		result.error = "The other player uses a different multiplayer protocol.";
 	else if (local.romAssistantApi != remote.romAssistantApi)
-		result.error = "ROM Assistant API differs";
+		result.error = "The other player does not use ROM Assistant API 3.";
 	else if (local.edition != remote.edition)
-		result.error = "ROM edition differs";
+		result.error = "The other player uses a different ROM edition.";
 	else if (local.playerCount != remote.playerCount)
-		result.error = "multiplayer player count differs";
+		result.error = "The games support different numbers of players.";
 	else if (local.multiplayerStateSize != remote.multiplayerStateSize || local.handshakeSize != remote.handshakeSize ||
 			 local.gameStateSize != remote.gameStateSize || local.playerProfileSize != remote.playerProfileSize ||
 			 local.playerStateSize != remote.playerStateSize)
-		result.error = "multiplayer ROM structure sizes differ";
+		result.error = "The games use different multiplayer data sizes.";
 	else
 	{
 		result.compatible = true;

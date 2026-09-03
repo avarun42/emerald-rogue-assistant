@@ -42,7 +42,7 @@ void GameConnectionManager::Start()
 	if (!UserData::Init())
 	{
 		UserData::Shutdown();
-		throw std::runtime_error("Cannot initialize Rogue Assistant user data");
+		throw std::runtime_error("Rogue Assistant cannot open its data folder.");
 	}
 
 	m_Started = true;
@@ -52,7 +52,15 @@ void GameConnectionManager::Start()
 		int const savedPort =
 			UserData::GetSavedInt(std::string(rogue::platform::BridgePortKey), static_cast<int>(m_BridgePort));
 		m_BridgePort = rogue::app::SelectBridgePort(m_BridgePortOverride, static_cast<std::uint16_t>(savedPort));
-		m_Transport = std::make_shared<TcpLuaTransport>(m_BridgePort);
+		try
+		{
+			m_Transport = std::make_shared<TcpLuaTransport>(m_BridgePort);
+		}
+		catch (std::exception const& exception)
+		{
+			LOG_ERROR("Cannot start mGBA listener: %s", exception.what());
+			throw std::runtime_error("Rogue Assistant cannot listen on port " + std::to_string(m_BridgePort) + ".");
+		}
 		ExportPortableScript();
 	}
 	m_ListeningForConnections = true;
@@ -94,7 +102,9 @@ void GameConnectionManager::HandleCommand(rogue::app::UiCommand command)
 											: rogue::platform::MultiplayerJoinIpKey;
 	if (!rogue::platform::TrySetSetting(validated, settingKey, address, validationError))
 	{
-		PushError("Invalid multiplayer address: " + validationError);
+		LOG_WARN("Invalid multiplayer address: %s", validationError.c_str());
+		PushError(multiplayer->IsRequestingHostConnection() ? "Enter a port from 1 to 65535."
+															: "Enter a valid multiplayer host address.");
 		return;
 	}
 	m_RecentError.clear();
@@ -176,7 +186,8 @@ void GameConnectionManager::ExportPortableScript()
 	if (!exported.Succeeded())
 	{
 		m_BridgeMessage.clear();
-		PushError(exported.error);
+		LOG_ERROR("Cannot export mGBA script: %s", exported.error.c_str());
+		PushError("Rogue Assistant cannot export the mGBA script.");
 		return;
 	}
 	m_BridgeScriptPath = rogue::platform::PathToUtf8(exported.path);
@@ -191,7 +202,8 @@ void GameConnectionManager::ChangeBridgePort(std::string const& value)
 	std::string error;
 	if (!rogue::platform::TrySetSetting(candidate, rogue::platform::BridgePortKey, value, error))
 	{
-		PushError(error);
+		LOG_WARN("Invalid connection port: %s", error.c_str());
+		PushError("Enter a port from 1 to 65535.");
 		return;
 	}
 	if (candidate.bridgePort != m_BridgePort)
@@ -203,7 +215,8 @@ void GameConnectionManager::ChangeBridgePort(std::string const& value)
 		}
 		catch (std::exception const& exception)
 		{
-			PushError(exception.what());
+			LOG_ERROR("Cannot change connection port: %s", exception.what());
+			PushError("Rogue Assistant cannot use port " + std::to_string(candidate.bridgePort) + ".");
 			return;
 		}
 
