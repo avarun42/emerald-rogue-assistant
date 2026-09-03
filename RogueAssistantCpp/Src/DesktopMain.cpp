@@ -88,8 +88,8 @@ int main(int argc, char** argv)
 		rogue::app::Application application(std::make_unique<GameConnectionManager>(options.bridgePort));
 		DesktopLoop loop{application, ui};
 		window.EnterMainLoop(RenderDesktopFrame, &loop);
-		bool const failed = application.Snapshot().workerState == rogue::app::WorkerState::Failed;
 		application.Stop();
+		bool const failed = application.Snapshot().workerState == rogue::app::WorkerState::Failed;
 		return failed ? 1 : 0;
 	}
 	catch (std::exception const& exception)
