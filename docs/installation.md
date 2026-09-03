@@ -54,6 +54,15 @@ signature and notarization when credentials are available. Otherwise, CI
 creates an ad hoc signed development build, which macOS identifies as an
 unverified build.
 
+If macOS blocks an ad hoc signed beta, open it from Finder:
+
+1. Control-click `RogueAssistant.app`, then choose **Open**.
+2. Choose **Open** again in the confirmation dialog.
+
+If that option is not available, try to open the app once. Then open **System
+Settings > Privacy & Security** and choose **Open Anyway** for Rogue Assistant.
+These extra steps are not required for a notarized build.
+
 ### Linux x86_64
 
 For the AppImage:

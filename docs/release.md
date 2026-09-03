@@ -41,7 +41,7 @@ cpack --preset release-windows-x64
 cmake --preset release-macos-arm64 --fresh -G Ninja
 cmake --build --preset release-macos-arm64 --parallel
 ctest --preset release-macos-arm64
-bash packaging/macos/package.sh build/release-macos-arm64 dist 1.0.0
+bash packaging/macos/package.sh build/release-macos-arm64 dist 1.0.0-beta.1
 
 cmake --preset release-linux-x86_64 --fresh -G Ninja
 cmake --build --preset release-linux-x86_64 --parallel
@@ -96,25 +96,29 @@ development artifacts when release credentials are unavailable. Release
 checksums describe the exact outputs. ZIP and DMG container metadata can differ
 between runner images, so separate runs might not be byte-for-byte identical.
 
-## Mandatory release gate
+## Release gates
 
-Before creating the version tag:
+Use a beta release to obtain test coverage that is not available on the
+maintainer's development computer. Before creating a beta tag:
 
-1. Complete every automated and manual item in the
-   [Parity gate](parity-gate.md), including packaged clean-machine starts and
-   the Windows, macOS, and Linux multiplayer pairings.
-2. Resolve every item in
-   [Asset provenance and licensing](asset-provenance.md), document a license
-   grant that covers the inherited source, and review the third-party notices
-   against the packaged libraries.
-3. Confirm `RogueAssistant --version`, application metadata, protocol hellos,
-   package names, and the intended tag all agree.
-4. Inspect the Windows executable signature, the arm64 Mach-O architecture,
-   macOS signing/notarization/stapling, and AppImage contents.
-5. Install each artifact on a clean supported machine or VM, run the complete
-   acceptance matrix, and record versions and results in the release notes.
-6. Verify `SHA256SUMS` from a fresh download of the draft assets.
+1. Confirm that hosted CI passes on the tagged commit.
+2. Complete and record the available mGBA smoke test.
+3. Confirm that `RogueAssistant --version`, application metadata, package names,
+   and the intended tag use the same version.
+4. Update the beta notes with verified behavior and known coverage gaps.
 
-After every gate passes, only the repository owner publishes the draft. Do not
-tag the final `v1.0.0` release while a gate remains open. A final tag asserts
-that the release candidate passed validation; it does not replace validation.
+The tag creates a draft release. Before publishing that draft as a prerelease:
+
+1. Confirm that every release workflow job passed.
+2. Download the complete release artifact and verify `SHA256SUMS`.
+3. Inspect the macOS package on Apple silicon, including its version, arm64
+   architecture, resources, signature, ZIP, and DMG.
+4. State clearly that Windows, Linux, EX, Home Box, and multiplayer behavior
+   still need testing when those checks have not been completed.
+
+Before tagging the final `v1.0.0`, complete every automated and manual item in
+the [Parity gate](parity-gate.md). This includes clean-machine package tests,
+live Home Box checks, and the required cross-platform multiplayer pairings.
+Review third-party notices against the packaged libraries. A final tag asserts
+that the complete release candidate passed validation; it does not replace
+validation.

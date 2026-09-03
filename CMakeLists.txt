@@ -224,6 +224,7 @@ set(
     docs/parity-gate.md
     docs/platform-services.md
     docs/release.md
+    docs/release-notes-1.0.0-beta.1.md
     docs/roadmap.md
 )
 

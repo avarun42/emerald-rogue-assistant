@@ -65,6 +65,7 @@ set(
   ${document_directory}/docs/parity-gate.md
   ${document_directory}/docs/platform-services.md
   ${document_directory}/docs/release.md
+  ${document_directory}/docs/release-notes-1.0.0-beta.1.md
   ${document_directory}/docs/roadmap.md
   ${document_directory}/licenses/SFML.txt
   ${document_directory}/licenses/ENet.txt
@@ -101,6 +102,7 @@ verify_directory_inventory(
   parity-gate.md
   platform-services.md
   release.md
+  release-notes-1.0.0-beta.1.md
   roadmap.md
 )
 verify_directory_inventory(

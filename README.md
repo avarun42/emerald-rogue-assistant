@@ -50,8 +50,9 @@ verification, mGBA script loading, and data locations. To create packages, use
 the platform release presets and draft-only workflow in
 [Release engineering](docs/release.md).
 
-The repository does not yet contain a license grant that covers the inherited
-source, and the inherited artwork has no recorded redistribution provenance.
-These issues block public prerelease and final binaries. See
-[Asset provenance and licensing](docs/asset-provenance.md) and
-[Third-party notices](THIRD_PARTY_NOTICES.md).
+The original Rogue Assistant creator has approved this fork and its GitHub
+releases. The repository does not yet define a general license for downstream
+reuse. See [Distribution status](docs/asset-provenance.md) and
+[Third-party notices](THIRD_PARTY_NOTICES.md). The
+[beta release notes](docs/release-notes-1.0.0-beta.1.md) describe verified
+behavior and the remaining test coverage.
