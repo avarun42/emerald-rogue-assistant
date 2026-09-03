@@ -105,7 +105,7 @@ class MultiplayerBehaviour : public IGameConnectionBehaviour
 	void BroadcastToConnectedPeers(enet_uint8 channel, std::span<u8 const> data, enet_uint32 flags);
 	[[nodiscard]] rogue::multiplayer::Hello BuildCompatibilityHello(GameConnection const& game) const;
 
-	void SendMultiplayerConfirmationToGame(GameConnection& game);
+	[[nodiscard]] bool SendMultiplayerConfirmationToGame(GameConnection& game);
 
 	// SessionWorker owns all behavior state. The UI receives value snapshots and
 	// sends value commands rather than accessing this object.

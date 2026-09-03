@@ -485,8 +485,8 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 		break;
 
 	case MultiplayerBehaviour::ConnectionState::ConnectionConfirmed:
-		SendMultiplayerConfirmationToGame(game);
-		m_ConnState = ConnectionState::Connected;
+		if (SendMultiplayerConfirmationToGame(game))
+			m_ConnState = ConnectionState::Connected;
 		break;
 
 	case MultiplayerBehaviour::ConnectionState::Connected:
@@ -960,12 +960,12 @@ void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent
 	}
 }
 
-void MultiplayerBehaviour::SendMultiplayerConfirmationToGame(GameConnection& game)
+bool MultiplayerBehaviour::SendMultiplayerConfirmationToGame(GameConnection& game)
 {
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
 	GameAddress multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
 
 	u8 const requestFlags = m_RequestFlags;
-	game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + rogueHeader.netCurrentStateOffset, &requestFlags,
-					  sizeof(requestFlags));
+	return game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + rogueHeader.netCurrentStateOffset,
+							 &requestFlags, sizeof(requestFlags));
 }

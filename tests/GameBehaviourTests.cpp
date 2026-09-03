@@ -398,3 +398,40 @@ TEST_CASE("Home Box retries a rejected transfer chunk without skipping bytes", "
 		harness.transport->TakeRequest(MemoryRequest::Operation::Write, GameAddress{0x02003000});
 	REQUIRE(retried.data == std::vector<std::byte>(header.homeDestMonSize, std::byte{0}));
 }
+
+TEST_CASE("Multiplayer retries a rejected ROM confirmation write", "[multiplayer][backpressure]")
+{
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress);
+
+	harness.transport->submitted.clear();
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	common->OnUpdate(harness.game);
+	auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	REQUIRE(multiplayer != nullptr);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 header.assistantState + header.assistantConfirmOffset);
+
+	multiplayer->ProvideConnectionAddress("30025");
+	multiplayer->OnUpdate(harness.game);
+	REQUIRE(!multiplayer->IsConnected());
+
+	harness.transport->acceptRequests = false;
+	multiplayer->OnUpdate(harness.game);
+	REQUIRE(!multiplayer->IsConnected());
+	REQUIRE(harness.transport->submitted.empty());
+
+	harness.transport->acceptRequests = true;
+	multiplayer->OnUpdate(harness.game);
+	REQUIRE(multiplayer->IsConnected());
+	MemoryRequest const confirmation = harness.transport->TakeRequest(
+		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netCurrentStateOffset);
+	REQUIRE(confirmation.data == std::vector<std::byte>{std::byte{2}});
+	harness.game.Disconnect();
+}
