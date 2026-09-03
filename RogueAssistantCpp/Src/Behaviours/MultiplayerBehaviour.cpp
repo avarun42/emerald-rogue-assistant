@@ -191,6 +191,7 @@ void MultiplayerBehaviour::OnAttach(GameConnection& game)
 	m_PlayerId = 0;
 	m_PeerStates.clear();
 	m_ServerState.m_PendingHandshake = nullptr;
+	m_ServerState.m_PendingHandshakeData.clear();
 	m_ServerState.m_PlayerProfiles.clear();
 
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
@@ -278,7 +279,10 @@ void MultiplayerBehaviour::RejectPeer(GameConnection& game, ENetPeer* peer, std:
 	game.ReportError("Multiplayer connection rejected:\n" + error);
 
 	if (m_ServerState.m_PendingHandshake == peer)
+	{
 		m_ServerState.m_PendingHandshake = nullptr;
+		m_ServerState.m_PendingHandshakeData.clear();
+	}
 	m_PeerStates.erase(peer);
 	if (peer != nullptr)
 		enet_peer_disconnect_now(peer, 0);
@@ -334,7 +338,10 @@ void MultiplayerBehaviour::HandlePeerDisconnect(GameConnection& game, ENetPeer* 
 {
 	bool const knownPeer = m_PeerStates.erase(peer) != 0;
 	if (m_ServerState.m_PendingHandshake == peer)
+	{
 		m_ServerState.m_PendingHandshake = nullptr;
+		m_ServerState.m_PendingHandshakeData.clear();
+	}
 	if (!knownPeer)
 		return;
 
@@ -407,12 +414,16 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 
 	// ENet must keep being serviced while the ROM is preparing a handshake
 	// response, otherwise a disconnect or a queued compatibility hello can stall.
+	bool const hadPendingHandshakeData = !m_ServerState.m_PendingHandshakeData.empty();
+	if (hadPendingHandshakeData)
+		(void)TrySubmitHostHandshake(game);
 	ENetPeer* const pendingBeforePoll = m_ServerState.m_PendingHandshake;
 	PollConnection(game);
 
 	// A handshake received by PollConnection must not consume stale ROM state in
 	// this same update. Wait for the next observed-memory cycle.
-	if (pendingBeforePoll != nullptr && m_ServerState.m_PendingHandshake == pendingBeforePoll)
+	if (!hadPendingHandshakeData && pendingBeforePoll != nullptr &&
+		m_ServerState.m_PendingHandshake == pendingBeforePoll && m_ServerState.m_PendingHandshakeData.empty())
 	{
 		ASSERT_MSG(IsHost(), "Can only process handshakes if as host");
 
@@ -650,6 +661,7 @@ void MultiplayerBehaviour::CloseConnection(GameConnection&)
 	}
 
 	m_ServerState.m_PendingHandshake = nullptr;
+	m_ServerState.m_PendingHandshakeData.clear();
 	m_PeerStates.clear();
 	if (m_EnetInitialised)
 	{
@@ -823,9 +835,9 @@ void MultiplayerBehaviour::HandleRomHandshake(GameConnection& game, ENetPeer* pe
 			RejectPeer(game, peer, "host is already processing another player handshake");
 			return;
 		}
-		game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + rogueHeader.netHandshakeOffset, data.data(),
-						  data.size());
 		m_ServerState.m_PendingHandshake = peer;
+		m_ServerState.m_PendingHandshakeData.assign(data.begin(), data.end());
+		(void)TrySubmitHostHandshake(game);
 		return;
 	}
 
@@ -847,6 +859,23 @@ void MultiplayerBehaviour::HandleRomHandshake(GameConnection& game, ENetPeer* pe
 	peerIt->second.m_PlayerId = playerId;
 	peerIt->second.m_RomConnected = true;
 	m_ConnState = ConnectionState::ConnectionConfirmed;
+}
+
+bool MultiplayerBehaviour::TrySubmitHostHandshake(GameConnection& game)
+{
+	if (m_ServerState.m_PendingHandshake == nullptr || m_ServerState.m_PendingHandshakeData.empty())
+		return false;
+
+	auto const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
+	GameAddress const multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
+	if (!game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + rogueHeader.netHandshakeOffset,
+						   m_ServerState.m_PendingHandshakeData.data(), m_ServerState.m_PendingHandshakeData.size()))
+	{
+		return false;
+	}
+
+	m_ServerState.m_PendingHandshakeData.clear();
+	return true;
 }
 
 void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent& netEvent)

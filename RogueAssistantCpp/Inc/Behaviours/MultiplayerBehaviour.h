@@ -71,6 +71,7 @@ class MultiplayerBehaviour : public IGameConnectionBehaviour
 	{
 		std::vector<u8> m_PlayerProfiles;
 		ENetPeer* m_PendingHandshake;
+		std::vector<u8> m_PendingHandshakeData;
 		UpdateTimer m_GameStateTimer;
 		UpdateTimer m_PlayerStateTimer;
 
@@ -101,6 +102,7 @@ class MultiplayerBehaviour : public IGameConnectionBehaviour
 	void HandleRomHandshake(GameConnection& game, ENetPeer* peer, std::span<u8 const> data);
 	void HandlePeerDisconnect(GameConnection& game, ENetPeer* peer);
 	void RejectPeer(GameConnection& game, ENetPeer* peer, std::string const& error);
+	bool TrySubmitHostHandshake(GameConnection& game);
 	void SendCompatibilityHello(GameConnection& game, ENetPeer* peer);
 	void BroadcastToConnectedPeers(enet_uint8 channel, std::span<u8 const> data, enet_uint32 flags);
 	[[nodiscard]] rogue::multiplayer::Hello BuildCompatibilityHello(GameConnection const& game) const;
