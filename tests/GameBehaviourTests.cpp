@@ -222,6 +222,35 @@ TEST_CASE("observed memory validates the ROM handshake before following dynamic 
 	REQUIRE(transport->submitted.empty());
 }
 
+TEST_CASE("an orderly mGBA disconnect does not report a game-memory error", "[game-memory][disconnect]")
+{
+	SECTION("orderly disconnect")
+	{
+		GameHarness harness;
+		MemoryRequest const pending =
+			harness.transport->TakeRequest(MemoryRequest::Operation::Read, GameAddresses::c_GFHeaderAddress);
+		harness.transport->results.push_back({pending.id, MemoryResult::Status::Disconnected, {}});
+
+		harness.game.Update();
+
+		REQUIRE(harness.game.HasDisconnected());
+		REQUIRE(harness.manager.Snapshot().error.empty());
+	}
+
+	SECTION("protocol failure")
+	{
+		GameHarness harness;
+		MemoryRequest const pending =
+			harness.transport->TakeRequest(MemoryRequest::Operation::Read, GameAddresses::c_GFHeaderAddress);
+		harness.transport->results.push_back({pending.id, MemoryResult::Status::ProtocolError, {}});
+
+		harness.game.Update();
+
+		REQUIRE(harness.game.HasDisconnected());
+		REQUIRE_FALSE(harness.manager.Snapshot().error.empty());
+	}
+}
+
 TEST_CASE("CommonBehaviour accepts only ROM Assistant API 3 and keeps Vanilla and EX alive",
 		  "[characterization][compatibility]")
 {

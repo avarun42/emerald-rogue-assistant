@@ -173,6 +173,12 @@ void GameConnection::OnMemoryResult(GameMessageID messageId, MemoryResult result
 {
 	if (m_State == GameConnectionState::Disconnected)
 		return;
+	if (result.status == MemoryResult::Status::Disconnected)
+	{
+		LOG_INFO("Game memory request %u ended because mGBA disconnected", static_cast<unsigned>(result.id));
+		Disconnect();
+		return;
+	}
 	if (result.status != MemoryResult::Status::Ok)
 	{
 		LOG_ERROR("Game memory request %u failed with status %u", static_cast<unsigned>(result.id),
