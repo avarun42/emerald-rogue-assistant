@@ -370,6 +370,19 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 {
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
 
+	if (!game.GetObservedGameMemory().IsMultiplayerStateValid())
+		return;
+
+	// Validate before accepting a host or client address. Opening ENet uses ROM-
+	// supplied sizes and counts, so waiting for the first network update would be
+	// too late for malformed metadata.
+	if (!ValidateMultiplayerLayout(game))
+	{
+		game.ReportError("Rogue Assistant cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
+		game.RemoveBehaviour(this);
+		return;
+	}
+
 	if (!m_HasAttemptedConnection)
 	{
 		bool const hasAddress = !m_ConnectionAddressRaw.empty();
@@ -398,16 +411,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 		return;
 	}
 
-	if (!game.GetObservedGameMemory().IsMultiplayerStateValid())
-		return;
-
 	// Revalidate the layout after the game changes netMultiplayerSize.
-	if (!ValidateMultiplayerLayout(game))
-	{
-		game.RemoveBehaviour(this);
-		return;
-	}
-
 	u8 const* multiplayerBlob = game.GetObservedGameMemory().GetMultiplayerStateBlob();
 
 	u8 requestFlags = multiplayerBlob[rogueHeader.netRequestStateOffset];

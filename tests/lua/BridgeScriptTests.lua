@@ -127,16 +127,29 @@ assert(Bridge.shouldReconnect(reconnect, 103))
 -- collected. Restart must not explicitly close that wrapper, and any delayed
 -- callback owned by the retired socket must not close the replacement.
 local fakeConnections = {}
+local nextConnectionSucceeds = true
 socket.tcp = function()
     local connection = {handlers = {}, closed = false}
     connection.add = function(self, event, callback)
         self.handlers[event] = callback
     end
-    connection.connect = function() return true end
+    connection.connect = function()
+        if nextConnectionSucceeds then
+            return true
+        end
+        return nil, "connection refused"
+    end
     connection.close = function(self) self.closed = true end
     table.insert(fakeConnections, connection)
     return connection
 end
+nextConnectionSucceeds = false
+local failedState = Bridge.newState()
+Bridge.connect(failedState)
+local failedConnection = fakeConnections[#fakeConnections]
+assert(failedState.socket == nil)
+assert(not failedConnection.closed)
+nextConnectionSucceeds = true
 local resetState = Bridge.newState()
 Bridge.connect(resetState)
 local retiredConnection = assert(resetState.socket)

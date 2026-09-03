@@ -224,15 +224,7 @@ local function queueError(state, requestId, code, diagnostic)
     return queueWire(state, wire)
 end
 
-local function closeSocket(state)
-    local connection = state.socket
-    state.socket = nil
-    state.phase = "disconnected"
-    state.decoder = newDecoder()
-    state.operations = {}
-    state.operationBytes = 0
-    state.outgoing = {}
-    state.outgoingBytes = 0
+local function detachSocketCallbacks(connection)
     if connection then
         -- mGBA 0.10.5's explicit close leaves the native descriptor stored in
         -- the Lua socket object. Its garbage collector later closes that same
@@ -244,9 +236,21 @@ local function closeSocket(state)
             connection._onframecb = nil
         end
         connection._callbacks = {}
-        connection = nil
-        collectgarbage("collect")
     end
+end
+
+local function closeSocket(state)
+    local connection = state.socket
+    state.socket = nil
+    state.phase = "disconnected"
+    state.decoder = newDecoder()
+    state.operations = {}
+    state.operationBytes = 0
+    state.outgoing = {}
+    state.outgoingBytes = 0
+    detachSocketCallbacks(connection)
+    connection = nil
+    collectgarbage("collect")
 end
 
 local function failConnection(state, diagnostic)
@@ -588,7 +592,11 @@ local function connect(state)
     end)
     local ok, err = connection:connect(BRIDGE_HOST, BRIDGE_PORT)
     if not ok then
-        pcall(function() connection:close() end)
+        -- Failed connection wrappers have the same double-close hazard as
+        -- established sockets. Let mGBA's finalizer close the descriptor.
+        detachSocketCallbacks(connection)
+        connection = nil
+        collectgarbage("collect")
         if err ~= state.lastConnectionError then
             console:log("Waiting for Rogue Assistant on port " .. BRIDGE_PORT .. ".")
             state.lastConnectionError = err

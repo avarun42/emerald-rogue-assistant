@@ -34,7 +34,19 @@ GameConnection::~GameConnection()
 void GameConnection::Update()
 {
 	if (m_GameSession)
+	{
 		m_GameSession->Poll();
+		// A transport disconnect normally completes pending requests. It can also
+		// happen between observation ticks, when there is no request to complete.
+		// Observe the transport state directly so the manager can retire this game
+		// connection and accept the reconnecting mGBA script.
+		if (!HasDisconnected() && m_GameSession->State() != TransportState::Connected)
+		{
+			LOG_INFO("Game memory transport disconnected between requests");
+			Disconnect();
+			return;
+		}
+	}
 
 	switch (m_State)
 	{

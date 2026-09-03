@@ -266,6 +266,19 @@ TEST_CASE("an orderly mGBA disconnect does not report a game-memory error", "[ga
 		REQUIRE(harness.game.HasDisconnected());
 		REQUIRE_FALSE(harness.manager.Snapshot().error.empty());
 	}
+
+	SECTION("disconnect between requests")
+	{
+		GameHarness harness;
+		harness.AcceptHeaders(BaseHeader());
+		REQUIRE(harness.transport->submitted.empty());
+
+		harness.transport->state = TransportState::Listening;
+		harness.game.Update();
+
+		REQUIRE(harness.game.HasDisconnected());
+		REQUIRE(harness.manager.Snapshot().error.empty());
+	}
 }
 
 TEST_CASE("CommonBehaviour accepts only ROM Assistant API 3 and keeps Vanilla and EX alive",
@@ -299,6 +312,19 @@ TEST_CASE("CommonBehaviour accepts only ROM Assistant API 3 and keeps Vanilla an
 	}
 }
 
+TEST_CASE("CommonBehaviour rejects unsupported ROM editions", "[characterization][compatibility]")
+{
+	GameHarness harness;
+	harness.AcceptHeaders(BaseHeader(3, 2));
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+
+	common->OnUpdate(harness.game);
+
+	REQUIRE(harness.game.HasDisconnected());
+	REQUIRE(harness.manager.Snapshot().error.find("Vanilla or EX") != std::string::npos);
+}
+
 TEST_CASE("CommonBehaviour rejects malformed assistant confirmation layouts", "[characterization][compatibility]")
 {
 	std::array<GameStructures::RogueAssistantHeader, 3> malformedHeaders{BaseHeader(), BaseHeader(), BaseHeader()};
@@ -317,6 +343,67 @@ TEST_CASE("CommonBehaviour rejects malformed assistant confirmation layouts", "[
 		REQUIRE(harness.game.HasDisconnected());
 		REQUIRE(harness.manager.Snapshot().error.find("connection data") != std::string::npos);
 		REQUIRE(harness.transport->submitted.empty());
+	}
+}
+
+TEST_CASE("multiplayer metadata is validated before it is indexed or used", "[multiplayer][layout]")
+{
+	SECTION("request-state offset outside the observed blob")
+	{
+		GameHarness harness;
+		auto header = BaseHeader();
+		ConfigureFeatureLayouts(header);
+		header.netRequestStateOffset = header.netMultiplayerSize;
+		harness.AcceptHeaders(header);
+
+		auto& observed = harness.game.GetObservedGameMemory();
+		constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+		constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+		auto const multiplayerAddressBytes = LittleAddress(MultiplayerStateAddress);
+		auto const homeBoxAddressBytes = LittleAddress(HomeBoxStateAddress);
+		observed.Update();
+		harness.transport->CompleteRead(header.multiplayerPtr, multiplayerAddressBytes);
+		harness.transport->CompleteRead(header.homeBoxPtr, homeBoxAddressBytes);
+		harness.game.Update();
+
+		std::vector<std::byte> multiplayerState(header.netMultiplayerSize, std::byte{0});
+		std::vector<std::byte> homeBoxState(header.homeBoxSize, std::byte{0});
+		observed.Update();
+		harness.transport->CompleteRead(header.multiplayerPtr, multiplayerAddressBytes);
+		harness.transport->CompleteRead(MultiplayerStateAddress, multiplayerState);
+		harness.transport->CompleteRead(header.homeBoxPtr, homeBoxAddressBytes);
+		harness.transport->CompleteRead(HomeBoxStateAddress, homeBoxState);
+		harness.game.Update();
+
+		auto common = harness.game.FindBehaviour<CommonBehaviour>();
+		REQUIRE(common != nullptr);
+		common->OnUpdate(harness.game);
+
+		REQUIRE(harness.game.HasDisconnected());
+		REQUIRE(harness.manager.Snapshot().error.find("multiplayer data") != std::string::npos);
+	}
+
+	SECTION("invalid player count before an address is accepted")
+	{
+		GameHarness harness;
+		auto header = BaseHeader();
+		ConfigureFeatureLayouts(header);
+		header.netPlayerCount = 0;
+		harness.AcceptHeaders(header);
+		constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+		constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+		harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress);
+
+		auto common = harness.game.FindBehaviour<CommonBehaviour>();
+		REQUIRE(common != nullptr);
+		common->OnUpdate(harness.game);
+		auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+		REQUIRE(multiplayer != nullptr);
+
+		multiplayer->OnUpdate(harness.game);
+
+		REQUIRE(harness.manager.Snapshot().error.find("multiplayer data") != std::string::npos);
+		REQUIRE(multiplayer->IsAwaitingAddress());
 	}
 }
 

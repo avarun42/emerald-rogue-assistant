@@ -29,6 +29,12 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 		game.Disconnect();
 		return;
 	}
+	if (!rogue::rom::IsSupportedEdition(rogueHeader.rogueVersion))
+	{
+		game.ReportError("This ROM is not compatible.\nUse the Vanilla or EX edition.");
+		game.Disconnect();
+		return;
+	}
 
 	// Notify the game that the assistant is connected by repeatedly writing zero
 	// to the ROM-provided confirmation field. The field is scalar in API 3; do
@@ -52,6 +58,13 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 		if (m_MultiplayerBehaviour.expired())
 		{
 			u8 const* multiplayerBlob = game.GetObservedGameMemory().GetMultiplayerStateBlob();
+			if (rogueHeader.netRequestStateOffset >=
+				game.GetObservedGameMemory().GetMultiplayerStateBlobSize())
+			{
+				game.ReportError("Rogue Assistant cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
+				game.Disconnect();
+				return;
+			}
 
 			u8 requestFlags = multiplayerBlob[rogueHeader.netRequestStateOffset];
 
