@@ -116,10 +116,38 @@ assert(Bridge.shouldReconnect(reconnect, 99))
 Bridge.stop(reconnect)
 assert(reconnect.stopped)
 assert(not Bridge.shouldReconnect(reconnect, 102))
-Bridge.restart(reconnect)
+Bridge.restart(reconnect, 102)
 assert(not reconnect.stopped)
-assert(reconnect.lastConnectSecond == nil)
-assert(Bridge.shouldReconnect(reconnect, 102))
+assert(reconnect.lastConnectSecond == 102)
+assert(not Bridge.shouldReconnect(reconnect, 102))
+assert(Bridge.shouldReconnect(reconnect, 103))
+
+-- mGBA 0.10.5 closes its native descriptor again when a Lua socket is
+-- collected. Restart must not explicitly close that wrapper, and any delayed
+-- callback owned by the retired socket must not close the replacement.
+local fakeConnections = {}
+socket.tcp = function()
+    local connection = {handlers = {}, closed = false}
+    connection.add = function(self, event, callback)
+        self.handlers[event] = callback
+    end
+    connection.connect = function() return true end
+    connection.close = function(self) self.closed = true end
+    table.insert(fakeConnections, connection)
+    return connection
+end
+local resetState = Bridge.newState()
+Bridge.connect(resetState)
+local retiredConnection = assert(resetState.socket)
+Bridge.restart(resetState)
+assert(not retiredConnection.closed)
+Bridge.connect(resetState)
+local replacementConnection = assert(resetState.socket)
+assert(replacementConnection ~= retiredConnection)
+retiredConnection.handlers.error(retiredConnection, "late close notification")
+assert(resetState.socket == replacementConnection)
+replacementConnection.handlers.error(replacementConnection, "active socket failure")
+assert(resetState.socket == nil)
 
 -- mGBA 0.10.5 does not discard top-level script results before dispatching
 -- callbacks. The production script must therefore return no values even though

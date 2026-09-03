@@ -234,7 +234,18 @@ local function closeSocket(state)
     state.outgoing = {}
     state.outgoingBytes = 0
     if connection then
-        pcall(function() connection:close() end)
+        -- mGBA 0.10.5's explicit close leaves the native descriptor stored in
+        -- the Lua socket object. Its garbage collector later closes that same
+        -- descriptor a second time, potentially after the OS has reused it for
+        -- our replacement connection. Remove the wrapper callbacks and let the
+        -- object finalizer perform the native close exactly once instead.
+        if connection._onframecb then
+            callbacks:remove(connection._onframecb)
+            connection._onframecb = nil
+        end
+        connection._callbacks = {}
+        connection = nil
+        collectgarbage("collect")
     end
 end
 
@@ -564,8 +575,16 @@ end
 
 local function connect(state)
     local connection = socket.tcp()
-    connection:add("received", function() receiveAvailable(state) end)
-    connection:add("error", function(_, err) failConnection(state, err) end)
+    connection:add("received", function()
+        if state.socket == connection then
+            receiveAvailable(state)
+        end
+    end)
+    connection:add("error", function(_, err)
+        if state.socket == connection then
+            failConnection(state, err)
+        end
+    end)
     local ok, err = connection:connect(BRIDGE_HOST, BRIDGE_PORT)
     if not ok then
         pcall(function() connection:close() end)
@@ -612,10 +631,10 @@ local function stop(state)
     closeSocket(state)
 end
 
-local function restart(state)
+local function restart(state, now)
     closeSocket(state)
     state.stopped = false
-    state.lastConnectSecond = nil
+    state.lastConnectSecond = now or os.time()
     state.lastConnectionError = nil
 end
 
@@ -649,6 +668,7 @@ Bridge.processOperations = processOperations
 Bridge.flushOutgoing = flushOutgoing
 Bridge.writeAligned = writeAligned
 Bridge.shouldReconnect = shouldReconnect
+Bridge.connect = connect
 Bridge.isRangeAllowed = isRangeAllowed
 Bridge.restart = restart
 Bridge.stop = stop
