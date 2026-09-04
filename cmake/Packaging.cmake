@@ -2,7 +2,7 @@ set(
   ROGUE_PACKAGE_PLATFORM
   ""
   CACHE STRING
-  "Artifact platform suffix; release presets set this explicitly"
+  "Package platform suffix; release presets set this value"
 )
 
 if(ROGUE_PACKAGE_PLATFORM STREQUAL "")
@@ -44,7 +44,7 @@ elseif(ROGUE_PACKAGE_PLATFORM STREQUAL "linux-x86_64")
 endif()
 
 set(CPACK_PACKAGE_NAME RogueAssistant)
-set(CPACK_PACKAGE_VENDOR "Varun Arora")
+set(CPACK_PACKAGE_VENDOR "Rogue Assistant Project")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_FILE_NAME RogueAssistant-${ROGUE_ASSISTANT_VERSION}-${ROGUE_PACKAGE_PLATFORM})
@@ -59,9 +59,8 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 if(WIN32)
   set(CPACK_GENERATOR ZIP)
 elseif(APPLE)
-  # Official macOS ZIP/DMG artifacts are created after signing by
-  # packaging/macos/package.sh. This archive generator keeps CPack useful for
-  # local install-tree inspection without claiming to produce a signed image.
+  # package.sh creates the signed ZIP and DMG. This CPack ZIP is only for
+  # checking a local install tree.
   set(CPACK_GENERATOR ZIP)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CPACK_GENERATOR TGZ)

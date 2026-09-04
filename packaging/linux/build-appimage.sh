@@ -55,8 +55,8 @@ cmake \
   -P "$repo_root/cmake/VerifyInstall.cmake"
 
 executable="$app_dir/usr/bin/RogueAssistant"
-desktop_file="$app_dir/usr/share/applications/io.github.avarun42.rogue-assistant.desktop"
-icon_file="$app_dir/usr/share/icons/hicolor/128x128/apps/io.github.avarun42.rogue-assistant.png"
+desktop_file="$app_dir/usr/share/applications/rogue.emerald.assistant.desktop"
+icon_file="$app_dir/usr/share/icons/hicolor/128x128/apps/rogue.emerald.assistant.png"
 for required_file in "$executable" "$desktop_file" "$icon_file"; do
   if [[ ! -f "$required_file" ]]; then
     echo "installed AppDir is missing: $required_file" >&2

@@ -21,7 +21,7 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName", "Varun Arora\0"
+            VALUE "CompanyName", "Rogue Assistant Project\0"
             VALUE "FileDescription", "Rogue Assistant\0"
             VALUE "FileVersion", "@ROGUE_ASSISTANT_VERSION@\0"
             VALUE "InternalName", "RogueAssistant\0"

@@ -164,7 +164,7 @@ if(ROGUE_INSTALL_PLATFORM STREQUAL "macos")
   find_program(ROGUE_PLUTIL_EXECUTABLE NAMES plutil REQUIRED)
   string(REGEX MATCH "^[0-9]+[.][0-9]+[.][0-9]+" expected_version_core "${ROGUE_EXPECTED_VERSION}")
   foreach(key_and_expected IN ITEMS
-          "CFBundleIdentifier|io.github.avarun42.rogue-assistant"
+          "CFBundleIdentifier|rogue.emerald.assistant"
           "CFBundleShortVersionString|${expected_version_core}"
           "CFBundleLongVersionString|${ROGUE_EXPECTED_VERSION}")
     string(REPLACE "|" ";" key_and_expected "${key_and_expected}")

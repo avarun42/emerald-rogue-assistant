@@ -9,9 +9,11 @@ project(
     LANGUAGES C CXX
 )
 
+set(ROGUE_ASSISTANT_APPLICATION_ID "rogue.emerald.assistant")
+
 if(MSVC)
-    # Release artifacts are ZIP-based and must run on a clean Windows install
-    # without requiring a separately installed Visual C++ redistributable.
+    # Use the static runtime so the ZIP works without a separate Visual C++
+    # Redistributable install.
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
@@ -269,7 +271,7 @@ if(ROGUE_BUILD_DESKTOP)
         PROPERTIES
             OUTPUT_NAME RogueAssistant
             MACOSX_BUNDLE_BUNDLE_NAME "Rogue Assistant"
-            MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.avarun42.rogue-assistant"
+            MACOSX_BUNDLE_GUI_IDENTIFIER "${ROGUE_ASSISTANT_APPLICATION_ID}"
             MACOSX_BUNDLE_INFO_STRING "Rogue Assistant ${ROGUE_ASSISTANT_VERSION}"
             MACOSX_BUNDLE_LONG_VERSION_STRING "${ROGUE_ASSISTANT_VERSION}"
             MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
@@ -375,14 +377,14 @@ if(ROGUE_BUILD_DESKTOP)
 
     if(UNIX AND NOT APPLE)
         install(
-            FILES packaging/linux/io.github.avarun42.rogue-assistant.desktop
+            FILES packaging/linux/${ROGUE_ASSISTANT_APPLICATION_ID}.desktop
             DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
             COMPONENT RogueAssistant
         )
         install(
             FILES RogueAssistantCpp/Assets/WobbuffetImage.png
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps
-            RENAME io.github.avarun42.rogue-assistant.png
+            RENAME ${ROGUE_ASSISTANT_APPLICATION_ID}.png
             COMPONENT RogueAssistant
         )
     endif()
