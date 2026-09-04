@@ -26,6 +26,7 @@ void HomeBoxBehaviour::OnAttach(GameConnection&)
 	m_InitialiseBoxWriteIndex = 0;
 	m_WriteFilePath.clear();
 	m_HasPendingFileWrite = false;
+	m_RequiresReopen = false;
 	m_NextSaveAttempt = {};
 }
 
@@ -132,6 +133,8 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 		game.Disconnect();
 		return;
 	}
+	if (m_RequiresReopen)
+		return;
 
 	HandlePendingFileWrite(game);
 	auto const& header = game.GetObservedGameMemory().GetRogueHeader();
@@ -141,6 +144,18 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 	switch (m_State)
 	{
 	case State::OpenOfflineFile: {
+		// The ROM initializes the final order entry to 255 when Extended Storage
+		// opens. A different value before this behaviour has written anything
+		// means another assistant session already initialized this screen. The ROM
+		// latches a disconnect while that screen is active, so the safe recovery is
+		// to leave it and open it again instead of modifying the stale session.
+		if (homeBoxState[header.homeRemoteIndexOrderOffset + header.homeTotalBoxCount - 1] != 255)
+		{
+			LOG_WARN("Extended Storage was already initialized when this assistant session connected");
+			m_RequiresReopen = true;
+			return;
+		}
+
 		std::uint32_t trainerId = 0;
 		std::span<std::uint8_t const> const state(homeBoxState, game.GetObservedGameMemory().GetHomeBoxStateBlobSize());
 		if (!rogue::endian::ReadLittle(state, header.homeTrainerIdOffset, trainerId))

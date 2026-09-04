@@ -39,6 +39,7 @@ struct HomeBoxSnapshot
 {
 	bool loading = false;
 	bool saving = false;
+	bool requiresReopen = false;
 };
 
 struct ConnectionSnapshot

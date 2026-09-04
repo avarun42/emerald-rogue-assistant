@@ -194,7 +194,10 @@ struct GameHarness
 		if (homeBoxOrder.empty())
 		{
 			for (std::uint32_t index = 0; index < header.homeTotalBoxCount; ++index)
-				homeBoxState[header.homeRemoteIndexOrderOffset + index] = static_cast<std::byte>(index);
+			{
+				homeBoxState[header.homeRemoteIndexOrderOffset + index] =
+					index < header.homeLocalBoxCount ? static_cast<std::byte>(index) : std::byte{255};
+			}
 		}
 		else
 		{
@@ -211,6 +214,29 @@ struct GameHarness
 		game.Update();
 		REQUIRE(observed.IsMultiplayerStateValid());
 		REQUIRE(observed.IsHomeBoxStateValid());
+	}
+
+	void RefreshHomeBoxOrder(GameStructures::RogueAssistantHeader const& header, GameAddress multiplayerStateAddress,
+							 GameAddress homeBoxStateAddress, std::span<std::uint8_t const> homeBoxOrder)
+	{
+		REQUIRE(homeBoxOrder.size() == header.homeTotalBoxCount);
+		auto& observed = game.GetObservedGameMemory();
+		auto const multiplayerAddressBytes = LittleAddress(multiplayerStateAddress);
+		auto const homeBoxAddressBytes = LittleAddress(homeBoxStateAddress);
+		std::vector<std::byte> multiplayerState(header.netMultiplayerSize, std::byte{0});
+		multiplayerState[header.netRequestStateOffset] = std::byte{2};
+		std::vector<std::byte> homeBoxState(header.homeBoxSize, std::byte{0});
+		REQUIRE(rogue::endian::WriteLittle(homeBoxState, header.homeDestMonOffset, GameAddress{0x02003000}));
+		REQUIRE(rogue::endian::WriteLittle(homeBoxState, header.homeTrainerIdOffset, std::uint32_t{0xDEADBEEF}));
+		for (std::size_t index = 0; index < homeBoxOrder.size(); ++index)
+			homeBoxState[header.homeRemoteIndexOrderOffset + index] = static_cast<std::byte>(homeBoxOrder[index]);
+
+		observed.Update();
+		transport->CompleteRead(header.multiplayerPtr, multiplayerAddressBytes);
+		transport->CompleteRead(multiplayerStateAddress, multiplayerState);
+		transport->CompleteRead(header.homeBoxPtr, homeBoxAddressBytes);
+		transport->CompleteRead(homeBoxStateAddress, homeBoxState);
+		game.Update();
 	}
 
 	std::shared_ptr<FakeGameTransport> transport = std::make_shared<FakeGameTransport>();
@@ -437,9 +463,6 @@ TEST_CASE("observed dynamic state activates multiplayer and advances Home Box in
 	homeBox->OnUpdate(harness.game);
 	homeBox->OnUpdate(harness.game);
 	homeBox->OnUpdate(harness.game);
-	homeBox->OnUpdate(harness.game);
-	REQUIRE_FALSE(homeBox->IsLoading());
-	REQUIRE_FALSE(homeBox->IsSaving());
 
 	MemoryRequest const metadata = harness.transport->TakeRequest(MemoryRequest::Operation::Write,
 																  HomeBoxStateAddress + header.homeMinimalBoxOffset);
@@ -447,6 +470,39 @@ TEST_CASE("observed dynamic state activates multiplayer and advances Home Box in
 	MemoryRequest const order = harness.transport->TakeRequest(MemoryRequest::Operation::Write,
 															   HomeBoxStateAddress + header.homeRemoteIndexOrderOffset);
 	REQUIRE(order.data == std::vector<std::byte>{std::byte{0}});
+	std::array<std::uint8_t, 1> const readyOrder{0};
+	harness.RefreshHomeBoxOrder(header, MultiplayerStateAddress, HomeBoxStateAddress, readyOrder);
+	homeBox->OnUpdate(harness.game);
+	REQUIRE_FALSE(homeBox->IsLoading());
+	REQUIRE_FALSE(homeBox->IsSaving());
+	REQUIRE_FALSE(homeBox->RequiresReopen());
+	REQUIRE(harness.transport->submitted.empty());
+}
+
+TEST_CASE("Home Box reports an initialized screen from an earlier assistant session", "[home-box][reconnect]")
+{
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	std::array<std::uint8_t, 1> const initializedOrder{0};
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress, initializedOrder);
+
+	harness.transport->submitted.clear();
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	common->OnUpdate(harness.game);
+	auto homeBox = harness.game.FindBehaviour<HomeBoxBehaviour>();
+	REQUIRE(homeBox != nullptr);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 header.assistantState + header.assistantConfirmOffset);
+
+	homeBox->OnUpdate(harness.game);
+
+	REQUIRE(homeBox->RequiresReopen());
+	REQUIRE_FALSE(homeBox->IsSaving());
 	REQUIRE(harness.transport->submitted.empty());
 }
 
@@ -460,8 +516,8 @@ TEST_CASE("Home Box retries a rejected transfer chunk without skipping bytes", "
 	harness.AcceptHeaders(header);
 	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
 	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
-	std::array<std::uint8_t, 2> const swappedOrder{1, 0};
-	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress, swappedOrder);
+	std::array<std::uint8_t, 2> const initialOrder{0, 255};
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress, initialOrder);
 
 	harness.transport->submitted.clear();
 	auto common = harness.game.FindBehaviour<CommonBehaviour>();
@@ -490,7 +546,11 @@ TEST_CASE("Home Box retries a rejected transfer chunk without skipping bytes", "
 									 HomeBoxStateAddress + header.homeMinimalBoxOffset + header.homeMinimalBoxSize);
 	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
 									 HomeBoxStateAddress + header.homeRemoteIndexOrderOffset);
+	std::array<std::uint8_t, 2> const readyOrder{0, 1};
+	harness.RefreshHomeBoxOrder(header, MultiplayerStateAddress, HomeBoxStateAddress, readyOrder);
 	homeBox->OnUpdate(harness.game);
+	std::array<std::uint8_t, 2> const swappedOrder{1, 0};
+	harness.RefreshHomeBoxOrder(header, MultiplayerStateAddress, HomeBoxStateAddress, swappedOrder);
 	homeBox->OnUpdate(harness.game);
 
 	harness.transport->acceptRequests = false;

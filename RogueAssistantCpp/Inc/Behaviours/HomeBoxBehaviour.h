@@ -20,11 +20,15 @@ class HomeBoxBehaviour : public IGameConnectionBehaviour
 
 	[[nodiscard]] bool IsLoading() const
 	{
-		return m_State < State::Update;
+		return !m_RequiresReopen && m_State < State::Update;
 	}
 	[[nodiscard]] bool IsSaving() const
 	{
 		return m_HasPendingFileWrite;
+	}
+	[[nodiscard]] bool RequiresReopen() const
+	{
+		return m_RequiresReopen;
 	}
 
   private:
@@ -78,5 +82,6 @@ class HomeBoxBehaviour : public IGameConnectionBehaviour
 
 	std::filesystem::path m_WriteFilePath;
 	bool m_HasPendingFileWrite = false;
+	bool m_RequiresReopen = false;
 	std::chrono::steady_clock::time_point m_NextSaveAttempt{};
 };

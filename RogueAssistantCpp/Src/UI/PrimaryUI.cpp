@@ -260,7 +260,7 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 			prevConnIdx != m_CurrentConnectionIdx || m_CurrentConnectionId != connection.id;
 		m_CurrentConnectionId = connection.id;
 
-		std::string connectionText = "Connected to Emerald Rogue";
+		std::string connectionText = "mGBA bridge connected";
 
 		if (connectionCount > 1)
 		{
@@ -509,6 +509,14 @@ void PrimaryUI::RenderMultiplayerPage(Window& window, rogue::app::UiSnapshot con
 void PrimaryUI::RenderHomeBoxPage(Window& window, rogue::app::HomeBoxSnapshot const& homeBox, bool /*initialLoad*/)
 {
 	sf::RenderWindow& gfx = *window.GetHandle();
+	if (homeBox.requiresReopen)
+	{
+		m_Assets->DrawCenteredText(gfx, "Extended Storage disconnected", c_CentreOffset + sf::Vector2f(0, -55), 14,
+								   m_Assets->m_ErrorFontColour);
+		m_Assets->DrawCenteredText(gfx, "Press B in mGBA, then reopen it.", c_CentreOffset + sf::Vector2f(0, -37), 11,
+								   m_Assets->m_DarkFontColour);
+		return;
+	}
 
 	// Draw the transfer state.
 	m_Assets->DrawCenteredText(gfx, "Transferring Pokémon boxes", c_CentreOffset + sf::Vector2f(0, -55), 16,
