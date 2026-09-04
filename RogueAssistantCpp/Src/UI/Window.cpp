@@ -34,7 +34,7 @@ Window::~Window()
 
 bool Window::Create()
 {
-	LOG_INFO("Creating Window");
+	LOG_INFO("Creating window");
 	unsigned int style = sf::Style::Titlebar | sf::Style::Close;
 	if (m_Config.resizable)
 		style |= sf::Style::Resize;

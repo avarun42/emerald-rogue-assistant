@@ -241,9 +241,8 @@ void GameConnectionManager::UpdateConnections()
 {
 	if (m_ActiveConnections.empty() && !m_AcceptingConnection)
 	{
-		// A listening TCP transport is driven by SessionWorker even before a
-		// GameSession exists. Results left by a retired session are deliberately
-		// discarded here because that session already completed its callbacks.
+		// SessionWorker polls a listening TCP transport before a GameSession
+		// exists. Drop results from an old session because its callbacks are done.
 		(void)m_Transport->PollResults();
 		if (m_Transport->State() != TransportState::Connected && m_Transport->State() != TransportState::Stopped)
 		{

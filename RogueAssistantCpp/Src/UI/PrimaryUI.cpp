@@ -260,7 +260,7 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 			prevConnIdx != m_CurrentConnectionIdx || m_CurrentConnectionId != connection.id;
 		m_CurrentConnectionId = connection.id;
 
-		std::string connectionText = "mGBA bridge connected";
+		std::string connectionText = "Connected to mGBA";
 
 		if (connectionCount > 1)
 		{
@@ -511,9 +511,9 @@ void PrimaryUI::RenderHomeBoxPage(Window& window, rogue::app::HomeBoxSnapshot co
 	sf::RenderWindow& gfx = *window.GetHandle();
 	if (homeBox.requiresReopen)
 	{
-		m_Assets->DrawCenteredText(gfx, "Extended Storage disconnected", c_CentreOffset + sf::Vector2f(0, -55), 14,
+		m_Assets->DrawCenteredText(gfx, "Storage transfer stopped", c_CentreOffset + sf::Vector2f(0, -55), 14,
 								   m_Assets->m_ErrorFontColour);
-		m_Assets->DrawCenteredText(gfx, "Press B in mGBA, then reopen it.", c_CentreOffset + sf::Vector2f(0, -37), 11,
+		m_Assets->DrawCenteredText(gfx, "Press B. Reopen Extended Storage.", c_CentreOffset + sf::Vector2f(0, -37), 11,
 								   m_Assets->m_DarkFontColour);
 		return;
 	}

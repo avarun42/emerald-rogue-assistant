@@ -177,7 +177,8 @@ bool TcpSocket::ListenLoopback(std::uint16_t port, std::string& error)
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	if (bind(socket, reinterpret_cast<sockaddr*>(&address), static_cast<SocketLength>(sizeof(address))) != 0)
 	{
-		error = "cannot bind 127.0.0.1:" + std::to_string(port) + ": " + DescribeSocketError(LastSocketError());
+		error =
+			"cannot listen on 127.0.0.1 port " + std::to_string(port) + ": " + DescribeSocketError(LastSocketError());
 		Close();
 		return false;
 	}
