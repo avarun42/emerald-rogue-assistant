@@ -1,53 +1,75 @@
 # Multiplayer protocol 1.0
 
-Rogue Assistant continues to use ENet and treats the ROM-provided handshake,
-game state, player profiles, and player state as opaque byte sequences. Modern
-peers first establish an application-owned compatibility envelope. Released
-legacy assistants do not implement this envelope and are intentionally not
-interoperable with version 1.0.
+Rogue Assistant uses ENet for multiplayer. It does not interpret the game's
+handshake, game state, player profiles, or player state. It moves those values
+as fixed byte blocks whose sizes come from the ROM.
 
-## Channels
+Before game data can move, both apps exchange a compatibility message. The
+original Windows assistant does not send this message, so it cannot connect to
+version 1.0.
 
-| ENet channel | Purpose | Delivery |
+## ENet channels
+
+| Channel | Data | Delivery |
 | ---: | --- | --- |
-| 0 | compatibility control | reliable |
-| 1 | opaque ROM handshake | reliable |
-| 2 | opaque host game state | reliable |
-| 3 | opaque player state | unreliable fragment |
-| 4 | opaque player profiles | reliable |
+| 0 | Compatibility message | Reliable |
+| 1 | ROM handshake | Reliable |
+| 2 | Host game state | Reliable |
+| 3 | Player state | Unreliable fragment |
+| 4 | Player profiles | Reliable |
 
-Rogue Assistant does not process an opaque ROM or gameplay payload until the
-sending peer passes the compatibility gate. The host sends broadcasts only to
-compatible peers that have also completed the ROM handshake.
+The app does not process game data until the sender passes the compatibility
+check. The host sends game data only to a peer that also finished the ROM
+handshake.
 
-## Compatibility hello
+## Compatibility message
 
-The first control-channel payload is exactly 40 bytes. All integers are
-unsigned little-endian.
+The first channel 0 message is exactly 40 bytes. All integers use unsigned
+little-endian byte order.
 
 | Offset | Size | Field |
 | ---: | ---: | --- |
 | 0 | 4 | ASCII magic `RAMP` |
-| 4 | 2 | protocol major, `1` |
-| 6 | 2 | protocol minor, `0` |
+| 4 | 2 | Protocol major, `1` |
+| 6 | 2 | Protocol minor, `0` |
 | 8 | 4 | ROM Assistant API, exactly `3` |
 | 12 | 1 | ROM edition: Vanilla `0`, EX `1` |
-| 13 | 3 | reserved, zero |
-| 16 | 4 | ROM-provided player count |
-| 20 | 4 | complete multiplayer-state size |
+| 13 | 3 | Reserved, zero |
+| 16 | 4 | ROM player count |
+| 20 | 4 | Full multiplayer state size |
 | 24 | 4 | ROM handshake size |
-| 28 | 4 | host game-state size |
-| 32 | 4 | player-profile size |
-| 36 | 4 | player-state size |
+| 28 | 4 | Host game state size |
+| 32 | 4 | Player profile size |
+| 36 | 4 | Player state size |
 
-Both peers must match the protocol major, API, edition, player count, and all
-five structure sizes. Minor negotiation selects the lower compatible minor.
-Protocol 1.0 defines no optional minor features. A peer has five seconds after
-the ENet connection to provide one valid hello.
+Both peers must have the same:
 
-Rogue Assistant disconnects a peer that sends a malformed, duplicate,
-mismatched, out-of-order, oversized, or directionally invalid payload. It also
-shows a local diagnostic. Because ENet orders each reliable channel
-independently, Rogue Assistant can retain one correctly sized early ROM
-handshake until the compatibility hello arrives. It validates every
-network-derived player ID before using the ID to index ROM state.
+- Protocol major
+- ROM Assistant API
+- ROM edition
+- Player count
+- Five structure sizes
+
+The peers choose the lower minor version when both sides support it. Protocol
+1.0 has no optional minor features.
+
+A peer has five seconds after the ENet connection starts to send one valid
+compatibility message.
+
+## Invalid peers
+
+Rogue Assistant disconnects a peer that sends:
+
+- A message with a bad size or field value
+- More than one compatibility message
+- Values that do not match the local game
+- Game data before the compatibility check or ROM handshake
+- A message on the wrong channel or from the wrong side
+- A player ID outside the ROM player table
+- A payload larger than the matching ROM structure
+
+The local app also shows an error.
+
+ENet orders reliable messages within one channel, but it does not order one
+channel against another. For this reason, the app can hold one valid early ROM
+handshake until the compatibility message arrives.

@@ -1,12 +1,11 @@
 # Development
 
-The [Parity gate](parity-gate.md) defines the required release-validation
-matrix.
+Rogue Assistant uses CMake 3.25 or later and C++20. The checked-in presets use
+the same main options locally and in GitHub Actions.
 
-Rogue Assistant uses CMake 3.25 or newer and C++20. The checked-in presets keep
-local and continuous-integration builds aligned.
+## Build and test
 
-## Local build
+For a debug build:
 
 ```sh
 cmake --preset dev-debug
@@ -14,75 +13,107 @@ cmake --build --preset dev-debug --parallel
 ctest --preset dev-debug
 ```
 
-`dev-release` provides the corresponding optimized build. Direct dependencies
-are downloaded from checksum-pinned release archives during configuration.
-The desktop target builds SFML 3.1.0 and ENet 1.3.18 from source; SFML's own
-transitive sources follow the revisions pinned by its release build.
+Use `dev-release` for an optimized local build. The result is
+`RogueAssistant.exe` on Windows, `RogueAssistant.app` on macOS, and
+`RogueAssistant` on Linux.
 
-The resulting executable is `RogueAssistant.exe` on Windows, `RogueAssistant`
-on Linux, and `RogueAssistant.app` on macOS. A smoke check does not create a
-window:
+You can check the app without opening a window:
 
 ```sh
 RogueAssistant --version
 RogueAssistant --help
 ```
 
-Linux source builds require development packages for FreeType, OpenGL, udev,
-X11, Xcursor, Xext, Xi, and Xrandr. CI installs these explicitly.
+The first CMake setup downloads release archives for direct dependencies. Each
+archive has a fixed checksum. The desktop app builds SFML 3.1.0 and ENet
+1.3.18 from source. Tests use Catch2 3.15.3.
 
-Platform release builds use `release-windows-x64`,
-`release-macos-arm64`, and `release-linux-x86_64`. Their archive and signing
-workflow is documented in [Release engineering](release.md). Application
-SemVer has one source in `cmake/Version.cmake`. That file separates the numeric
-version core from an optional prerelease identifier because native operating
-system metadata requires a numeric core. Bridge, multiplayer, storage, and ROM
-API versions remain independent.
+Linux builds need development packages for FreeType, OpenGL, udev, X11,
+Xcursor, Xext, Xi, and Xrandr.
 
-## Quality gates
+## Main targets
 
-Every review unit must build and pass its applicable tests before it is
-committed. CI runs the portable targets with MSVC x64, Apple Clang, GCC, and
-Clang. Project warnings are errors in all four jobs. Separate Linux jobs run
-AddressSanitizer plus UndefinedBehaviorSanitizer and clang-tidy.
+The code is split into these targets:
 
-The sanitizer and analyzer presets can also be run locally:
+- `rogue_core`
+- `rogue_bridge`
+- `rogue_multiplayer`
+- `rogue_app`
+- `RogueAssistant`
+- `rogue_tests`
+
+See [Architecture](architecture.md) for the job of each target.
+
+## Extra checks
+
+GitHub Actions builds and tests with MSVC x64, Apple Clang, GCC, and Clang.
+Warnings in project code are errors in these jobs. Other jobs test the Lua
+script, run AddressSanitizer and UndefinedBehaviorSanitizer, and run
+`clang-tidy`.
+
+To run the sanitizer checks on Linux:
 
 ```sh
 cmake --preset ci-sanitizers
 cmake --build --preset ci-sanitizers --parallel
 ctest --preset ci-sanitizers
+```
 
+To run `clang-tidy` on Linux:
+
+```sh
 cmake --preset ci-clang-tidy
 cmake --build --preset ci-clang-tidy --parallel
 ctest --preset ci-clang-tidy
 ```
 
-Format only the C++ files that you change. Keep repository-wide formatting and
-dependency upgrades in separate changes.
+Run the checks that cover your change before you commit. Let hosted CI run the
+full system and compiler set. Run the full local package check when a change
+affects packaging or when you prepare a release.
 
-## Technical writing
+## Versions
 
-Follow the [Google developer documentation style guide](https://developers.google.com/style)
-for first-party documentation, application text, command-line output, log
-messages, code comments, and mGBA console messages. Do not edit quoted or
-vendored third-party license text.
+`cmake/Version.cmake` is the only source for the app version. It stores a
+three-part number and an optional prerelease name. The window, logs, command
+line, and package names use the full version.
 
-- Use US English, active voice, present tense, and sentence-case headings.
-- Address the reader as "you" and use direct commands for instructions.
-- Describe the visible state or the action that the user must take.
-- Prefer short sentences and familiar, consistent terms.
-- Do not expose internal architecture terms unless the user needs them to fix
-  a problem.
-- Write relationships as words when shorthand can be ambiguous. For example,
-  write `on port 30125`, not `:30125`.
-- Put detailed protocol and storage diagnostics in the log. Show a concise
-  summary and a useful next action in the UI.
+The bridge protocol, multiplayer protocol, Home Box format, and ROM Assistant
+API have separate versions. Do not change one only because the app version
+changes.
 
-## Distribution review
+## Change rules
 
-`THIRD_PARTY_NOTICES.md` is installed with every application. Keep its versions
-aligned with `cmake/DesktopDependencies.cmake` and SFML's transitive revisions.
-The original Rogue Assistant creator has approved this fork and its GitHub
-releases. Keep that release permission distinct from any general repository
-license added later. See [Distribution status](asset-provenance.md).
+- Give each commit one clear purpose.
+- Use a Conventional Commit prefix such as `feat:`, `fix:`, `refactor:`,
+  `test:`, `docs:`, `build:`, or `ci:`.
+- Write the subject as a short command. Explain the reason in the body when it
+  is not clear from the change.
+- Do not mix code formatting, a dependency update, a protocol change, and a
+  behavior change in one commit.
+- Format only the C++ files that you change.
+- Keep all supported builds working after each commit.
+- Add or update tests when behavior changes.
+
+## Writing rules
+
+Use clear US English in documentation, app text, command output, logs, code
+comments, and commit messages.
+
+- Use common words and short sentences.
+- Use one term for each idea.
+- Use active voice and present tense.
+- Tell the reader what happened and what to do next.
+- Keep internal design terms out of app messages unless they help solve a
+  problem.
+- Define a needed special term the first time you use it.
+- Keep detailed protocol and file errors in the log. Show a short error and a
+  useful next step in the app.
+- Write `on port 30125` instead of the less clear `:30125`.
+
+Do not edit third-party license text.
+
+## Release packages
+
+The release presets are `release-windows-x64`, `release-macos-arm64`, and
+`release-linux-x86_64`. See [Release process](release.md) for package commands,
+GitHub Actions, and release tests.

@@ -1,113 +1,155 @@
-# Installation and first run
+# Install Rogue Assistant
 
-Rogue Assistant is distributed separately from Pokémon Emerald Rogue and from
-mGBA. It does not contain a ROM. Use only a ROM that you are legally entitled
-to use.
+Rogue Assistant is separate from mGBA and Pokémon Emerald Rogue. Release
+packages do not include a ROM.
 
-## Requirements
+## Before you install
 
-- mGBA 0.10.5 or newer with Lua scripting enabled
-- Emerald Rogue Vanilla or EX with Assistant API 3
+You need:
+
+- mGBA 0.10.5 or later with Lua support
+- Emerald Rogue Vanilla or EX with ROM Assistant API 3
 - Windows x64, macOS 11 or later on Apple silicon, or Linux x86_64
-- One available loopback TCP port, `30125` by default
+- A free local TCP port; the default is `30125`
 
-The bridge protocol is local-only. Multiplayer separately uses the configured
-ENet host port (`30025` by default). The player who hosts a session might need
-to allow that port through the operating system's firewall.
+Multiplayer uses a separate port. The default multiplayer port is `30025`.
+The host might need to allow this port through a firewall.
 
-## Verify a download
+## Check the download
 
-Every release contains `SHA256SUMS`. Verify the artifact before opening it:
+Each release includes `SHA256SUMS`. Use it to check that your download is
+complete and unchanged.
+
+On Windows PowerShell:
 
 ```powershell
-# Windows PowerShell
 Get-FileHash .\RogueAssistant-1.0.0-beta.1-windows-x64.zip -Algorithm SHA256
 ```
 
-```sh
-# macOS
-shasum -a 256 RogueAssistant-1.0.0-beta.1-macos-arm64.dmg
+On macOS:
 
-# Linux
+```sh
+shasum -a 256 RogueAssistant-1.0.0-beta.1-macos-arm64.dmg
+```
+
+On Linux:
+
+```sh
 sha256sum RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage
 ```
 
-Compare the complete hexadecimal value with the matching line in
-`SHA256SUMS`. Do not use a file if the values differ.
+Compare the full value with the matching line in `SHA256SUMS`. Do not use the
+file if the values differ.
 
-## Install
+## Windows
 
-### Windows x64
+Extract `RogueAssistant-1.0.0-beta.1-windows-x64.zip` to a folder where you can
+write files. Run `bin\RogueAssistant.exe`.
 
-Extract `RogueAssistant-1.0.0-beta.1-windows-x64.zip` to a user-writable
-directory and run `bin\RogueAssistant.exe`. Keep the `resources` directory
-beside the executable. Moving only the executable produces a resource-loading
-failure. The release binary statically links its Microsoft C/C++ runtime and
-does not require a separate Visual C++ Redistributable installation.
+Keep the `resources` folder beside the app. The app cannot start if you move
+only the `.exe` file.
 
-### macOS
+## macOS
 
-Open `RogueAssistant-1.0.0-beta.1-macos-arm64.dmg` and drag
-`RogueAssistant.app` to Applications. The application is native to Apple
-silicon and contains only an arm64 slice. Release builds use a Developer ID
-signature and notarization when credentials are available. Otherwise, CI
-creates an ad hoc signed development build, which macOS identifies as an
-unverified build.
+Open `RogueAssistant-1.0.0-beta.1-macos-arm64.dmg`. Drag
+`RogueAssistant.app` to Applications.
 
-If macOS blocks an ad hoc signed beta, open it from Finder:
+The beta package runs only on Apple silicon. A package from GitHub Actions uses
+an ad hoc signature unless the release job has Apple signing details. macOS
+can show an unknown developer warning for an ad hoc signed build.
 
-1. Control-click `RogueAssistant.app`, then choose **Open**.
-2. Choose **Open** again in the confirmation dialog.
+To open such a build:
 
-If that option is not available, try to open the app once. Then open **System
-Settings > Privacy & Security** and choose **Open Anyway** for Rogue Assistant.
-These extra steps are not required for a notarized build.
+1. Control-click `RogueAssistant.app` in Finder.
+2. Select **Open**.
+3. Select **Open** again in the warning.
 
-### Linux x86_64
+If **Open** is not available, try to open the app once. Then go to **System
+Settings > Privacy & Security** and select **Open Anyway**.
 
-For the AppImage:
+## Linux
+
+To use the AppImage:
 
 ```sh
 chmod +x RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage
 ./RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage
 ```
 
-Alternatively, extract `RogueAssistant-1.0.0-beta.1-linux-x86_64.tar.gz` into
-an empty directory and run `bin/RogueAssistant` without separating it from
-`bin/resources`. The archive build uses desktop OpenGL/X11 system interfaces;
-use the AppImage when those runtime dependencies are not already available.
+You can also extract
+`RogueAssistant-1.0.0-beta.1-linux-x86_64.tar.gz`. Run
+`bin/RogueAssistant` from the extracted files. Keep `bin/resources` beside the
+app.
 
-## Connect to mGBA
+The archive uses OpenGL and X11 libraries from the system. Use the AppImage if
+those libraries are not installed.
 
-1. Start Rogue Assistant. It exports the mGBA script to the application data
-   folder and waits for mGBA on port `30125`.
-2. Open the API-3 Emerald Rogue ROM in mGBA.
-3. In mGBA, open **Tools > Scripting**.
-4. Choose **File > Load Script** and select the exported
-   `RogueAssistant_mGBA.lua` shown by Rogue Assistant.
-5. Confirm that the assistant changes from waiting to connected.
+## Connect mGBA
 
-On the waiting screen, `E` exports the script again, `C` copies its path, `R`
-opens its folder, and `P` changes the saved connection port. If another program
-already owns the port, choose the same replacement port in Rogue Assistant and
-reload the newly exported Lua file in mGBA. The script reconnects automatically
-after normal application restarts and ROM resets.
+1. Start Rogue Assistant. It exports its Lua script and waits for mGBA.
+2. Open the supported Emerald Rogue ROM in mGBA.
+3. Press `R` in Rogue Assistant to open the exported script folder.
+4. In mGBA, select **Tools > Scripting**.
+5. Select **File > Load Script**.
+6. Open `RogueAssistant_mGBA.lua` from the exported script folder.
+7. Wait for Rogue Assistant to show that mGBA is connected.
 
-The full command line is:
+The waiting screen has these controls:
+
+- `P`: change the saved connection port
+- `E`: export the script again
+- `C`: copy the script path
+- `R`: open the script folder
+
+The exported script contains the port that was active when it was created.
+Export and reload the script after you change the port. The script reconnects
+after an app restart or a ROM reset.
+
+## Command line
 
 ```text
 RogueAssistant [--bridge-port PORT] [--version] [--help]
 ```
 
-`--bridge-port` is a one-run override. It does not modify `settings.ini`.
+`--bridge-port` changes the port for that run only. It does not change
+`settings.ini`.
 
-## User data and removal
+The app chooses the bridge port in this order:
 
-Settings, logs, exported scripts, and Home Box data remain in the directories
-listed in [Platform services](platform-services.md) after you remove the
-application. Back up this data before you delete it, especially Home Box files
-and their `.bak` files.
+1. The `--bridge-port` value
+2. `Bridge.Port` in `settings.ini`
+3. Port `30125`
 
-To uninstall Rogue Assistant, remove the extracted application or app bundle.
-Delete the data and configuration directories only if you no longer need their
-Home Box contents.
+## User files
+
+Rogue Assistant stores settings, logs, the exported script, and Home Box data
+in these folders:
+
+- Windows: `%APPDATA%\Rogue Assistant`
+- macOS: `~/Library/Application Support/rogue.emerald.assistant`
+- Linux data: `$XDG_DATA_HOME/rogue-assistant`, or
+  `~/.local/share/rogue-assistant` when `XDG_DATA_HOME` is not set
+- Linux settings: `$XDG_CONFIG_HOME/rogue-assistant`, or
+  `~/.config/rogue-assistant` when `XDG_CONFIG_HOME` is not set
+
+The log is `logs/RogueAssistant.log` in the data folder. The Lua script is in
+the `scripts` folder. Home Box files are stored by ROM edition and trainer ID.
+
+`settings.ini` can contain these keys:
+
+```ini
+Multiplayer.HostPort=30025
+Multiplayer.JoinIP=
+Bridge.Port=30125
+```
+
+On Windows, the first run can copy data from the original assistant. It checks
+`%APPDATA%\.pokabbie\rogue_assistant` and a `settings.ini` file in the old app's
+working folder. It copies these files only when the new data folder does not
+exist. It does not remove the old files.
+
+## Remove the app
+
+Delete the app or the extracted package. User files remain in the folders
+listed above. Back up any Home Box files that you want to keep before you
+delete those folders.

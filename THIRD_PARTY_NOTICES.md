@@ -1,17 +1,14 @@
 # Third-party notices
 
-These notices cover third-party software and the font that Rogue Assistant 1.0
-includes or uses during its build. They do not license Rogue Assistant,
-its Lua adapter, or its images. Before public distribution, document a license
-grant that covers the inherited source and resolve the remaining asset
-provenance in `docs/asset-provenance.md`.
+These notices cover the third-party software and font that Rogue Assistant 1.0
+includes or uses during its build.
 
-Release packages include the upstream, unmodified license texts for SFML,
-ENet, FreeType, HarfBuzz, and SheenBidi in the adjacent `licenses` directory.
-The license for the vendored strutil header appears below. The upstream license
-texts control if a summary differs from a license.
+Release packages include the full license text for SFML, ENet, FreeType,
+HarfBuzz, and SheenBidi in the `licenses` folder. The license for the included
+strutil header appears below. The full license text controls if a summary is
+different.
 
-## Shipped components
+## Included components
 
 | Component | Version | Use | License |
 | --- | --- | --- | --- |

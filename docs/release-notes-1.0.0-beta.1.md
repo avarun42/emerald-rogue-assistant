@@ -1,43 +1,52 @@
 # Rogue Assistant 1.0.0 beta 1
 
-This beta brings the Rogue Assistant desktop application to Apple silicon and
-replaces the Windows-only native mGBA bridge with a portable Lua and loopback
-TCP bridge. The same application also builds for Windows x64 and Linux x86_64.
+This beta brings Rogue Assistant to Apple silicon. It replaces the original
+Windows-only mGBA bridge with a portable Lua script and a local TCP connection.
+The same source also builds for Windows x64 and Linux x86_64.
 
-## Verified on macOS
+## Tested on macOS
 
-The maintainer tested the Apple silicon build with mGBA 0.10.5 and Pokémon
-Emerald Rogue 2.2.0 Vanilla with ROM Assistant API 3. The test covered both
-startup orders, the ROM handshake, the assistant confirmation write, pause and
-resume, ROM reset, script reload, application restart, mGBA shutdown, and clean
-application shutdown.
+The Apple silicon package was tested with mGBA 0.10.5 and Pokémon Emerald
+Rogue 2.2.0 Vanilla with ROM Assistant API 3.
 
-The application and text render at native resolution on a Retina display. The
-packaged executable contains only the arm64 architecture.
+The test covered:
 
-## Beta coverage still needed
+- Starting mGBA before and after Rogue Assistant
+- The ROM connection and confirmation write
+- Pause and resume
+- ROM reset
+- Lua script reload
+- Rogue Assistant restart
+- mGBA shutdown
+- Rogue Assistant shutdown
+- Native Retina resolution and clear text
+- An arm64-only app package
+
+## More beta testing is needed
 
 Please help test:
 
-- Windows x64 and Linux x86_64 package installation and launch
+- Windows x64 and Linux x86_64 packages
 - Emerald Rogue EX with ROM Assistant API 3
-- Home Box load, save, backup recovery, and legacy data import with real saves
-- Multiplayer between supported operating systems
-- Long play sessions, repeated resets, and repeated reconnects
+- Home Box load, save, old file import, and backup recovery with real game data
+- Multiplayer between supported systems
+- Long play sessions and repeated reconnects
 
-These areas have automated coverage, but they have not all been tested in a
-real game on every supported operating system. They remain requirements for the
-final 1.0.0 release.
+These areas have automated tests. They have not all been used in a real game
+on every supported system. They must be tested before the final 1.0.0 release.
 
 ## Report a problem
 
-Open a GitHub issue and include:
+Include:
 
-- Operating system and CPU architecture
-- Rogue Assistant, mGBA, and Emerald Rogue versions
-- Vanilla or EX edition and ROM Assistant API version
-- What you expected and what happened
-- The relevant `RogueAssistant.log` file, after checking it for private data
+- Your operating system and CPU type
+- The Rogue Assistant, mGBA, and Emerald Rogue versions
+- The Vanilla or EX edition
+- The ROM Assistant API version
+- What you expected
+- What happened
+- The relevant `RogueAssistant.log` lines, after you check them for private
+  data
 
-See [Installation and first run](installation.md) for setup instructions and
-data locations.
+See [Install Rogue Assistant](installation.md) for setup and file locations.
+See [Troubleshooting](troubleshooting.md) for common problems.

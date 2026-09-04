@@ -213,21 +213,14 @@ set(
 set(
     ROGUE_GUIDE_DOCUMENT_FILES
     docs/architecture.md
-    docs/asset-provenance.md
     docs/bridge-protocol.md
-    docs/compatibility.md
-    docs/desktop-application.md
     docs/development.md
-    docs/game-memory-transport.md
     docs/home-box-format.md
     docs/installation.md
-    docs/lifecycle.md
     docs/multiplayer-protocol.md
-    docs/parity-gate.md
-    docs/platform-services.md
     docs/release.md
     docs/release-notes-1.0.0-beta.1.md
-    docs/roadmap.md
+    docs/troubleshooting.md
 )
 
 set(ROGUE_DOCUMENT_FILES ${ROGUE_ROOT_DOCUMENT_FILES} ${ROGUE_GUIDE_DOCUMENT_FILES})

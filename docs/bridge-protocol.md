@@ -1,73 +1,116 @@
-# Bridge Protocol 1.0
+# Bridge protocol 1.0
 
-The portable mGBA adapter and Rogue Assistant communicate over a single TCP
-connection. Rogue Assistant is the server and listens only on loopback. Every
-integer is little-endian and every peer must tolerate fragmented frames,
-coalesced frames, and partial socket sends.
+The mGBA Lua script and Rogue Assistant use one TCP connection. Rogue
+Assistant is the server. It listens only on `127.0.0.1`.
 
-## Frame
+All integers use little-endian byte order. Both programs keep incomplete data
+until a full frame is ready. They also handle several frames in one receive and
+keep any bytes that a partial send did not write.
+
+## Frame format
 
 ```text
 offset  size  field
-0       4     body length (8 through 1,048,576)
+0       4     body length, from 8 through 1,048,576
 4       1     message type
-5       1     flags (zero in protocol 1.0)
-6       2     reserved (zero)
+5       1     flags, zero in version 1.0
+6       2     reserved, zero
 8       4     request ID
 12      n     payload
 ```
 
-The body length covers the eight-byte message header and payload but excludes
-its own four-byte length. A decoder rejects unknown message IDs, nonzero flags
-or reserved bits, invalid request-ID classes, and oversized input. Receive and
-send queues each retain at most 256 frames and 4 MiB of wire data. The send
-queue advances only by the byte count actually accepted by the socket. These
-bounds are protocol implementation limits, not flow-control signals.
+The body length includes the eight-byte message header and the payload. It does
+not include the four-byte length field.
 
-Because the 1 MiB body limit includes headers, a `ReadResult` can carry at most
-1,048,568 memory bytes. A `WriteRequest` can carry at most 1,048,560 memory
-bytes because its payload also contains address and byte-count fields.
+A decoder rejects:
+
+- An unknown message type
+- Nonzero flags or reserved bytes
+- A request ID that is not valid for the message
+- A body that is too small or larger than 1 MiB
+- A queue that is already full
+
+The receive queue and send queue can each hold at most 256 frames and 4 MiB of
+wire data. These limits keep memory use fixed. They are not flow control
+messages.
+
+A `ReadResult` can hold at most 1,048,568 memory bytes. A `WriteRequest` can
+hold at most 1,048,560 memory bytes because its payload also has address and
+size fields.
+
+## Messages
 
 | ID | Name | Request ID | Payload |
-|---:|---|---|---|
-| 1 | `ClientHello` | zero | `RAB1`, protocol `u16 major, u16 minor`, script version `u32` |
-| 2 | `ServerHello` | zero | status `u8`, reserved `u8`, protocol `u16, u16`, app version core `u16, u16, u16` |
-| 3 | `ReadRequest` | nonzero | address `u32`, byte count `u32` |
-| 4 | `WriteRequest` | nonzero | address `u32`, byte count `u32`, bytes |
-| 5 | `ReadResult` | nonzero | requested bytes |
-| 6 | `WriteResult` | nonzero | empty |
-| 7 | `Error` | zero or originating request | stable code `u16`, diagnostic length `u16`, UTF-8 diagnostic |
-| 8 | `Close` | zero | empty |
+| ---: | --- | --- | --- |
+| 1 | `ClientHello` | Zero | `RAB1`, protocol `u16 major, u16 minor`, script version `u32` |
+| 2 | `ServerHello` | Zero | Status `u8`, reserved `u8`, protocol `u16, u16`, app version `u16, u16, u16` |
+| 3 | `ReadRequest` | Nonzero | Address `u32`, byte count `u32` |
+| 4 | `WriteRequest` | Nonzero | Address `u32`, byte count `u32`, bytes |
+| 5 | `ReadResult` | Nonzero | Requested bytes |
+| 6 | `WriteResult` | Nonzero | Empty |
+| 7 | `Error` | Zero or source request | Error code `u16`, text length `u16`, UTF-8 text |
+| 8 | `Close` | Zero | Empty |
 
-Protocol 1.0 uses script version `1`. Error diagnostics are limited to 1,024
-bytes. Stable error codes are unsupported protocol (1), busy (2), malformed
-frame (3), invalid request ID (4), invalid address (5), invalid size (6), queue
-full (7), and internal error (8).
+Protocol 1.0 uses script version `1`. Error text can contain at most 1,024
+bytes.
 
-The handshake must finish before the server accepts memory messages. Protocol
-majors must match. The server can accept an older protocol minor only when that
-minor defines every feature in use. The initial implementation negotiates
-exactly 1.0. The server sends `Close` after it rejects a hello. The application
-version fields contain the numeric SemVer core. Command-line output, logs, and
-the UI include any prerelease identifier.
+The error codes are:
 
-The canonical byte vectors live in
-`tests/fixtures/bridge_protocol_1.golden`. Both the C++ codec suite and the Lua
-adapter suite read that file, which prevents silent differences between the
-implementations.
+| Code | Meaning |
+| ---: | --- |
+| 1 | Unsupported protocol |
+| 2 | Bridge is busy |
+| 3 | Bad frame |
+| 4 | Bad request ID |
+| 5 | Bad address |
+| 6 | Bad size |
+| 7 | Queue is full |
+| 8 | Internal error |
 
-## mGBA execution bounds
+## Connection setup
 
-The script receives and sends no more than 256 KiB per emulated frame. It
-starts or advances at most 64 memory operations and 256 KiB of memory per
-frame; larger individual requests are carried across multiple frames. Reads
-use `emu:readRange`. Writes select aligned `write32` and `write16` calls with
-`write8` for byte-safe leading and trailing data. The script independently
-allows reads only from documented GBA RAM, video memory, and ROM ranges and
-writes only to EWRAM or IWRAM.
+The script sends `ClientHello` first. The app accepts memory messages only
+after the hello is complete.
 
-mGBA owns socket event polling. The script buffers received bytes and retains
-the unsent suffix reported by `socket:send`. After a connection fails, the
-script waits at least one wall-clock second before reconnecting. Pausing
-emulation performs no work and has no timeout. Bounded queues provide
-backpressure until frames resume.
+Protocol major versions must match. A server can accept an older minor version
+only when it supports every feature used by that version. This release accepts
+only protocol 1.0.
+
+The `ServerHello` contains the three numeric parts of the app version. A beta
+name is not sent in this fixed field. The full version still appears in the UI,
+log, and command output.
+
+The app accepts one script. It sends a rejected hello, error code 2, and
+`Close` to another script while the first one is connected. It sends `Close`
+after any rejected hello.
+
+The script reconnects no more than once per second. A script stop, ROM reset,
+mGBA shutdown, app restart, or port change closes the old connection. The app
+then waits for a new connection.
+
+## Memory work in mGBA
+
+During one emulated frame, the script:
+
+- Receives and sends at most 256 KiB
+- Starts or moves forward at most 64 memory operations
+- Reads or writes at most 256 KiB of memory
+
+A large operation continues in later frames.
+
+Reads use `emu:readRange`. Writes use aligned `write32` and `write16` calls.
+Leading or trailing bytes use `write8`.
+
+The script checks addresses on its own. Reads can use the documented GBA RAM,
+video memory, and ROM regions. Writes can use only EWRAM or IWRAM.
+
+mGBA controls socket event checks. The script stores received bytes until a
+full frame is ready. It also stores the unsent part reported by `socket:send`.
+Pausing mGBA does no work and does not cause a time limit error. The queue
+limits stop work from growing without a bound.
+
+## Shared test data
+
+`tests/fixtures/bridge_protocol_1.golden` contains the standard byte examples.
+The C++ tests and Lua tests both read this file. A change fails tests if the two
+implementations no longer use the same bytes.

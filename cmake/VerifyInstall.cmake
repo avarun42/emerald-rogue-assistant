@@ -52,27 +52,28 @@ set(
   ${document_directory}/README.md
   ${document_directory}/THIRD_PARTY_NOTICES.md
   ${document_directory}/docs/architecture.md
-  ${document_directory}/docs/asset-provenance.md
   ${document_directory}/docs/bridge-protocol.md
-  ${document_directory}/docs/compatibility.md
-  ${document_directory}/docs/desktop-application.md
   ${document_directory}/docs/development.md
-  ${document_directory}/docs/game-memory-transport.md
   ${document_directory}/docs/home-box-format.md
   ${document_directory}/docs/installation.md
-  ${document_directory}/docs/lifecycle.md
   ${document_directory}/docs/multiplayer-protocol.md
-  ${document_directory}/docs/parity-gate.md
-  ${document_directory}/docs/platform-services.md
   ${document_directory}/docs/release.md
   ${document_directory}/docs/release-notes-1.0.0-beta.1.md
-  ${document_directory}/docs/roadmap.md
+  ${document_directory}/docs/troubleshooting.md
   ${document_directory}/licenses/SFML.txt
   ${document_directory}/licenses/ENet.txt
   ${document_directory}/licenses/FreeType.txt
   ${document_directory}/licenses/HarfBuzz.txt
   ${document_directory}/licenses/SheenBidi.txt
 )
+if(ROGUE_INSTALL_PLATFORM STREQUAL "linux")
+  list(
+    APPEND
+    required_files
+    ${ROGUE_INSTALL_ROOT}/share/applications/rogue.emerald.assistant.desktop
+    ${ROGUE_INSTALL_ROOT}/share/icons/hicolor/128x128/apps/rogue.emerald.assistant.png
+  )
+endif()
 foreach(required_file IN LISTS required_files)
   if(NOT EXISTS ${required_file})
     message(FATAL_ERROR "Installed package is missing: ${required_file}")
@@ -89,21 +90,14 @@ verify_directory_inventory(
 verify_directory_inventory(
   "${document_directory}/docs"
   architecture.md
-  asset-provenance.md
   bridge-protocol.md
-  compatibility.md
-  desktop-application.md
   development.md
-  game-memory-transport.md
   home-box-format.md
   installation.md
-  lifecycle.md
   multiplayer-protocol.md
-  parity-gate.md
-  platform-services.md
   release.md
   release-notes-1.0.0-beta.1.md
-  roadmap.md
+  troubleshooting.md
 )
 verify_directory_inventory(
   "${document_directory}/licenses"
