@@ -1,11 +1,14 @@
 #include "ObservedGameMemory.h"
+#include "Bridge/BridgeProtocol.h"
 #include "Endian.h"
 #include "GameConnection.h"
 #include "Log.h"
 
-
-// Helpers
-//
+namespace
+{
+constexpr std::uint32_t MaximumObservedReadSize =
+	rogue::bridge::MaximumFrameBodyLength - rogue::bridge::FrameBodyHeaderSize;
+}
 
 enum class ObservedMemoryID : u16
 {
@@ -24,11 +27,7 @@ inline static GameMessageID CreateMessageId(GameMessageChannel channel, Observed
 	return ::CreateMessageId(channel, static_cast<u16>(param));
 }
 
-// ObservedBlob
-//
-
-ObservedBlob::ObservedBlob(size_t size)
-	: m_IsValid(false)
+ObservedBlob::ObservedBlob(size_t size) : m_IsValid(false)
 {
 	Resize(size);
 }
@@ -59,11 +58,7 @@ void ObservedBlob::Clear()
 	m_IsValid = false;
 }
 
-// ObservedGameMemory
-//
-
-ObservedGameMemory::ObservedGameMemory(GameConnection& game)
-	: m_Game(game)
+ObservedGameMemory::ObservedGameMemory(GameConnection& game) : m_Game(game)
 {
 }
 
@@ -81,19 +76,10 @@ void ObservedGameMemory::Update()
 	}
 	else
 	{
-		// Both headers are valid, so can update other memory now
+		// Both headers are valid. Read the dynamic state.
 		GameMessageID messageId;
 
-
-		// Grab assistant state
-		//
-		// NOTE: This is laggy to get, as it's so large
-		// Should consider setting up a system which will grab in smaller sizes over multiple frames
-		//messageId = CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::AssitantState);
-		//m_Game.ReadRequest(messageId, m_RogueHeader->assistantState, m_AssistantState.GetSize());
-
-		// Grab multiplayer state, if we have one
-		//
+		// Read the multiplayer state when the ROM provides it.
 		messageId = CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::MultiplayerStatePtr);
 		m_Game.ReadRequest(messageId, m_RogueHeader->multiplayerPtr, m_MultiplayerStatePtr.GetSize());
 
@@ -107,17 +93,23 @@ void ObservedGameMemory::Update()
 		}
 		else
 		{
-			// Pointing to null
+			// A null pointer means that multiplayer is inactive.
 			m_MultiplayerState.Clear();
 		}
 
-		// Grab Home Box state
-		//
+		// Read the Home Box state when the ROM provides it.
 		messageId = CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::HomeBoxStatePtr);
 		m_Game.ReadRequest(messageId, m_RogueHeader->homeBoxPtr, m_HomeBoxStatePtr.GetSize());
 
 		if (m_HomeBoxStatePtr.IsValid() && m_HomeBoxStatePtr.Get() != 0)
 		{
+			if (m_RogueHeader->homeBoxSize == 0 || m_RogueHeader->homeBoxSize > MaximumObservedReadSize)
+			{
+				LOG_ERROR("Home Box state size must be from 1 through %zu bytes", MaximumObservedReadSize);
+				m_Game.ReportError("Cannot use Home Box.\nThe ROM Home Box data is invalid.");
+				m_Game.Disconnect();
+				return;
+			}
 			if (m_HomeBoxState.GetSize() != m_RogueHeader->homeBoxSize)
 				m_HomeBoxState.Resize(m_RogueHeader->homeBoxSize);
 
@@ -126,7 +118,7 @@ void ObservedGameMemory::Update()
 		}
 		else
 		{
-			// Pointing to null
+			// A null pointer means that Home Box is inactive.
 			m_HomeBoxState.Clear();
 			m_PokemonStorageData.Clear();
 		}
@@ -142,17 +134,17 @@ void ObservedGameMemory::OnRecieveMessage(GameMessageID messageId, u8 const* dat
 	case ObservedMemoryID::GFHeader:
 		if (m_GFRomHeader.SetData(data, size))
 		{
-			// A couple of verification handshakes are placed in the handshake, so check those before continuing
+			// Validate both handshake values before following the assistant header pointer.
 			if (m_GFRomHeader->rogueAssistantHandshake1 != 20012 || m_GFRomHeader->rogueAssistantHandshake2 != 30035)
 			{
-				LOG_WARN("Invalid GF Header handshakes");
+				LOG_WARN("Invalid Game Freak ROM header handshake");
 				m_Game.Disconnect();
 				return;
 			}
 		}
 		else
 		{
-			LOG_WARN("Invalid GF Header size");
+			LOG_WARN("Invalid Game Freak ROM header size");
 			m_Game.Disconnect();
 		}
 		break;
@@ -160,7 +152,7 @@ void ObservedGameMemory::OnRecieveMessage(GameMessageID messageId, u8 const* dat
 	case ObservedMemoryID::RogueHeader:
 		if (!m_RogueHeader.SetData(data, size))
 		{
-			LOG_WARN("Invalid GF Header size");
+			LOG_WARN("Invalid ROM Assistant header size");
 			m_Game.Disconnect();
 		}
 		break;
@@ -228,13 +220,17 @@ bool ObservedGameMemory::RequestPokemonStorageData(u32 boxId)
 	{
 		GameStructures::RogueAssistantHeader const& rogueHeader = m_Game.GetObservedGameMemory().GetRogueHeader();
 
-		GameMessageID messageId = CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::GamePokemonStorageData);
+		GameMessageID messageId =
+			CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::GamePokemonStorageData);
 
-		m_Game.ReadRequest(messageId, GetPokemonStoragePtr() + rogueHeader.homeDestMonSize * boxId, rogueHeader.homeDestMonSize);
+		if (!m_Game.ReadRequest(messageId, GetPokemonStoragePtr() + rogueHeader.homeDestMonSize * boxId,
+						 rogueHeader.homeDestMonSize))
+		{
+			return false;
+		}
 		m_PokemonStorageData.Resize(rogueHeader.homeDestMonSize);
 		return true;
 	}
 
 	return false;
-	//m_PokemonStorageData.Resize()
 }

@@ -147,6 +147,7 @@ rogue::app::UiSnapshot GameConnectionManager::Snapshot() const
 			connection.page = rogue::app::UiPage::HomeBox;
 			connection.homeBox.loading = homeBox->IsLoading();
 			connection.homeBox.saving = homeBox->IsSaving();
+			connection.homeBox.requiresReopen = homeBox->RequiresReopen();
 		}
 		else if (auto multiplayer = active.game->FindBehaviour<MultiplayerBehaviour>())
 		{

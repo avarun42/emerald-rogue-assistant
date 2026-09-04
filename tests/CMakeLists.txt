@@ -3,6 +3,7 @@ add_executable(
     BridgeProtocolTests.cpp
     CharacterizationTests.cpp
     CommandLineTests.cpp
+    HomeBoxFileTests.cpp
     LifecycleTests.cpp
     PlatformTests.cpp
     TcpLuaTransportTests.cpp
