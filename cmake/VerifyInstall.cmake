@@ -145,9 +145,22 @@ execute_process(
 if(NOT result EQUAL 0)
   message(FATAL_ERROR "Installed executable failed --version (${result}): ${error}")
 endif()
+# Windows writes a carriage return before the line feed. Normalize it before
+# comparing the one-line version output with the platform-independent value.
+string(REPLACE "\r" "" output "${output}")
 string(STRIP "${output}" output)
-if(NOT output STREQUAL "Rogue Assistant ${ROGUE_EXPECTED_VERSION}")
-  message(FATAL_ERROR "Unexpected installed version output: ${output}")
+set(expected_output "Rogue Assistant ${ROGUE_EXPECTED_VERSION}")
+if(NOT "${output}" STREQUAL "${expected_output}")
+  string(HEX "${output}" output_hex)
+  string(HEX "${expected_output}" expected_output_hex)
+  message(
+    FATAL_ERROR
+    "Unexpected installed version output\n"
+    "Expected: ${expected_output}\n"
+    "Actual:   ${output}\n"
+    "Expected bytes: ${expected_output_hex}\n"
+    "Actual bytes:   ${output_hex}"
+  )
 endif()
 
 if(ROGUE_INSTALL_PLATFORM STREQUAL "macos")

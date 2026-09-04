@@ -64,11 +64,17 @@ jobs:
         run: |
           $stage = Join-Path $env:RUNNER_TEMP "rogue-install"
           cmake --install build/release-windows-x64 --prefix $stage --component RogueAssistant
+          if ($LASTEXITCODE -ne 0) {
+            throw "cmake --install failed"
+          }
           cmake `
             "-DROGUE_INSTALL_ROOT=$stage" `
             -DROGUE_INSTALL_PLATFORM=windows `
             -DROGUE_EXPECTED_VERSION=${{ needs.metadata.outputs.version }} `
             -P cmake/VerifyInstall.cmake
+          if ($LASTEXITCODE -ne 0) {
+            throw "Installed application verification failed"
+          }
           $dependencies = & dumpbin /DEPENDENTS "$stage/bin/RogueAssistant.exe" | Out-String
           if ($LASTEXITCODE -ne 0) {
             throw "dumpbin failed while inspecting the packaged executable"
@@ -95,6 +101,9 @@ jobs:
             -DROGUE_INSTALL_PLATFORM=windows `
             -DROGUE_EXPECTED_VERSION=${{ needs.metadata.outputs.version }} `
             -P cmake/VerifyInstall.cmake
+          if ($LASTEXITCODE -ne 0) {
+            throw "Packaged application verification failed"
+          }
       - name: Upload Windows package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
