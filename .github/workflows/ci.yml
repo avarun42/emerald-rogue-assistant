@@ -12,6 +12,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  line-endings:
+    name: Line endings
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check tracked text files
+        shell: bash
+        run: |
+          if git ls-files --eol | grep -E '^i/(crlf|mixed)'; then
+            echo "Tracked text files must use LF line endings." >&2
+            exit 1
+          fi
+
   portable-build:
     name: ${{ matrix.name }}
     strategy:
