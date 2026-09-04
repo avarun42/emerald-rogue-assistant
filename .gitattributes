@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+*.rc binary
+*.png binary
+*.ico binary
+*.icns binary
+*.dmg binary
+*.AppImage binary
+*.ttf binary
+*.lib binary
+*.dll binary
+*.exe binary
