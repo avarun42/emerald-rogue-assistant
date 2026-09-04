@@ -59,6 +59,20 @@ if [[ "$(lipo -archs "$executable")" != arm64 ]]; then
   exit 1
 fi
 
+doc_dir="$app/Contents/Resources/Documentation"
+for document in README.md THIRD_PARTY_NOTICES.md; do
+  if [[ ! -f "$doc_dir/$document" ]]; then
+    echo "installed package is missing documentation: $document" >&2
+    exit 1
+  fi
+  cmake -E copy "$doc_dir/$document" "$stage_root/$document"
+done
+if [[ ! -f "$doc_dir/docs/installation.md" ]]; then
+  echo "installed package is missing documentation: docs/installation.md" >&2
+  exit 1
+fi
+cmake -E copy "$doc_dir/docs/installation.md" "$stage_root/installation.md"
+cmake -E copy_directory "$doc_dir/docs" "$stage_root/docs"
 ln -s /Applications "$stage_root/Applications"
 
 signing_identity="${APPLE_SIGNING_IDENTITY:-}"

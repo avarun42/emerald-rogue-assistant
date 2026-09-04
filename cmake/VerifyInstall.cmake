@@ -49,6 +49,17 @@ set(
   ${resource_directory}/poketch_frame.png
   ${resource_directory}/pokemon-emerald-pro.ttf
   ${resource_directory}/RogueAssistant_mGBA.lua
+  ${document_directory}/README.md
+  ${document_directory}/THIRD_PARTY_NOTICES.md
+  ${document_directory}/docs/architecture.md
+  ${document_directory}/docs/bridge-protocol.md
+  ${document_directory}/docs/development.md
+  ${document_directory}/docs/home-box-format.md
+  ${document_directory}/docs/installation.md
+  ${document_directory}/docs/multiplayer-protocol.md
+  ${document_directory}/docs/release.md
+  ${document_directory}/docs/release-notes-1.0.0-beta.1.md
+  ${document_directory}/docs/troubleshooting.md
   ${document_directory}/licenses/SFML.txt
   ${document_directory}/licenses/ENet.txt
   ${document_directory}/licenses/FreeType.txt
@@ -71,7 +82,22 @@ endforeach()
 
 verify_directory_inventory(
   "${document_directory}"
+  README.md
+  THIRD_PARTY_NOTICES.md
+  docs
   licenses
+)
+verify_directory_inventory(
+  "${document_directory}/docs"
+  architecture.md
+  bridge-protocol.md
+  development.md
+  home-box-format.md
+  installation.md
+  multiplayer-protocol.md
+  release.md
+  release-notes-1.0.0-beta.1.md
+  troubleshooting.md
 )
 verify_directory_inventory(
   "${document_directory}/licenses"

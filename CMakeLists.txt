@@ -205,6 +205,27 @@ set(
     RogueAssistantCpp/Assets/RogueAssistant_mGBA.lua
 )
 
+set(
+    ROGUE_ROOT_DOCUMENT_FILES
+    README.md
+    THIRD_PARTY_NOTICES.md
+)
+
+set(
+    ROGUE_GUIDE_DOCUMENT_FILES
+    docs/architecture.md
+    docs/bridge-protocol.md
+    docs/development.md
+    docs/home-box-format.md
+    docs/installation.md
+    docs/multiplayer-protocol.md
+    docs/release.md
+    docs/release-notes-1.0.0-beta.1.md
+    docs/troubleshooting.md
+)
+
+set(ROGUE_DOCUMENT_FILES ${ROGUE_ROOT_DOCUMENT_FILES} ${ROGUE_GUIDE_DOCUMENT_FILES})
+
 if(ROGUE_BUILD_DESKTOP)
     set(ROGUE_DESKTOP_SOURCES)
     if(WIN32)
@@ -272,6 +293,14 @@ if(ROGUE_BUILD_DESKTOP)
             PROPERTIES MACOSX_PACKAGE_LOCATION Resources
         )
         set_source_files_properties(
+            ${ROGUE_ROOT_DOCUMENT_FILES}
+            PROPERTIES MACOSX_PACKAGE_LOCATION Resources/Documentation
+        )
+        set_source_files_properties(
+            ${ROGUE_GUIDE_DOCUMENT_FILES}
+            PROPERTIES MACOSX_PACKAGE_LOCATION Resources/Documentation/docs
+        )
+        set_source_files_properties(
             ${ROGUE_DEPENDENCY_LICENSE_FILES}
             PROPERTIES MACOSX_PACKAGE_LOCATION Resources/Documentation/licenses
         )
@@ -285,6 +314,7 @@ if(ROGUE_BUILD_DESKTOP)
             RogueAssistant
             PRIVATE
                 ${ROGUE_RESOURCE_FILES}
+                ${ROGUE_DOCUMENT_FILES}
                 ${ROGUE_DEPENDENCY_LICENSE_FILES}
                 ${ROGUE_MACOS_ICON}
         )
@@ -322,6 +352,16 @@ if(ROGUE_BUILD_DESKTOP)
     endif()
 
     if(NOT APPLE)
+        install(
+            FILES ${ROGUE_ROOT_DOCUMENT_FILES}
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/RogueAssistant
+            COMPONENT RogueAssistant
+        )
+        install(
+            FILES ${ROGUE_GUIDE_DOCUMENT_FILES}
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/RogueAssistant/docs
+            COMPONENT RogueAssistant
+        )
         install(
             FILES ${ROGUE_DEPENDENCY_LICENSE_FILES}
             DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/RogueAssistant/licenses

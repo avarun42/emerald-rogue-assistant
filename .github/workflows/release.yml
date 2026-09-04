@@ -329,9 +329,10 @@ jobs:
               exit 1
             fi
           done
+          cp THIRD_PARTY_NOTICES.md dist/THIRD_PARTY_NOTICES.md
           (
             cd dist
-            sha256sum "${artifacts[@]}" > SHA256SUMS
+            sha256sum "${artifacts[@]}" THIRD_PARTY_NOTICES.md > SHA256SUMS
           )
       - name: Upload complete release set
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
