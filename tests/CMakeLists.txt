@@ -10,11 +10,14 @@ add_executable(
     PlatformTests.cpp
     TcpLuaTransportTests.cpp
     TransportTests.cpp
+    UiTextTests.cpp
 )
 
 target_compile_definitions(
     rogue_tests
-    PRIVATE ROGUE_TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    PRIVATE
+        ROGUE_TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+        ROGUE_TEST_RESOURCE_DIR="${PROJECT_SOURCE_DIR}/RogueAssistantCpp/Assets"
 )
 
 target_link_libraries(
@@ -23,6 +26,7 @@ target_link_libraries(
         rogue_app
         rogue_project_warnings
         Catch2::Catch2WithMain
+        sfml-graphics
 )
 rogue_enable_clang_tidy(rogue_tests)
 

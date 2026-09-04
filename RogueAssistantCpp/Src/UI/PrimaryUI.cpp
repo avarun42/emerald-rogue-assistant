@@ -5,6 +5,7 @@
 #include "Platform/ResourceLocator.h"
 #include "Platform/Utf8.h"
 #include "RogueAssistantVersion.h"
+#include "UI/TextEncoding.h"
 #include "UI/Window.h"
 
 #include <SFML/Graphics.hpp>
@@ -108,7 +109,7 @@ struct AssetCollection
 		}
 
 		unsigned int const rasterSize = static_cast<unsigned int>(std::ceil(fontSize * rasterScale));
-		sf::Text text(m_Font, msg, rasterSize);
+		sf::Text text(m_Font, rogue::ui::DecodeUtf8(msg), rasterSize);
 		text.setScale(sf::Vector2f(1.0F / rasterScale, 1.0F / rasterScale));
 		return text;
 	}
