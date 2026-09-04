@@ -145,9 +145,6 @@ execute_process(
 if(NOT result EQUAL 0)
   message(FATAL_ERROR "Installed executable failed --version (${result}): ${error}")
 endif()
-# Windows writes a carriage return before the line feed. Normalize it before
-# comparing the one-line version output with the platform-independent value.
-string(REPLACE "\r" "" output "${output}")
 string(STRIP "${output}" output)
 set(expected_output "Rogue Assistant ${ROGUE_EXPECTED_VERSION}")
 if(NOT "${output}" STREQUAL "${expected_output}")

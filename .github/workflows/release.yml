@@ -69,8 +69,8 @@ jobs:
           }
           cmake `
             "-DROGUE_INSTALL_ROOT=$stage" `
-            -DROGUE_INSTALL_PLATFORM=windows `
-            -DROGUE_EXPECTED_VERSION=${{ needs.metadata.outputs.version }} `
+            "-DROGUE_INSTALL_PLATFORM=windows" `
+            "-DROGUE_EXPECTED_VERSION=${{ needs.metadata.outputs.version }}" `
             -P cmake/VerifyInstall.cmake
           if ($LASTEXITCODE -ne 0) {
             throw "Installed application verification failed"
@@ -98,8 +98,8 @@ jobs:
           Expand-Archive -LiteralPath $package -DestinationPath $extract
           cmake `
             "-DROGUE_INSTALL_ROOT=$extract" `
-            -DROGUE_INSTALL_PLATFORM=windows `
-            -DROGUE_EXPECTED_VERSION=${{ needs.metadata.outputs.version }} `
+            "-DROGUE_INSTALL_PLATFORM=windows" `
+            "-DROGUE_EXPECTED_VERSION=${{ needs.metadata.outputs.version }}" `
             -P cmake/VerifyInstall.cmake
           if ($LASTEXITCODE -ne 0) {
             throw "Packaged application verification failed"
