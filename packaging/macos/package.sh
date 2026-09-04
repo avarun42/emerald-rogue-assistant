@@ -124,7 +124,7 @@ hdiutil create \
   -quiet \
   -format UDZO \
   -fs HFS+ \
-  -volname "Rogue Assistant $version" \
+  -volname "Emerald Rogue Assistant $version" \
   -srcfolder "$stage_root" \
   "$dmg_output"
 

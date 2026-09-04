@@ -49,7 +49,7 @@ bool Window::Create()
 	if (LoadWindowIcon(icon, m_Config.resourceDirectory))
 		m_WindowHandle->setIcon(icon);
 	else
-		LOG_WARN("Cannot load the Rogue Assistant window icon");
+		LOG_WARN("Cannot load the Emerald Rogue Assistant window icon");
 	return m_WindowHandle->isOpen();
 }
 

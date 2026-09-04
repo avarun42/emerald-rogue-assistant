@@ -277,7 +277,7 @@ void TcpLuaTransport::ProcessFrame(rogue::bridge::Frame const& frame)
 			response.status = HelloStatus::Rejected;
 			(void)QueueFrame(*m_Client, EncodeServerHello(response));
 			BeginProtocolClose(ProtocolErrorCode::UnsupportedProtocol,
-							   "Rogue Assistant requires bridge protocol 1.0 and script version 1");
+							   "Emerald Rogue Assistant requires bridge protocol 1.0 and script version 1");
 			return;
 		}
 

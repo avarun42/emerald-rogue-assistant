@@ -1,6 +1,6 @@
 # Third-party notices
 
-These notices cover the third-party software and font that Rogue Assistant 1.0
+These notices cover the third-party software and font that Emerald Rogue Assistant 1.0
 includes or uses during its build.
 
 Release packages include the full license text for SFML, ENet, FreeType,
@@ -141,7 +141,7 @@ UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 ## SFML embedded helper libraries
 
 SFML's pinned source archive compiles several header libraries into the three
-modules used by Rogue Assistant. Their upstream notices identify:
+modules used by Emerald Rogue Assistant. Their upstream notices identify:
 
 - cpp-unicodelib: Copyright (c) 2025 Yuji Hirose, MIT License;
 - GLAD 2.0.8 generated OpenGL/EGL/GLX/WGL loaders: SPDX expression
@@ -159,7 +159,7 @@ checksum-pinned SFML source archive.
 
 ## Pokemon Emerald Pro font
 
-Rogue Assistant packages the inherited font file without modifying it. The file
+Emerald Rogue Assistant packages the inherited font file without modifying it. The file
 identifies itself as “Pokemon Emerald Pro” version 1.0, copyright
 `crystalwalrein` 2013. Its embedded metadata links to
 <https://fontstruct.com/fontstructions/show/832818/pok_mon_emerald_pro>; that
@@ -172,6 +172,6 @@ author is implied.
 
 Catch2 3.15.3 is used only for tests under the Boost Software License 1.0. The
 Linux release uses linuxdeploy `1-alpha-20251107-1` only as a packaging tool;
-linuxdeploy is licensed GPL-3.0-or-later and is not included in Rogue Assistant
+linuxdeploy is licensed GPL-3.0-or-later and is not included in Emerald Rogue Assistant
 artifacts. Their authoritative license texts remain in their checksum-pinned
 source/tool distributions.

@@ -194,4 +194,4 @@ registeredCallbacks.stop()
 registeredCallbacks.start()
 registeredCallbacks.reset()
 
-print("Rogue Assistant Lua bridge tests passed")
+print("Emerald Rogue Assistant Lua bridge tests passed")

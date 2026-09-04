@@ -64,24 +64,24 @@ TEST_CASE("application paths follow each platform convention", "[platform][paths
 	windows.platform = HostPlatform::Windows;
 	windows.roamingAppData = "C:/Users/Misty/AppData/Roaming";
 	windows.currentWorkingDirectory = "C:/Games/RogueAssistant";
-	windows.executablePath = "C:/Program Files/Rogue Assistant/RogueAssistant.exe";
+	windows.executablePath = "C:/Program Files/Emerald Rogue Assistant/RogueAssistant.exe";
 	auto const windowsPaths = BuildAppPaths(windows);
-	REQUIRE(windowsPaths.dataDirectory == fs::path("C:/Users/Misty/AppData/Roaming/Rogue Assistant"));
+	REQUIRE(windowsPaths.dataDirectory == fs::path("C:/Users/Misty/AppData/Roaming/Emerald Rogue Assistant"));
 	REQUIRE(windowsPaths.configDirectory == windowsPaths.dataDirectory);
 	REQUIRE(windowsPaths.settingsFile == windowsPaths.dataDirectory / "settings.ini");
-	REQUIRE(windowsPaths.resourceDirectory == fs::path("C:/Program Files/Rogue Assistant/resources"));
+	REQUIRE(windowsPaths.resourceDirectory == fs::path("C:/Program Files/Emerald Rogue Assistant/resources"));
 	REQUIRE(windowsPaths.legacyDataDirectory
 		== fs::path("C:/Users/Misty/AppData/Roaming/.pokabbie/rogue_assistant"));
 
 	PathEnvironment mac;
 	mac.platform = HostPlatform::MacOS;
 	mac.homeDirectory = "/Users/misty";
-	mac.executablePath = "/Applications/Rogue Assistant.app/Contents/MacOS/RogueAssistant";
+	mac.executablePath = "/Applications/RogueAssistant.app/Contents/MacOS/RogueAssistant";
 	auto const macPaths = BuildAppPaths(mac);
 	REQUIRE(macPaths.dataDirectory
-		== fs::path("/Users/misty/Library/Application Support/rogue.emerald.assistant"));
+		== fs::path("/Users/misty/Library/Application Support/assistant.emerald.rogue"));
 	REQUIRE(macPaths.configDirectory == macPaths.dataDirectory);
-	REQUIRE(macPaths.resourceDirectory == fs::path("/Applications/Rogue Assistant.app/Contents/Resources"));
+	REQUIRE(macPaths.resourceDirectory == fs::path("/Applications/RogueAssistant.app/Contents/Resources"));
 
 	PathEnvironment linuxEnvironment;
 	linuxEnvironment.platform = HostPlatform::Linux;
@@ -90,14 +90,14 @@ TEST_CASE("application paths follow each platform convention", "[platform][paths
 	linuxEnvironment.xdgConfigHome = "/srv/misty/config";
 	linuxEnvironment.executablePath = "/opt/rogue-assistant/RogueAssistant";
 	auto const linuxPaths = BuildAppPaths(linuxEnvironment);
-	REQUIRE(linuxPaths.dataDirectory == fs::path("/srv/misty/data/rogue-assistant"));
-	REQUIRE(linuxPaths.configDirectory == fs::path("/srv/misty/config/rogue-assistant"));
+	REQUIRE(linuxPaths.dataDirectory == fs::path("/srv/misty/data/emerald-rogue-assistant"));
+	REQUIRE(linuxPaths.configDirectory == fs::path("/srv/misty/config/emerald-rogue-assistant"));
 
 	linuxEnvironment.xdgDataHome = "relative/data";
 	linuxEnvironment.xdgConfigHome.clear();
 	auto const fallbackPaths = BuildAppPaths(linuxEnvironment);
-	REQUIRE(fallbackPaths.dataDirectory == fs::path("/home/misty/.local/share/rogue-assistant"));
-	REQUIRE(fallbackPaths.configDirectory == fs::path("/home/misty/.config/rogue-assistant"));
+	REQUIRE(fallbackPaths.dataDirectory == fs::path("/home/misty/.local/share/emerald-rogue-assistant"));
+	REQUIRE(fallbackPaths.configDirectory == fs::path("/home/misty/.config/emerald-rogue-assistant"));
 }
 
 TEST_CASE("native path discovery resolves the running test executable", "[platform][paths]")

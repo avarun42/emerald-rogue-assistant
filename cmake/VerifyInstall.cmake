@@ -70,8 +70,8 @@ if(ROGUE_INSTALL_PLATFORM STREQUAL "linux")
   list(
     APPEND
     required_files
-    ${ROGUE_INSTALL_ROOT}/share/applications/rogue.emerald.assistant.desktop
-    ${ROGUE_INSTALL_ROOT}/share/icons/hicolor/128x128/apps/rogue.emerald.assistant.png
+    ${ROGUE_INSTALL_ROOT}/share/applications/assistant.emerald.rogue.desktop
+    ${ROGUE_INSTALL_ROOT}/share/icons/hicolor/128x128/apps/assistant.emerald.rogue.png
   )
 endif()
 foreach(required_file IN LISTS required_files)
@@ -140,7 +140,7 @@ if(NOT result EQUAL 0)
   message(FATAL_ERROR "Installed executable failed --version (${result}): ${error}")
 endif()
 string(STRIP "${output}" output)
-set(expected_output "Rogue Assistant ${ROGUE_EXPECTED_VERSION}")
+set(expected_output "Emerald Rogue Assistant ${ROGUE_EXPECTED_VERSION}")
 if(NOT "${output}" STREQUAL "${expected_output}")
   string(HEX "${output}" output_hex)
   string(HEX "${expected_output}" expected_output_hex)
@@ -158,7 +158,8 @@ if(ROGUE_INSTALL_PLATFORM STREQUAL "macos")
   find_program(ROGUE_PLUTIL_EXECUTABLE NAMES plutil REQUIRED)
   string(REGEX MATCH "^[0-9]+[.][0-9]+[.][0-9]+" expected_version_core "${ROGUE_EXPECTED_VERSION}")
   foreach(key_and_expected IN ITEMS
-          "CFBundleIdentifier|rogue.emerald.assistant"
+          "CFBundleIdentifier|assistant.emerald.rogue"
+          "CFBundleName|Emerald Rogue Assistant"
           "CFBundleShortVersionString|${expected_version_core}"
           "CFBundleLongVersionString|${ROGUE_EXPECTED_VERSION}")
     string(REPLACE "|" ";" key_and_expected "${key_and_expected}")

@@ -187,23 +187,23 @@ namespace rogue::platform
 		switch (environment.platform)
 		{
 		case HostPlatform::Windows:
-			paths.dataDirectory = environment.roamingAppData / "Rogue Assistant";
+			paths.dataDirectory = environment.roamingAppData / "Emerald Rogue Assistant";
 			paths.configDirectory = paths.dataDirectory;
 			paths.legacyDataDirectory = environment.roamingAppData / ".pokabbie" / "rogue_assistant";
 			paths.legacySettingsFile = environment.currentWorkingDirectory / "settings.ini";
 			break;
 		case HostPlatform::MacOS:
 			paths.dataDirectory =
-				environment.homeDirectory / "Library" / "Application Support" / "rogue.emerald.assistant";
+				environment.homeDirectory / "Library" / "Application Support" / "assistant.emerald.rogue";
 			paths.configDirectory = paths.dataDirectory;
 			break;
 		case HostPlatform::Linux:
 			paths.dataDirectory = SelectPosixAbsoluteOrFallback(
 				environment.xdgDataHome, environment.homeDirectory / ".local" / "share")
-				/ "rogue-assistant";
+				/ "emerald-rogue-assistant";
 			paths.configDirectory = SelectPosixAbsoluteOrFallback(
 				environment.xdgConfigHome, environment.homeDirectory / ".config")
-				/ "rogue-assistant";
+				/ "emerald-rogue-assistant";
 			break;
 		}
 

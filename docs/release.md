@@ -1,6 +1,6 @@
 # Release process
 
-This page explains how to build, test, and publish Rogue Assistant packages.
+This page explains how to build, test, and publish Emerald Rogue Assistant packages.
 
 ## Version
 

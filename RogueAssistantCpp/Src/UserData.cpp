@@ -108,7 +108,7 @@ bool UserData::Init()
 	for (std::string const& diagnostic : migration.diagnostics)
 		LOG_ERROR("Legacy data import: %s", diagnostic.c_str());
 	if (migration.importedData)
-		LOG_INFO("Imported legacy Rogue Assistant data");
+		LOG_INFO("Imported data from the original Rogue Assistant");
 	if (migration.importedSettings)
 		LOG_INFO("Imported legacy settings.ini");
 

@@ -1,6 +1,6 @@
 # Home Box file format 1
 
-Rogue Assistant stores Home Box data in
+Emerald Rogue Assistant stores Home Box data in
 `<data folder>/<edition>/<trainer ID>/boxes.dat`. All integers use unsigned
 little-endian byte order.
 

@@ -42,11 +42,11 @@ void GameConnectionManager::Start()
 	if (!UserData::Init())
 	{
 		UserData::Shutdown();
-		throw std::runtime_error("Rogue Assistant cannot open its data folder.");
+		throw std::runtime_error("Cannot open the app data folder.");
 	}
 
 	m_Started = true;
-	LOG_INFO("Rogue Assistant %s", ROGUE_ASSISTANT_VERSION_STRING);
+	LOG_INFO("Emerald Rogue Assistant %s", ROGUE_ASSISTANT_VERSION_STRING);
 	if (m_UsesPortableBridge)
 	{
 		int const savedPort =
@@ -59,7 +59,8 @@ void GameConnectionManager::Start()
 		catch (std::exception const& exception)
 		{
 			LOG_ERROR("Cannot start mGBA listener: %s", exception.what());
-			throw std::runtime_error("Rogue Assistant cannot listen on port " + std::to_string(m_BridgePort) + ".");
+			throw std::runtime_error(
+				"Cannot listen on port " + std::to_string(m_BridgePort) + ".");
 		}
 		ExportPortableScript();
 	}
@@ -188,7 +189,7 @@ void GameConnectionManager::ExportPortableScript()
 	{
 		m_BridgeMessage.clear();
 		LOG_ERROR("Cannot export mGBA script: %s", exported.error.c_str());
-		PushError("Rogue Assistant cannot export the mGBA script.");
+		PushError("Cannot export the mGBA script.");
 		return;
 	}
 	m_BridgeScriptPath = rogue::platform::PathToUtf8(exported.path);
@@ -217,7 +218,7 @@ void GameConnectionManager::ChangeBridgePort(std::string const& value)
 		catch (std::exception const& exception)
 		{
 			LOG_ERROR("Cannot change connection port: %s", exception.what());
-			PushError("Rogue Assistant cannot use port " + std::to_string(candidate.bridgePort) + ".");
+			PushError("Cannot use port " + std::to_string(candidate.bridgePort) + ".");
 			return;
 		}
 

@@ -218,7 +218,7 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 
 	if (errorStr.empty())
 	{
-		m_Assets->DrawCenteredText(gfx, "Rogue Assistant", c_CentreOffset + sf::Vector2f(0, -86), 32,
+		m_Assets->DrawCenteredText(gfx, ROGUE_ASSISTANT_DISPLAY_NAME, c_CentreOffset + sf::Vector2f(0, -86), 20,
 								   m_Assets->m_DarkFontColour);
 	}
 	else
@@ -373,7 +373,7 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 		if (submitCommand(std::move(command)))
 			m_ActionMessage.clear();
 		else
-			m_ActionMessage = "Rogue Assistant is busy. Try again.";
+			m_ActionMessage = "The app is busy. Try again.";
 	}
 	if (window.ButtonJustReleased(sf::Keyboard::Key::C))
 	{
@@ -404,7 +404,7 @@ void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot cons
 			}
 			else
 			{
-				m_ActionMessage = "Rogue Assistant cannot open the script folder.";
+				m_ActionMessage = "Cannot open the script folder.";
 				LOG_WARN("Cannot open bridge script folder: %s", error.c_str());
 			}
 		}

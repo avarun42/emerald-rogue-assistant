@@ -88,7 +88,7 @@ void ObservedGameMemory::Update()
 			if (m_RogueHeader->netMultiplayerSize == 0 || m_RogueHeader->netMultiplayerSize > MaximumObservedReadSize)
 			{
 				LOG_ERROR("Multiplayer state size must be from 1 through %zu bytes", MaximumObservedReadSize);
-				m_Game.ReportError("Rogue Assistant cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
+				m_Game.ReportError("Cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
 				m_Game.Disconnect();
 				return;
 			}
@@ -113,7 +113,7 @@ void ObservedGameMemory::Update()
 			if (m_RogueHeader->homeBoxSize == 0 || m_RogueHeader->homeBoxSize > MaximumObservedReadSize)
 			{
 				LOG_ERROR("Home Box state size must be from 1 through %zu bytes", MaximumObservedReadSize);
-				m_Game.ReportError("Rogue Assistant cannot use Home Box.\nThe ROM Home Box data is invalid.");
+				m_Game.ReportError("Cannot use Home Box.\nThe ROM Home Box data is invalid.");
 				m_Game.Disconnect();
 				return;
 			}
@@ -159,7 +159,7 @@ void ObservedGameMemory::OnRecieveMessage(GameMessageID messageId, u8 const* dat
 	case ObservedMemoryID::RogueHeader:
 		if (!m_RogueHeader.SetData(data, size))
 		{
-			LOG_WARN("Invalid Rogue Assistant header size");
+			LOG_WARN("Invalid ROM Assistant header size");
 			m_Game.Disconnect();
 		}
 		break;

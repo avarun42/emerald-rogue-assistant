@@ -1,6 +1,6 @@
-# Rogue Assistant 1.0.0 beta 1
+# Emerald Rogue Assistant 1.0.0 beta 1
 
-This beta brings Rogue Assistant to Apple silicon. It replaces the original
+This beta brings Emerald Rogue Assistant to Apple silicon. It replaces the original
 Windows-only mGBA bridge with a portable Lua script and a local TCP connection.
 The same source also builds for Windows x64 and Linux x86_64.
 
@@ -11,14 +11,14 @@ Rogue 2.2.0 Vanilla with ROM Assistant API 3.
 
 The test covered:
 
-- Starting mGBA before and after Rogue Assistant
+- Starting mGBA before and after Emerald Rogue Assistant
 - The ROM connection and confirmation write
 - Pause and resume
 - ROM reset
 - Lua script reload
-- Rogue Assistant restart
+- Emerald Rogue Assistant restart
 - mGBA shutdown
-- Rogue Assistant shutdown
+- Emerald Rogue Assistant shutdown
 - Native Retina resolution and clear text
 - An arm64-only app package
 
@@ -40,7 +40,7 @@ on every supported system. They must be tested before the final 1.0.0 release.
 Include:
 
 - Your operating system and CPU type
-- The Rogue Assistant, mGBA, and Emerald Rogue versions
+- The versions of Emerald Rogue Assistant, mGBA, and Emerald Rogue
 - The Vanilla or EX edition
 - The ROM Assistant API version
 - What you expected
@@ -48,5 +48,5 @@ Include:
 - The relevant `RogueAssistant.log` lines, after you check them for private
   data
 
-See [Install Rogue Assistant](installation.md) for setup and file locations.
+See [Install Emerald Rogue Assistant](installation.md) for setup and file locations.
 See [Troubleshooting](troubleshooting.md) for common problems.

@@ -43,7 +43,7 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 	if (rogueHeader.assistantConfirmSize == 0 || rogueHeader.assistantConfirmSize > sizeof(u32) ||
 		rogueHeader.assistantState > std::numeric_limits<GameAddress>::max() - rogueHeader.assistantConfirmOffset)
 	{
-		game.ReportError("Rogue Assistant cannot connect.\nThe ROM connection data is invalid.");
+		game.ReportError("Cannot connect.\nThe ROM connection data is invalid.");
 		game.Disconnect();
 		return;
 	}
@@ -61,7 +61,7 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 			if (rogueHeader.netRequestStateOffset >=
 				game.GetObservedGameMemory().GetMultiplayerStateBlobSize())
 			{
-				game.ReportError("Rogue Assistant cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
+				game.ReportError("Cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
 				game.Disconnect();
 				return;
 			}

@@ -1,6 +1,6 @@
 # Development
 
-Rogue Assistant uses CMake 3.25 or later and C++20. The checked-in presets use
+Emerald Rogue Assistant uses CMake 3.25 or later and C++20. The checked-in presets use
 the same main options locally and in GitHub Actions.
 
 ## Build and test

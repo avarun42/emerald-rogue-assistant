@@ -65,7 +65,7 @@ private:
 	T m_Value{};
 };
 
-// The game-memory regions that Rogue Assistant observes each update.
+// The game-memory regions that Emerald Rogue Assistant observes each update.
 
 class ObservedGameMemory
 {

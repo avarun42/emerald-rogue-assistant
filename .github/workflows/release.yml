@@ -350,7 +350,7 @@ jobs:
             release_options=(
               --draft
               --verify-tag
-              --title "Rogue Assistant ${{ needs.metadata.outputs.version }}"
+              --title "Emerald Rogue Assistant ${{ needs.metadata.outputs.version }}"
               --generate-notes
             )
             if [[ "${{ needs.metadata.outputs.prerelease }}" == true ]]; then

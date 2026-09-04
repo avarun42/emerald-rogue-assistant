@@ -1,4 +1,4 @@
--- Rogue Assistant mGBA bridge protocol 1.0
+-- Emerald Rogue Assistant mGBA bridge protocol 1.0
 -- This file is portable across every host supported by mGBA 0.10.5 or later.
 
 local BRIDGE_HOST = "127.0.0.1"
@@ -256,7 +256,7 @@ end
 local function failConnection(state, diagnostic)
     local expectedClose = state.phase == "closing" or state.stopped
     if not expectedClose and diagnostic and diagnostic ~= state.lastConnectionError then
-        console:error("Rogue Assistant connection error: " .. tostring(diagnostic))
+        console:error("Emerald Rogue Assistant connection error: " .. tostring(diagnostic))
         state.lastConnectionError = diagnostic
     end
     closeSocket(state)
@@ -298,14 +298,14 @@ local function processServerHello(state, frame)
     end
     if status ~= 0 or major ~= PROTOCOL_MAJOR or minor ~= PROTOCOL_MINOR then
         console:error(string.format(
-            "Rogue Assistant did not accept the connection. Application version: %d.%d.%d.",
+            "Emerald Rogue Assistant did not accept the connection. Application version: %d.%d.%d.",
             appMajor, appMinor, appPatch))
         state.phase = "closing"
         return
     end
     state.phase = "connected"
     state.lastConnectionError = nil
-    console:log(string.format("Rogue Assistant %d.%d.%d connected.", appMajor, appMinor, appPatch))
+    console:log(string.format("Emerald Rogue Assistant %d.%d.%d connected.", appMajor, appMinor, appPatch))
 end
 
 local function processIncomingFrame(state, frame)
@@ -329,7 +329,7 @@ local function processIncomingFrame(state, frame)
             return
         end
         local diagnostic = string.sub(frame.payload, 5)
-        console:error(string.format("Rogue Assistant connection error %d: %s", code, diagnostic))
+        console:error(string.format("Emerald Rogue Assistant connection error %d: %s", code, diagnostic))
         if frame.requestId == 0 then
             state.phase = "closing"
         end
@@ -415,7 +415,7 @@ local function processIncomingFrame(state, frame)
         return
     end
 
-    beginProtocolClose(state, "unexpected bridge message from Rogue Assistant")
+    beginProtocolClose(state, "unexpected bridge message from Emerald Rogue Assistant")
 end
 
 local function processReceivedBytes(state, bytes)
@@ -598,7 +598,7 @@ local function connect(state)
         connection = nil
         collectgarbage("collect")
         if err ~= state.lastConnectionError then
-            console:log("Waiting for Rogue Assistant on port " .. BRIDGE_PORT .. ".")
+            console:log("Waiting for Emerald Rogue Assistant on port " .. BRIDGE_PORT .. ".")
             state.lastConnectionError = err
         end
         return
@@ -654,7 +654,7 @@ local function guardCallback(state, name, callback)
             callback(table.unpack(arguments, 1, arguments.n))
         end, debug.traceback)
         if not ok then
-            console:error("The Rogue Assistant script stopped after an error in " .. name .. ":\n"
+            console:error("The Emerald Rogue Assistant script stopped after an error in " .. name .. ":\n"
                 .. tostring(diagnostic))
             stop(state)
         end
@@ -690,7 +690,7 @@ if rawget(_G, "ROGUE_ASSISTANT_TEST") then
 end
 
 local state = newState()
-console:log("The Rogue Assistant script is running.")
+console:log("The Emerald Rogue Assistant script is running.")
 callbacks:add("frame", guardCallback(state, "frame", function() onFrame(state) end))
 callbacks:add("start", guardCallback(state, "start", function() restart(state) end))
 callbacks:add("reset", guardCallback(state, "reset", function() restart(state) end))

@@ -13,7 +13,7 @@ file(READ "${SFML_WINDOW_CONTROLLER}" SFML_WINDOW_CONTROLLER_SOURCE)
 
 set(SFML_LOW_DPI_ASSIGNMENT "        m_highDpi       = NO;")
 set(SFML_HIGH_DPI_ASSIGNMENT
-    "        m_highDpi       = YES; // Rogue Assistant: render the OpenGL surface at native Retina resolution."
+    "        m_highDpi       = YES; // Emerald Rogue Assistant: render the OpenGL surface at native Retina resolution."
 )
 set(SFML_LOW_DPI_VIEW "fullscreen:NO highDpi:NO]")
 set(SFML_HIGH_DPI_VIEW "fullscreen:NO highDpi:m_highDpi]")

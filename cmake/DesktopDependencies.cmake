@@ -21,7 +21,7 @@ endif()
 set(ROGUE_SFML_PATCH_ARGUMENTS)
 if(APPLE)
     # SFML 3.1.0 has Retina coordinate conversion internally but disables the
-    # high-resolution OpenGL surface that Rogue Assistant's scaled UI needs.
+    # high-resolution OpenGL surface that Emerald Rogue Assistant's scaled UI needs.
     list(
         APPEND ROGUE_SFML_PATCH_ARGUMENTS
         PATCH_COMMAND
@@ -52,7 +52,7 @@ set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME ${ROGUE_SAVED_DEFAULT_INSTALL_COMPONENT
 unset(ROGUE_SAVED_DEFAULT_INSTALL_COMPONENT)
 
 # Treat SFML's public headers as third-party so dependency diagnostics do not
-# become Rogue Assistant project errors.
+# become Emerald Rogue Assistant project errors.
 set_target_properties(sfml-system sfml-window sfml-graphics PROPERTIES SYSTEM TRUE)
 
 FetchContent_GetProperties(SFML SOURCE_DIR ROGUE_SFML_SOURCE_DIR)

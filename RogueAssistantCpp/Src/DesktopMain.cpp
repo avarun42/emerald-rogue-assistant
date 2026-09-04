@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 	rogue::app::DesktopOptions const options = rogue::app::ParseDesktopOptions(arguments);
 	if (!options.error.empty())
 	{
-		std::cerr << "Rogue Assistant: " << options.error << '\n';
+		std::cerr << ROGUE_ASSISTANT_DISPLAY_NAME ": " << options.error << '\n';
 		PrintHelp();
 		return 2;
 	}
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 	}
 	if (options.showVersion)
 	{
-		std::cout << "Rogue Assistant " ROGUE_ASSISTANT_VERSION_STRING << '\n';
+		std::cout << ROGUE_ASSISTANT_DISPLAY_NAME " " ROGUE_ASSISTANT_VERSION_STRING << '\n';
 		return 0;
 	}
 
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 		std::filesystem::path const resourceDirectory = paths->resourceDirectory;
 
 		WindowConfig windowConfig;
-		windowConfig.title = "Rogue Assistant " ROGUE_ASSISTANT_VERSION_STRING;
+		windowConfig.title = ROGUE_ASSISTANT_DISPLAY_NAME;
 		windowConfig.width = 768;
 		windowConfig.height = 576;
 		windowConfig.canBeDestroyed = true;
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
 		PrimaryUI ui(resourceDirectory);
 		if (!window.Create())
 		{
-			std::cerr << "Rogue Assistant: Cannot open the application window.\n";
+			std::cerr << ROGUE_ASSISTANT_DISPLAY_NAME ": Cannot open the application window.\n";
 			return 1;
 		}
 
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
 	}
 	catch (std::exception const& exception)
 	{
-		std::cerr << "Rogue Assistant: " << exception.what() << '\n';
+		std::cerr << ROGUE_ASSISTANT_DISPLAY_NAME ": " << exception.what() << '\n';
 		return 1;
 	}
 }

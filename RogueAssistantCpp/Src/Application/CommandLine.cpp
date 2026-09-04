@@ -67,7 +67,7 @@ std::uint16_t SelectBridgePort(std::optional<std::uint16_t> currentRunOverride, 
 
 std::string DesktopUsage()
 {
-	return "Rogue Assistant " ROGUE_ASSISTANT_VERSION_STRING
+	return ROGUE_ASSISTANT_DISPLAY_NAME " " ROGUE_ASSISTANT_VERSION_STRING
 		   "\nUsage: RogueAssistant [--bridge-port PORT] [--version] [--help]\n";
 }
 } // namespace rogue::app

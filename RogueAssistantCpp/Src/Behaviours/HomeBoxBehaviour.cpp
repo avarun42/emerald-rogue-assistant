@@ -102,16 +102,16 @@ void HomeBoxBehaviour::LoadOfflineData(GameConnection& game, std::uint32_t train
 	else if (!loaded.NotFound())
 	{
 		LOG_ERROR("Home Box load failed: %s", loaded.error.c_str());
-		game.ReportError("The Home Box file is invalid.\nRogue Assistant did not change it.");
+		game.ReportError("The Home Box file is invalid.\nIt was not changed.");
 	}
 
 	if (!loaded.warning.empty())
 	{
 		LOG_WARN("Home Box load warning: %s", loaded.warning.c_str());
 		if (loaded.primaryInvalid)
-			game.ReportError("Rogue Assistant loaded the Home Box backup.\nIt did not change the invalid file.");
+			game.ReportError("Loaded the Home Box backup.\nThe invalid file was not changed.");
 		else
-			game.ReportError("Rogue Assistant loaded Home Box with a warning.\nSee RogueAssistant.log for details.");
+			game.ReportError("Loaded Home Box with a warning.\nSee RogueAssistant.log for details.");
 	}
 
 	m_ActiveBoxData.clear();
@@ -129,7 +129,7 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 	if (!ValidateLayout(game, layoutError))
 	{
 		LOG_ERROR("%s", layoutError.c_str());
-		game.ReportError("Rogue Assistant cannot use Home Box.\nThe ROM layout is invalid.");
+		game.ReportError("Cannot use Home Box.\nThe ROM layout is invalid.");
 		game.Disconnect();
 		return;
 	}
@@ -161,7 +161,7 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 		if (!rogue::endian::ReadLittle(state, header.homeTrainerIdOffset, trainerId))
 		{
 			LOG_ERROR("Home Box trainer ID is outside the observed state");
-			game.ReportError("Rogue Assistant cannot use Home Box.\nThe trainer data is invalid.");
+			game.ReportError("Cannot use Home Box.\nThe trainer data is invalid.");
 			game.Disconnect();
 			return;
 		}
@@ -185,7 +185,7 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 			m_ActiveBoxData.push_back(stored);
 		if (m_ActiveBoxData.size() != header.homeTotalBoxCount)
 		{
-			game.ReportError("Rogue Assistant cannot use Home Box.\nThe number of boxes changed.");
+			game.ReportError("Cannot use Home Box.\nThe number of boxes changed.");
 			game.Disconnect();
 			return;
 		}
@@ -241,7 +241,7 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 					m_RemoteActiveBoxIndices.size());
 		if (!ValidateIndexOrder(m_RemoteActiveBoxIndices))
 		{
-			game.ReportError("Rogue Assistant cannot use Home Box.\nThe box order is invalid.");
+			game.ReportError("Cannot use Home Box.\nThe box order is invalid.");
 			game.Disconnect();
 			return;
 		}
@@ -336,7 +336,7 @@ void HomeBoxBehaviour::HandlePendingFileWrite(GameConnection& game, bool force)
 		std::size_t const slot = m_LocalBoxCount + remoteIndex;
 		if (slot >= m_LocalActiveBoxIndices.size() || m_LocalActiveBoxIndices[slot] >= m_ActiveBoxData.size())
 		{
-			game.ReportError("Rogue Assistant cannot save Home Box.\nThe box order is invalid.");
+			game.ReportError("Cannot save Home Box.\nThe box order is invalid.");
 			m_NextSaveAttempt = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 			return;
 		}
@@ -349,7 +349,7 @@ void HomeBoxBehaviour::HandlePendingFileWrite(GameConnection& game, bool force)
 	if (!rogue::storage::SaveHomeBoxFile(m_WriteFilePath, data, error))
 	{
 		LOG_ERROR("Home Box save failed: %s", error.c_str());
-		game.ReportError("Rogue Assistant did not save Home Box.\nIt did not change the existing files.");
+		game.ReportError("Could not save Home Box.\nThe existing files were not changed.");
 		m_NextSaveAttempt = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 		return;
 	}

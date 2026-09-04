@@ -1,7 +1,7 @@
 # Bridge protocol 1.0
 
-The mGBA Lua script and Rogue Assistant use one TCP connection. Rogue
-Assistant is the server. It listens only on `127.0.0.1`.
+The mGBA Lua script and Emerald Rogue Assistant use one TCP connection. The app
+is the server. It listens only on `127.0.0.1`.
 
 All integers use little-endian byte order. Both programs keep incomplete data
 until a full frame is ready. They also handle several frames in one receive and

@@ -1,7 +1,7 @@
-# Rogue Assistant
+# Emerald Rogue Assistant
 
-Rogue Assistant is a companion app for Pokémon Emerald Rogue. It adds two
-features while the game runs in mGBA:
+Emerald Rogue Assistant is a companion app for Pokémon Emerald Rogue. It adds
+two features while the game runs in mGBA:
 
 - Home Box storage that remains available between runs
 - Multiplayer data sharing between supported games
@@ -28,10 +28,10 @@ cross-platform multiplayer still need more live testing.
 ## Get started
 
 1. Download the package for your system from GitHub Releases.
-2. Follow the steps in [Install Rogue Assistant](docs/installation.md).
-3. Start Rogue Assistant.
+2. Follow the steps in [Install Emerald Rogue Assistant](docs/installation.md).
+3. Start Emerald Rogue Assistant.
 4. Open Emerald Rogue in mGBA.
-5. Press `R` in Rogue Assistant to open its script folder.
+5. Press `R` in Emerald Rogue Assistant to open its script folder.
 6. In mGBA, select **Tools > Scripting**, then load
    `RogueAssistant_mGBA.lua` from that folder.
 

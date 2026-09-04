@@ -1,8 +1,8 @@
 # Architecture
 
-Rogue Assistant is one desktop app and one mGBA Lua script. The app contains
-all game, Home Box, multiplayer, storage, and user interface logic. The Lua
-script only moves memory requests between mGBA and the app.
+Emerald Rogue Assistant is one desktop app and one mGBA Lua script. The app
+contains all game, Home Box, multiplayer, storage, and user interface logic.
+The Lua script only moves memory requests between mGBA and the app.
 
 ## Main parts
 
@@ -18,7 +18,7 @@ script only moves memory requests between mGBA and the app.
 ## Data flow
 
 ```text
-mGBA and Emerald Rogue                 Rogue Assistant
+mGBA and Emerald Rogue                 Emerald Rogue Assistant
 ----------------------                 ---------------
 Lua frame callback                     main thread: window and input
 readRange and write8/16/32      TCP     worker thread: game session
@@ -30,8 +30,8 @@ The script reconnects when mGBA resets or the app restarts.
 
 ## ROM data
 
-Rogue Assistant does not parse or patch the ROM file. It reads the running
-game's memory.
+Emerald Rogue Assistant does not parse or patch the ROM file. It reads the
+running game's memory.
 
 The app first reads the standard Game Boy Advance header at `0x08000100`. It
 then checks the Emerald Rogue values and follows the pointer to the Rogue
@@ -98,7 +98,7 @@ operations so that an interrupted write does not expose a partial file.
 
 On macOS, resources are in `RogueAssistant.app/Contents/Resources`. On Windows
 and Linux, the `resources` folder is beside the app. User paths are listed in
-[Install Rogue Assistant](installation.md#user-files).
+[Install Emerald Rogue Assistant](installation.md#user-files).
 
 ## Original Windows design
 

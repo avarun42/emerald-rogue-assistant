@@ -21,12 +21,12 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName", "Rogue Assistant Project\0"
-            VALUE "FileDescription", "Rogue Assistant\0"
+            VALUE "CompanyName", "Emerald Rogue Assistant Project\0"
+            VALUE "FileDescription", "Emerald Rogue Assistant\0"
             VALUE "FileVersion", "@ROGUE_ASSISTANT_VERSION@\0"
             VALUE "InternalName", "RogueAssistant\0"
             VALUE "OriginalFilename", "RogueAssistant.exe\0"
-            VALUE "ProductName", "Rogue Assistant\0"
+            VALUE "ProductName", "Emerald Rogue Assistant\0"
             VALUE "ProductVersion", "@ROGUE_ASSISTANT_VERSION@\0"
         END
     END

@@ -140,7 +140,7 @@ CompatibilityResult CheckCompatibility(Hello const& local, Hello const& remote)
 	std::string validationError;
 	if (!ValidateHello(local, validationError))
 	{
-		result.error = "Rogue Assistant has invalid multiplayer data.";
+		result.error = "The local multiplayer data is invalid.";
 		return result;
 	}
 	if (!ValidateHello(remote, validationError))

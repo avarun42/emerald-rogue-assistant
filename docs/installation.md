@@ -1,6 +1,6 @@
-# Install Rogue Assistant
+# Install Emerald Rogue Assistant
 
-Rogue Assistant is separate from mGBA and Pokémon Emerald Rogue. Release
+Emerald Rogue Assistant is separate from mGBA and Pokémon Emerald Rogue. Release
 packages do not include a ROM.
 
 ## Before you install
@@ -86,13 +86,13 @@ those libraries are not installed.
 
 ## Connect mGBA
 
-1. Start Rogue Assistant. It exports its Lua script and waits for mGBA.
+1. Start Emerald Rogue Assistant. It exports its Lua script and waits for mGBA.
 2. Open the supported Emerald Rogue ROM in mGBA.
-3. Press `R` in Rogue Assistant to open the exported script folder.
+3. Press `R` in Emerald Rogue Assistant to open the exported script folder.
 4. In mGBA, select **Tools > Scripting**.
 5. Select **File > Load Script**.
 6. Open `RogueAssistant_mGBA.lua` from the exported script folder.
-7. Wait for Rogue Assistant to show that mGBA is connected.
+7. Wait for Emerald Rogue Assistant to show that mGBA is connected.
 
 The waiting screen has these controls:
 
@@ -122,15 +122,15 @@ The app chooses the bridge port in this order:
 
 ## User files
 
-Rogue Assistant stores settings, logs, the exported script, and Home Box data
+Emerald Rogue Assistant stores settings, logs, the exported script, and Home Box data
 in these folders:
 
-- Windows: `%APPDATA%\Rogue Assistant`
-- macOS: `~/Library/Application Support/rogue.emerald.assistant`
-- Linux data: `$XDG_DATA_HOME/rogue-assistant`, or
-  `~/.local/share/rogue-assistant` when `XDG_DATA_HOME` is not set
-- Linux settings: `$XDG_CONFIG_HOME/rogue-assistant`, or
-  `~/.config/rogue-assistant` when `XDG_CONFIG_HOME` is not set
+- Windows: `%APPDATA%\Emerald Rogue Assistant`
+- macOS: `~/Library/Application Support/assistant.emerald.rogue`
+- Linux data: `$XDG_DATA_HOME/emerald-rogue-assistant`, or
+  `~/.local/share/emerald-rogue-assistant` when `XDG_DATA_HOME` is not set
+- Linux settings: `$XDG_CONFIG_HOME/emerald-rogue-assistant`, or
+  `~/.config/emerald-rogue-assistant` when `XDG_CONFIG_HOME` is not set
 
 The log is `logs/RogueAssistant.log` in the data folder. The Lua script is in
 the `scripts` folder. Home Box files are stored by ROM edition and trainer ID.

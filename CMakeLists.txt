@@ -9,7 +9,8 @@ project(
     LANGUAGES C CXX
 )
 
-set(ROGUE_ASSISTANT_APPLICATION_ID "rogue.emerald.assistant")
+set(ROGUE_ASSISTANT_APPLICATION_ID "assistant.emerald.rogue")
+set(ROGUE_ASSISTANT_DISPLAY_NAME "Emerald Rogue Assistant")
 
 if(MSVC)
     # Use the static runtime so the ZIP works without a separate Visual C++
@@ -21,11 +22,11 @@ include(CTest)
 include(GNUInstallDirs)
 find_package(Threads REQUIRED)
 
-option(ROGUE_BUILD_TESTS "Build Rogue Assistant tests" ${BUILD_TESTING})
-option(ROGUE_BUILD_DESKTOP "Build the standalone Rogue Assistant desktop application" ON)
-option(ROGUE_WARNINGS_AS_ERRORS "Treat Rogue Assistant warnings as errors" OFF)
+option(ROGUE_BUILD_TESTS "Build Emerald Rogue Assistant tests" ${BUILD_TESTING})
+option(ROGUE_BUILD_DESKTOP "Build the standalone Emerald Rogue Assistant desktop application" ON)
+option(ROGUE_WARNINGS_AS_ERRORS "Treat Emerald Rogue Assistant warnings as errors" OFF)
 option(ROGUE_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
-option(ROGUE_ENABLE_CLANG_TIDY "Run clang-tidy on Rogue Assistant targets" OFF)
+option(ROGUE_ENABLE_CLANG_TIDY "Run clang-tidy on Emerald Rogue Assistant targets" OFF)
 
 add_library(rogue_project_options INTERFACE)
 target_compile_features(rogue_project_options INTERFACE cxx_std_20)
@@ -263,9 +264,9 @@ if(ROGUE_BUILD_DESKTOP)
         RogueAssistant
         PROPERTIES
             OUTPUT_NAME RogueAssistant
-            MACOSX_BUNDLE_BUNDLE_NAME "Rogue Assistant"
+            MACOSX_BUNDLE_BUNDLE_NAME "${ROGUE_ASSISTANT_DISPLAY_NAME}"
             MACOSX_BUNDLE_GUI_IDENTIFIER "${ROGUE_ASSISTANT_APPLICATION_ID}"
-            MACOSX_BUNDLE_INFO_STRING "Rogue Assistant ${ROGUE_ASSISTANT_VERSION}"
+            MACOSX_BUNDLE_INFO_STRING "${ROGUE_ASSISTANT_DISPLAY_NAME} ${ROGUE_ASSISTANT_VERSION}"
             MACOSX_BUNDLE_LONG_VERSION_STRING "${ROGUE_ASSISTANT_VERSION}"
             MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
             MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"

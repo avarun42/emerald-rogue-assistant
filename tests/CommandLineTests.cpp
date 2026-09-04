@@ -50,5 +50,5 @@ TEST_CASE("desktop help and version switches are recognized", "[command-line]")
 	REQUIRE(parsed.error.empty());
 	REQUIRE(parsed.showVersion);
 	REQUIRE(parsed.showHelp);
-	REQUIRE(DesktopUsage().starts_with("Rogue Assistant " ROGUE_ASSISTANT_VERSION_STRING "\n"));
+	REQUIRE(DesktopUsage().starts_with(ROGUE_ASSISTANT_DISPLAY_NAME " " ROGUE_ASSISTANT_VERSION_STRING "\n"));
 }

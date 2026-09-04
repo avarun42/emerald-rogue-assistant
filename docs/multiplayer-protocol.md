@@ -1,6 +1,6 @@
 # Multiplayer protocol 1.0
 
-Rogue Assistant uses ENet for multiplayer. It does not interpret the game's
+Emerald Rogue Assistant uses ENet for multiplayer. It does not interpret the game's
 handshake, game state, player profiles, or player state. It moves those values
 as fixed byte blocks whose sizes come from the ROM.
 
@@ -58,7 +58,7 @@ compatibility message.
 
 ## Invalid peers
 
-Rogue Assistant disconnects a peer that sends:
+Emerald Rogue Assistant disconnects a peer that sends:
 
 - A message with a bad size or field value
 - More than one compatibility message
