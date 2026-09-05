@@ -132,7 +132,8 @@ other users can help close those gaps.
 ## Tests required for final 1.0.0
 
 The normal test suite must pass with MSVC x64, Apple Clang, GCC, and Clang.
-The sanitizer, static analysis, and Lua jobs must also pass.
+The sanitizer and Lua jobs must also pass. The Clang build includes static
+analysis.
 
 Automated tests cover:
 

@@ -13,6 +13,3 @@ indent_size = 4
 [*.{cmake,json,md,yml,yaml,lua}]
 indent_style = space
 indent_size = 2
-
-[*.sln]
-end_of_line = crlf

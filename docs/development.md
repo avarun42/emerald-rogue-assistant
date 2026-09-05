@@ -47,9 +47,9 @@ See [Architecture](architecture.md) for the job of each target.
 ## Extra checks
 
 GitHub Actions builds and tests with MSVC x64, Apple Clang, GCC, and Clang.
-Warnings in project code are errors in these jobs. Other jobs test the Lua
-script, run AddressSanitizer and UndefinedBehaviorSanitizer, and run
-`clang-tidy`.
+Warnings in project code are errors in these jobs. The Linux Clang build also
+runs `clang-tidy`. Separate jobs test the Lua script and run AddressSanitizer
+and UndefinedBehaviorSanitizer.
 
 To run the sanitizer checks on Linux:
 
