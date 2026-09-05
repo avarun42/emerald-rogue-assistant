@@ -141,7 +141,7 @@ Automated tests cover:
 - ROM headers, changing state, confirmation writes, Home Box, and multiplayer
 - Request IDs, bad results, queue limits, and paused mGBA
 - Split and joined bridge frames, partial sends, rejected peers, and reconnects
-- Home Box format 0 import, format 1, file damage, backups, and interrupted
+- Original Home Box file compatibility, file damage, backups, and interrupted
   writes
 - Multiplayer compatibility and ROM layout checks
 - Worker shutdown and UI thread boundaries

@@ -4,6 +4,10 @@ This beta brings Emerald Rogue Assistant to Apple silicon. It replaces the origi
 Windows-only mGBA bridge with a portable Lua script and a local TCP connection.
 The same source also builds for Windows x64 and Linux x86_64.
 
+Home Box files use the original assistant's format. You can copy these files
+between this app and the original Windows app. The apps use separate data
+folders; see [Move Home Box data](installation.md#move-home-box-data).
+
 ## Tested on macOS
 
 The Apple silicon package was tested with mGBA 0.10.5 and Pokémon Emerald

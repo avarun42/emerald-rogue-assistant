@@ -1,75 +1,58 @@
-# Home Box file format 1
+# Home Box file format
 
-Emerald Rogue Assistant stores Home Box data in
-`<data folder>/<edition>/<trainer ID>/boxes.dat`. All integers use unsigned
-little-endian byte order.
+Emerald Rogue Assistant reads and writes the original Windows assistant's
+format, version 0. No conversion is needed when moving files between the apps.
 
-A file belongs to one ROM Assistant API, ROM edition, trainer, box count,
-metadata size, and Pokémon data size. The app rejects a file when any of these
-values do not match the running game.
+Files are stored at `<data folder>/<edition>/<trainer ID>/boxes.dat`. The
+edition and trainer ID come from the folder path, not the file contents. Keep
+that path when copying a file. The ROM API is not stored in the file either.
+
+All integers are unsigned and use little-endian byte order. Pokémon and box
+metadata are copied as bytes without changing the game's data.
 
 ## Header
 
+The header contains five 32-bit integers:
+
 | Offset | Size | Field |
-| ---: | ---: | --- |
-| 0 | 4 | ASCII magic `RABX` |
-| 4 | 2 | File format, exactly `1` |
-| 6 | 2 | Reserved, zero |
-| 8 | 4 | ROM Assistant API, exactly `3` |
-| 12 | 1 | ROM edition: Vanilla `0`, EX `1` |
-| 13 | 3 | Reserved, zero |
-| 16 | 4 | Trainer ID |
-| 20 | 4 | Number of box records |
-| 24 | 4 | Metadata bytes in each record |
-| 28 | 4 | Pokémon data bytes in each record |
+| --- | --- | --- |
+| 0 | 4 | Header marker, `3497814` |
+| 4 | 4 | File format, `0` |
+| 8 | 4 | Number of stored boxes |
+| 12 | 4 | Metadata bytes per box |
+| 16 | 4 | Pokémon bytes per box |
 
-The file can contain at most 255 records. Each record data size must be from 1
-byte through 1 MiB. The complete file can be at most 64 MiB.
+The box count and byte sizes must match the running game's layout.
 
-## Records
+## Box records and footer
 
-The header is followed by the exact number of records named in the header.
-Each record contains:
+Each stored box has one record. Records appear in box order and contain:
 
 | Size | Field |
-| ---: | --- |
-| 4 | Box index, starting at zero |
-| Header value | Metadata |
-| Header value | Pokémon data |
-| 4 | IEEE CRC32 of the index, metadata, and Pokémon data |
+| --- | --- |
+| Header value | Metadata bytes |
+| Header value | Pokémon bytes |
+| 4 | Sum of all metadata and Pokémon bytes in this record |
 
-Each box index must appear once. No index can be missing or repeated.
+The checksum is an unsigned 32-bit sum. It is the same checksum used by the
+original assistant. It detects some changes to the bytes, but not all changes.
+There is no stored box index or whole-file checksum.
 
-The last four bytes are an IEEE CRC32 of the header and all records, including
-each record CRC32.
+The final four bytes are the footer marker, `7893612`.
 
-The reader rejects:
-
-- Unknown file formats
-- Nonzero reserved bytes
-- A wrong ROM API, edition, trainer ID, box count, or record size
-- Missing or repeated box indexes
-- A bad record or file CRC32
-- A file that is cut short, too large, or has extra bytes
+The reader rejects a wrong marker, unknown version, mismatched dimensions,
+incorrect checksum, truncated file, or trailing data. It also limits files
+to 64 MiB and box counts to 255 before allocating storage.
 
 ## Save and recovery
 
-The app writes a new file beside the current file with a unique temporary
-name. It flushes and closes the new file before it uses an atomic rename.
+The app writes a temporary file beside `boxes.dat`, then replaces `boxes.dat`
+with an atomic rename. It keeps the previous valid file as `boxes.dat.bak`.
+These safeguards do not change the file format.
 
-If the current `boxes.dat` file is valid, the app keeps it as `boxes.dat.bak`
-before it installs the new file. The backup is also replaced with an atomic
-rename.
+If `boxes.dat` is missing or invalid, the app tries `boxes.dat.bak`. It shows
+a warning when it loads the backup and does not overwrite an invalid main
+file. Copy the complete trainer folder before attempting recovery.
 
-The app does not overwrite an invalid `boxes.dat`. When the main file is
-missing or invalid, it tries `boxes.dat.bak`. If the backup is valid, the app
-loads it, shows a warning, and leaves the invalid main file unchanged.
-
-## Old format import
-
-The reader still accepts the original format 0 when every record checksum and
-the file checksum are valid.
-
-After a successful import, the app keeps the original bytes as
-`boxes.dat.v0.bak`. The next successful save writes format 1. The app never
-replaces a damaged record with an empty box.
+The original assistant uses a different data folder. See
+[Move Home Box data](installation.md#move-home-box-data) before switching apps.
