@@ -93,8 +93,11 @@ void HomeBoxBehaviour::LoadOfflineData(GameConnection& game, std::uint32_t train
 		{
 			m_StoredBoxData[record.remoteBoxIndex] = BoxData{record.metadata, record.pokemonData};
 		}
-		LOG_INFO("Loaded Home Box data from %s",
+		LOG_INFO("Loaded Home Box format %u from %s",
+				 loaded.format == rogue::storage::HomeBoxFileFormat::Version1 ? 1U : 0U,
 				 loaded.source == rogue::storage::HomeBoxLoadSource::Primary ? "primary" : "backup");
+		if (loaded.format == rogue::storage::HomeBoxFileFormat::LegacyVersion0 && !loaded.primaryInvalid)
+			m_HasPendingFileWrite = true;
 	}
 	else if (!loaded.NotFound())
 	{
@@ -352,5 +355,5 @@ void HomeBoxBehaviour::HandlePendingFileWrite(GameConnection& game, bool force)
 	}
 	m_HasPendingFileWrite = false;
 	m_NextSaveAttempt = {};
-	LOG_INFO("Saved Home Box data");
+	LOG_INFO("Saved Home Box format 1");
 }

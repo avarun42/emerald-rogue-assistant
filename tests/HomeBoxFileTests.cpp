@@ -5,12 +5,10 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <iterator>
 #include <span>
 #include <string>
 #include <vector>
@@ -64,7 +62,7 @@ void AppendLittle(std::vector<std::byte>& output, std::uint32_t value)
 	REQUIRE(rogue::endian::WriteLittle(output, offset, value));
 }
 
-std::vector<std::byte> EncodeOriginal(HomeBoxData const& data)
+std::vector<std::byte> EncodeLegacy(HomeBoxData const& data)
 {
 	std::vector<std::byte> encoded;
 	AppendLittle(encoded, 3497814U);
@@ -106,138 +104,147 @@ std::vector<std::byte> ReadBytes(fs::path const& path)
 }
 } // namespace
 
-TEST_CASE("Home Box writes the original assistant's exact file format", "[home-box][codec]")
+TEST_CASE("CRC32 uses the standard IEEE test vector", "[home-box][crc]")
+{
+	std::string const text = "123456789";
+	auto const* bytes = reinterpret_cast<std::byte const*>(text.data());
+	REQUIRE(Crc32(std::span<std::byte const>(bytes, text.size())) == 0xCBF43926U);
+}
+
+TEST_CASE("Home Box v1 has a stable little-endian encoding and round trips", "[home-box][codec]")
 {
 	HomeBoxData const expected = ExampleData();
 	std::vector<std::byte> encoded;
 	std::string error;
-	REQUIRE(EncodeHomeBox(expected, encoded, error));
-
-	// Original Windows layout: five u32 header fields, two records with
-	// byte-sum checksums, then the fixed footer. Records have no index field.
-	constexpr std::array<std::uint8_t, 48> originalBytes{
-		0x56, 0x5F, 0x35, 0x00, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 5, 0, 0, 0,
-		1, 2, 3, 4, 5, 6, 7, 8, 36, 0, 0, 0,
-		9, 10, 11, 12, 13, 14, 15, 16, 100, 0, 0, 0,
-		0x6C, 0x72, 0x78, 0x00,
-	};
-	REQUIRE(encoded.size() == originalBytes.size());
-	for (std::size_t index = 0; index < originalBytes.size(); ++index)
-		REQUIRE(encoded[index] == static_cast<std::byte>(originalBytes[index]));
-	REQUIRE(encoded == EncodeOriginal(expected));
+	REQUIRE(EncodeHomeBoxVersion1(expected, encoded, error));
+	REQUIRE(encoded.size() == 68);
+	REQUIRE(encoded[0] == std::byte{'R'});
+	REQUIRE(encoded[1] == std::byte{'A'});
+	REQUIRE(encoded[2] == std::byte{'B'});
+	REQUIRE(encoded[3] == std::byte{'X'});
+	REQUIRE(encoded[4] == std::byte{1});
+	REQUIRE(encoded[5] == std::byte{0});
+	REQUIRE(encoded[16] == std::byte{0x12});
+	REQUIRE(encoded[17] == std::byte{0x34});
+	REQUIRE(encoded[18] == std::byte{0x56});
+	REQUIRE(encoded[19] == std::byte{0x78});
 
 	HomeBoxData decoded;
-	REQUIRE(DecodeHomeBox(encoded, expected.dimensions, decoded, error));
+	HomeBoxFileFormat format = HomeBoxFileFormat::LegacyVersion0;
+	REQUIRE(DecodeHomeBox(encoded, expected.dimensions, decoded, format, error));
+	REQUIRE(format == HomeBoxFileFormat::Version1);
 	REQUIRE(decoded == expected);
 
 	auto reversed = expected;
 	std::reverse(reversed.records.begin(), reversed.records.end());
 	std::vector<std::byte> canonical;
-	REQUIRE(EncodeHomeBox(reversed, canonical, error));
+	REQUIRE(EncodeHomeBoxVersion1(reversed, canonical, error));
 	REQUIRE(canonical == encoded);
 }
 
-TEST_CASE("Home Box rejects damaged files and unsupported formats", "[home-box][codec]")
+TEST_CASE("Home Box v1 rejects corruption, truncation, trailing bytes, and invalid indices", "[home-box][codec]")
 {
 	HomeBoxData const expected = ExampleData();
-	auto const encoded = EncodeOriginal(expected);
-	HomeBoxData decoded;
+	std::vector<std::byte> encoded;
 	std::string error;
+	REQUIRE(EncodeHomeBoxVersion1(expected, encoded, error));
+	HomeBoxData decoded;
+	HomeBoxFileFormat format = HomeBoxFileFormat::Version1;
 
-	auto corruptRecord = encoded;
-	corruptRecord[20] ^= std::byte{0x80};
-	REQUIRE_FALSE(DecodeHomeBox(corruptRecord, expected.dimensions, decoded, error));
-	REQUIRE(error.find("checksum") != std::string::npos);
+	auto corruptedRecord = encoded;
+	corruptedRecord[36] ^= std::byte{0x80};
+	REQUIRE_FALSE(DecodeHomeBox(corruptedRecord, expected.dimensions, decoded, format, error));
+	REQUIRE(error.find("record CRC32") != std::string::npos);
 
-	auto corruptFooter = encoded;
-	corruptFooter.back() ^= std::byte{1};
-	REQUIRE_FALSE(DecodeHomeBox(corruptFooter, expected.dimensions, decoded, error));
-	REQUIRE(error.find("footer") != std::string::npos);
+	auto corruptedFileCrc = encoded;
+	corruptedFileCrc.back() ^= std::byte{1};
+	REQUIRE_FALSE(DecodeHomeBox(corruptedFileCrc, expected.dimensions, decoded, format, error));
+	REQUIRE(error.find("whole-file CRC32") != std::string::npos);
 
-	for (std::size_t size = 0; size < encoded.size(); ++size)
-		REQUIRE_FALSE(DecodeHomeBox(std::span(encoded).first(size), expected.dimensions, decoded, error));
+	auto truncated = encoded;
+	truncated.pop_back();
+	REQUIRE_FALSE(DecodeHomeBox(truncated, expected.dimensions, decoded, format, error));
 
 	auto trailing = encoded;
 	trailing.push_back(std::byte{0});
-	REQUIRE_FALSE(DecodeHomeBox(trailing, expected.dimensions, decoded, error));
+	REQUIRE_FALSE(DecodeHomeBox(trailing, expected.dimensions, decoded, format, error));
 
-	auto wrongVersion = encoded;
-	REQUIRE(rogue::endian::WriteLittle<std::uint32_t>(wrongVersion, 4, 1));
-	REQUIRE_FALSE(DecodeHomeBox(wrongVersion, expected.dimensions, decoded, error));
-
-	auto wrongMagic = encoded;
-	wrongMagic[0] ^= std::byte{1};
-	REQUIRE_FALSE(DecodeHomeBox(wrongMagic, expected.dimensions, decoded, error));
+	auto duplicateIndex = encoded;
+	REQUIRE(rogue::endian::WriteLittle<std::uint32_t>(duplicateIndex, 48, 0));
+	REQUIRE_FALSE(DecodeHomeBox(duplicateIndex, expected.dimensions, decoded, format, error));
+	REQUIRE(error.find("record index") != std::string::npos);
 }
 
-TEST_CASE("Home Box checks dimensions without adding identity fields to the file", "[home-box][codec]")
+TEST_CASE("Home Box v1 is bound to ROM API, edition, trainer, and dimensions", "[home-box][codec]")
 {
 	HomeBoxData const expected = ExampleData();
-	auto const encoded = EncodeOriginal(expected);
-	HomeBoxData decoded;
+	std::vector<std::byte> encoded;
 	std::string error;
+	REQUIRE(EncodeHomeBoxVersion1(expected, encoded, error));
+	HomeBoxData decoded;
+	HomeBoxFileFormat format = HomeBoxFileFormat::Version1;
+
 	for (HomeBoxDimensions mismatch :
-		 {HomeBoxDimensions{3, 1, expected.dimensions.trainerId, 1, 3, 5},
+		 {HomeBoxDimensions{3, 0, expected.dimensions.trainerId, 2, 3, 5}, HomeBoxDimensions{3, 1, 7, 2, 3, 5},
+		  HomeBoxDimensions{3, 1, expected.dimensions.trainerId, 1, 3, 5},
 		  HomeBoxDimensions{3, 1, expected.dimensions.trainerId, 2, 4, 5},
 		  HomeBoxDimensions{3, 1, expected.dimensions.trainerId, 2, 3, 4}})
 	{
-		REQUIRE_FALSE(DecodeHomeBox(encoded, mismatch, decoded, error));
+		REQUIRE_FALSE(DecodeHomeBox(encoded, mismatch, decoded, format, error));
 	}
-
-	HomeBoxDimensions identity = expected.dimensions;
-	identity.edition = 0;
-	identity.trainerId = 7;
-	REQUIRE(DecodeHomeBox(encoded, identity, decoded, error));
-	REQUIRE(decoded.dimensions == identity);
-	REQUIRE(decoded.records == expected.records);
-	std::vector<std::byte> unchanged;
-	REQUIRE(EncodeHomeBox(decoded, unchanged, error));
-	REQUIRE(unchanged == encoded);
 
 	HomeBoxDimensions unsupported = expected.dimensions;
 	unsupported.romAssistantApi = 2;
-	REQUIRE_FALSE(DecodeHomeBox(encoded, unsupported, decoded, error));
+	REQUIRE_FALSE(DecodeHomeBox(encoded, unsupported, decoded, format, error));
 	REQUIRE(error.find("API 3") != std::string::npos);
-
-	auto invalid = expected;
-	invalid.records[1].remoteBoxIndex = 0;
-	REQUIRE_FALSE(EncodeHomeBox(invalid, unchanged, error));
-	invalid = expected;
-	invalid.records[0].pokemonData.pop_back();
-	REQUIRE_FALSE(EncodeHomeBox(invalid, unchanged, error));
 }
 
-TEST_CASE("Home Box loads and updates original files without changing their format", "[home-box][persistence]")
+TEST_CASE("legacy Home Box format 0 is read strictly", "[home-box][legacy]")
+{
+	HomeBoxData const expected = ExampleData();
+	auto encoded = EncodeLegacy(expected);
+	HomeBoxData decoded;
+	HomeBoxFileFormat format = HomeBoxFileFormat::Version1;
+	std::string error;
+	REQUIRE(DecodeHomeBox(encoded, expected.dimensions, decoded, format, error));
+	REQUIRE(format == HomeBoxFileFormat::LegacyVersion0);
+	REQUIRE(decoded == expected);
+
+	encoded[20] ^= std::byte{1};
+	REQUIRE_FALSE(DecodeHomeBox(encoded, expected.dimensions, decoded, format, error));
+	REQUIRE(error.find("checksum") != std::string::npos);
+
+	encoded = EncodeLegacy(expected);
+	encoded.push_back(std::byte{0});
+	REQUIRE_FALSE(DecodeHomeBox(encoded, expected.dimensions, decoded, format, error));
+	REQUIRE(error.find("trailing") != std::string::npos);
+}
+
+TEST_CASE("legacy import preserves v0 and previous backups before writing v1", "[home-box][persistence]")
 {
 	TemporaryDirectory temporary;
 	fs::path const primary = temporary.path / "1" / "trainer" / "boxes.dat";
 	HomeBoxData updated = ExampleData();
-	auto const original = EncodeOriginal(updated);
-	WriteBytes(primary, original);
+	auto const legacy = EncodeLegacy(updated);
+	WriteBytes(primary, legacy);
 
-	auto loaded = LoadHomeBoxFile(primary, updated.dimensions);
+	auto const loaded = LoadHomeBoxFile(primary, updated.dimensions);
 	REQUIRE(loaded.Succeeded());
-	REQUIRE(*loaded.data == updated);
-	REQUIRE(ReadBytes(primary) == original);
-	REQUIRE_FALSE(fs::exists(HomeBoxBackupPath(primary)));
+	REQUIRE(loaded.format == HomeBoxFileFormat::LegacyVersion0);
+	REQUIRE(loaded.legacyBackupPreserved);
+	REQUIRE(ReadBytes(HomeBoxLegacyBackupPath(primary)) == legacy);
 
 	updated.records[0].pokemonData[0] = 99;
 	std::string error;
 	REQUIRE(SaveHomeBoxFile(primary, updated, error));
-	REQUIRE(ReadBytes(HomeBoxBackupPath(primary)) == original);
-	REQUIRE(ReadBytes(primary) == EncodeOriginal(updated));
+	REQUIRE(ReadBytes(HomeBoxBackupPath(primary)) == legacy);
+	REQUIRE(ReadBytes(HomeBoxLegacyBackupPath(primary)) == legacy);
 
-	loaded = LoadHomeBoxFile(primary, updated.dimensions);
-	REQUIRE(loaded.Succeeded());
-	REQUIRE(*loaded.data == updated);
-	auto const previous = ReadBytes(primary);
-	updated.records[1].metadata[0] = 200;
-	REQUIRE(SaveHomeBoxFile(primary, updated, error));
-	REQUIRE(ReadBytes(HomeBoxBackupPath(primary)) == previous);
-	REQUIRE(ReadBytes(primary) == EncodeOriginal(updated));
-
-	// Saving introduces only the normal backup, not a format-migration file.
-	REQUIRE(std::distance(fs::directory_iterator(primary.parent_path()), fs::directory_iterator{}) == 2);
+	HomeBoxData decoded;
+	HomeBoxFileFormat format = HomeBoxFileFormat::LegacyVersion0;
+	REQUIRE(DecodeHomeBox(ReadBytes(primary), updated.dimensions, decoded, format, error));
+	REQUIRE(format == HomeBoxFileFormat::Version1);
+	REQUIRE(decoded == updated);
 }
 
 TEST_CASE("backup recovery warns and refuses to overwrite an invalid primary", "[home-box][persistence]")
@@ -247,7 +254,7 @@ TEST_CASE("backup recovery warns and refuses to overwrite an invalid primary", "
 	HomeBoxData const expected = ExampleData();
 	std::vector<std::byte> valid;
 	std::string error;
-	REQUIRE(EncodeHomeBox(expected, valid, error));
+	REQUIRE(EncodeHomeBoxVersion1(expected, valid, error));
 	WriteBytes(HomeBoxBackupPath(primary), valid);
 	std::vector<std::byte> const invalid{std::byte{'b'}, std::byte{'a'}, std::byte{'d'}};
 	WriteBytes(primary, invalid);
@@ -270,7 +277,7 @@ TEST_CASE("a missing primary recovers from backup and ignores interrupted tempor
 	HomeBoxData updated = ExampleData();
 	std::vector<std::byte> valid;
 	std::string error;
-	REQUIRE(EncodeHomeBox(updated, valid, error));
+	REQUIRE(EncodeHomeBoxVersion1(updated, valid, error));
 	WriteBytes(HomeBoxBackupPath(primary), valid);
 	WriteBytes(fs::path(primary.string() + ".tmp.interrupted"), std::vector<std::byte>{std::byte{0xFF}});
 

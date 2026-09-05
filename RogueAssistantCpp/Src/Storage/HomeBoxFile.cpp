@@ -2,8 +2,10 @@
 
 #include "Endian.h"
 #include "Platform/FileSystem.h"
+#include "Platform/Utf8.h"
 
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <utility>
 
@@ -11,10 +13,13 @@ namespace rogue::storage
 {
 namespace
 {
-constexpr std::uint32_t HeaderMagic = 3497814;
-constexpr std::uint32_t FooterMagic = 7893612;
-constexpr std::size_t HeaderSize = 20;
-constexpr std::size_t FooterSize = 4;
+constexpr std::array<std::byte, 4> Version1Magic{std::byte{'R'}, std::byte{'A'}, std::byte{'B'}, std::byte{'X'}};
+constexpr std::uint32_t LegacyHeaderMagic = 3497814;
+constexpr std::uint32_t LegacyFooterMagic = 7893612;
+constexpr std::size_t Version1HeaderSize = 32;
+constexpr std::size_t Version1FooterSize = 4;
+constexpr std::size_t LegacyHeaderSize = 20;
+constexpr std::size_t LegacyFooterSize = 4;
 
 bool CheckedAdd(std::size_t left, std::size_t right, std::size_t& result)
 {
@@ -32,9 +37,9 @@ bool CheckedMultiply(std::size_t left, std::size_t right, std::size_t& result)
 	return true;
 }
 
-bool CalculateFileSize(HomeBoxDimensions const& dimensions, std::size_t& size)
+bool CalculateFileSize(HomeBoxDimensions const& dimensions, bool legacy, std::size_t& size)
 {
-	std::size_t recordSize = sizeof(std::uint32_t);
+	std::size_t recordSize = legacy ? 4U : 8U;
 	if (!CheckedAdd(recordSize, dimensions.metadataSize, recordSize) ||
 		!CheckedAdd(recordSize, dimensions.pokemonDataSize, recordSize))
 	{
@@ -43,9 +48,9 @@ bool CalculateFileSize(HomeBoxDimensions const& dimensions, std::size_t& size)
 	std::size_t recordsSize = 0;
 	if (!CheckedMultiply(recordSize, dimensions.remoteBoxCount, recordsSize))
 		return false;
-	size = HeaderSize;
-	return CheckedAdd(size, recordsSize, size) && CheckedAdd(size, FooterSize, size) &&
-		   size <= MaximumHomeBoxFileSize;
+	size = legacy ? LegacyHeaderSize : Version1HeaderSize;
+	return CheckedAdd(size, recordsSize, size) &&
+		   CheckedAdd(size, legacy ? LegacyFooterSize : Version1FooterSize, size) && size <= MaximumHomeBoxFileSize;
 }
 
 bool ValidateDimensions(HomeBoxDimensions const& dimensions, std::string& error)
@@ -72,12 +77,19 @@ bool ValidateDimensions(HomeBoxDimensions const& dimensions, std::string& error)
 		return false;
 	}
 	std::size_t ignored = 0;
-	if (!CalculateFileSize(dimensions, ignored))
+	if (!CalculateFileSize(dimensions, false, ignored))
 	{
 		error = "Home Box dimensions exceed the file size limit";
 		return false;
 	}
 	return true;
+}
+
+void AppendLittle(std::vector<std::byte>& output, std::uint16_t value)
+{
+	std::size_t const offset = output.size();
+	output.resize(offset + sizeof(value));
+	(void)endian::WriteLittle<std::uint16_t>(output, offset, value);
 }
 
 void AppendLittle(std::vector<std::byte>& output, std::uint32_t value)
@@ -92,6 +104,14 @@ void AppendBytes(std::vector<std::byte>& output, std::span<std::uint8_t const> b
 	output.reserve(output.size() + bytes.size());
 	for (std::uint8_t byte : bytes)
 		output.push_back(static_cast<std::byte>(byte));
+}
+
+bool ReadU8(std::span<std::byte const> input, std::size_t& position, std::uint8_t& value)
+{
+	if (position >= input.size())
+		return false;
+	value = std::to_integer<std::uint8_t>(input[position++]);
+	return true;
 }
 
 template <typename T> bool ReadLittle(std::span<std::byte const> input, std::size_t& position, T& value)
@@ -114,7 +134,7 @@ bool ReadBytes(std::span<std::byte const> input, std::size_t& position, std::siz
 	return true;
 }
 
-std::uint32_t RecordChecksum(HomeBoxRecord const& record)
+std::uint32_t LegacyChecksum(HomeBoxRecord const& record)
 {
 	std::uint32_t checksum = 0;
 	for (std::uint8_t byte : record.metadata)
@@ -124,14 +144,103 @@ std::uint32_t RecordChecksum(HomeBoxRecord const& record)
 	return checksum;
 }
 
-bool DecodeRecords(std::span<std::byte const> encoded, HomeBoxDimensions const& expected, HomeBoxData& output,
+bool DecodeVersion1(std::span<std::byte const> encoded, HomeBoxDimensions const& expected, HomeBoxData& output,
+					std::string& error)
+{
+	std::size_t position = Version1Magic.size();
+	std::uint16_t format = 0;
+	std::uint16_t reserved16 = 0;
+	HomeBoxDimensions actual;
+	std::uint8_t reserved8 = 0;
+	if (!ReadLittle(encoded, position, format) || !ReadLittle(encoded, position, reserved16) ||
+		!ReadLittle(encoded, position, actual.romAssistantApi) || !ReadU8(encoded, position, actual.edition) ||
+		!ReadU8(encoded, position, reserved8) || reserved8 != 0 || !ReadU8(encoded, position, reserved8) ||
+		reserved8 != 0 || !ReadU8(encoded, position, reserved8) || reserved8 != 0 ||
+		!ReadLittle(encoded, position, actual.trainerId) || !ReadLittle(encoded, position, actual.remoteBoxCount) ||
+		!ReadLittle(encoded, position, actual.metadataSize) || !ReadLittle(encoded, position, actual.pokemonDataSize))
+	{
+		error = "Home Box v1 header is truncated";
+		return false;
+	}
+	if (format != HomeBoxFormatVersion || reserved16 != 0)
+	{
+		error = "Home Box v1 version or reserved fields are invalid";
+		return false;
+	}
+	std::string dimensionsError;
+	if (!ValidateDimensions(actual, dimensionsError))
+	{
+		error = "Home Box v1 header is invalid: " + dimensionsError;
+		return false;
+	}
+	std::size_t actualSize = 0;
+	if (!CalculateFileSize(actual, false, actualSize) || encoded.size() != actualSize)
+	{
+		error = encoded.size() > actualSize ? "Home Box v1 has trailing data" : "Home Box v1 is truncated";
+		return false;
+	}
+	if (actual != expected)
+	{
+		error = "Home Box v1 does not match this ROM, edition, trainer, or box dimensions";
+		return false;
+	}
+
+	HomeBoxData decoded;
+	decoded.dimensions = actual;
+	decoded.records.resize(actual.remoteBoxCount);
+	std::vector<bool> seen(actual.remoteBoxCount, false);
+	for (std::uint32_t recordNumber = 0; recordNumber < actual.remoteBoxCount; ++recordNumber)
+	{
+		std::size_t const recordStart = position;
+		std::uint32_t recordIndex = 0;
+		HomeBoxRecord record;
+		if (!ReadLittle(encoded, position, recordIndex) || recordIndex >= actual.remoteBoxCount || seen[recordIndex])
+		{
+			error = "Home Box v1 has a duplicate or out-of-range record index";
+			return false;
+		}
+		record.remoteBoxIndex = recordIndex;
+		if (!ReadBytes(encoded, position, actual.metadataSize, record.metadata) ||
+			!ReadBytes(encoded, position, actual.pokemonDataSize, record.pokemonData))
+		{
+			error = "Home Box v1 record is truncated";
+			return false;
+		}
+		std::uint32_t storedCrc = 0;
+		std::uint32_t const calculatedCrc = Crc32(encoded.subspan(recordStart, position - recordStart));
+		if (!ReadLittle(encoded, position, storedCrc) || storedCrc != calculatedCrc)
+		{
+			error = "Home Box v1 record CRC32 mismatch";
+			return false;
+		}
+		seen[recordIndex] = true;
+		decoded.records[recordIndex] = std::move(record);
+	}
+
+	std::uint32_t storedFileCrc = 0;
+	std::uint32_t const calculatedFileCrc = Crc32(encoded.first(position));
+	if (!ReadLittle(encoded, position, storedFileCrc) || storedFileCrc != calculatedFileCrc)
+	{
+		error = "Home Box v1 whole-file CRC32 mismatch";
+		return false;
+	}
+	if (position != encoded.size())
+	{
+		error = "Home Box v1 has trailing data";
+		return false;
+	}
+	output = std::move(decoded);
+	return true;
+}
+
+bool DecodeLegacy(std::span<std::byte const> encoded, HomeBoxDimensions const& expected, HomeBoxData& output,
 				  std::string& error)
 {
 	std::size_t expectedSize = 0;
-	if (!CalculateFileSize(expected, expectedSize) || encoded.size() != expectedSize)
+	if (!CalculateFileSize(expected, true, expectedSize) || encoded.size() != expectedSize)
 	{
-		error = encoded.size() > expectedSize ? "Home Box file has trailing data"
-											  : "Home Box file is truncated";
+		error = encoded.size() > expectedSize ? "legacy Home Box file has trailing data"
+											  : "legacy Home Box file is truncated";
 		return false;
 	}
 
@@ -145,13 +254,13 @@ bool DecodeRecords(std::span<std::byte const> encoded, HomeBoxDimensions const& 
 		!ReadLittle(encoded, position, boxCount) || !ReadLittle(encoded, position, metadataSize) ||
 		!ReadLittle(encoded, position, pokemonDataSize))
 	{
-		error = "Home Box header is truncated";
+		error = "legacy Home Box header is truncated";
 		return false;
 	}
-	if (magic != HeaderMagic || version != HomeBoxFormatVersion || boxCount != expected.remoteBoxCount ||
+	if (magic != LegacyHeaderMagic || version != 0 || boxCount != expected.remoteBoxCount ||
 		metadataSize != expected.metadataSize || pokemonDataSize != expected.pokemonDataSize)
 	{
-		error = "Home Box header does not match the expected format and dimensions";
+		error = "legacy Home Box header does not match the expected format and dimensions";
 		return false;
 	}
 
@@ -165,34 +274,80 @@ bool DecodeRecords(std::span<std::byte const> encoded, HomeBoxDimensions const& 
 		if (!ReadBytes(encoded, position, metadataSize, record.metadata) ||
 			!ReadBytes(encoded, position, pokemonDataSize, record.pokemonData))
 		{
-			error = "Home Box record is truncated";
+			error = "legacy Home Box record is truncated";
 			return false;
 		}
 		std::uint32_t checksum = 0;
-		if (!ReadLittle(encoded, position, checksum) || checksum != RecordChecksum(record))
+		if (!ReadLittle(encoded, position, checksum) || checksum != LegacyChecksum(record))
 		{
-			error = "Home Box record checksum mismatch";
+			error = "legacy Home Box record checksum mismatch";
 			return false;
 		}
 		decoded.records.push_back(std::move(record));
 	}
-	if (!ReadLittle(encoded, position, magic) || magic != FooterMagic || position != encoded.size())
+	if (!ReadLittle(encoded, position, magic) || magic != LegacyFooterMagic || position != encoded.size())
 	{
-		error = "Home Box footer is invalid";
+		error = "legacy Home Box footer is invalid";
 		return false;
 	}
 	output = std::move(decoded);
 	return true;
 }
 
+bool DecodeBytes(std::vector<std::byte> const& bytes, HomeBoxDimensions const& expected, HomeBoxData& data,
+				 HomeBoxFileFormat& format, std::string& error)
+{
+	return DecodeHomeBox(bytes, expected, data, format, error);
+}
+
+bool PreserveLegacyBackup(std::filesystem::path const& primary, std::span<std::byte const> bytes, std::string& error)
+{
+	std::filesystem::path const backup = HomeBoxLegacyBackupPath(primary);
+	std::error_code ec;
+	if (!std::filesystem::exists(backup, ec))
+	{
+		if (ec)
+		{
+			error = "cannot inspect the legacy Home Box backup: " + ec.message();
+			return false;
+		}
+		return platform::WriteFileAtomically(backup, bytes, error);
+	}
+
+	std::vector<std::byte> existing;
+	if (!platform::ReadFile(backup, MaximumHomeBoxFileSize, existing, error))
+	{
+		error = "cannot read the existing legacy Home Box backup: " + error;
+		return false;
+	}
+	if (!std::equal(existing.begin(), existing.end(), bytes.begin(), bytes.end()))
+	{
+		error = "legacy Home Box backup already exists with different contents";
+		return false;
+	}
+	return true;
+}
+
 bool ReadCandidate(std::filesystem::path const& path, HomeBoxDimensions const& expected, std::vector<std::byte>& bytes,
-				   HomeBoxData& data, std::string& error)
+				   HomeBoxData& data, HomeBoxFileFormat& format, std::string& error)
 {
 	if (!platform::ReadFile(path, MaximumHomeBoxFileSize, bytes, error))
 		return false;
-	return DecodeHomeBox(bytes, expected, data, error);
+	return DecodeBytes(bytes, expected, data, format, error);
 }
 } // namespace
+
+std::uint32_t Crc32(std::span<std::byte const> bytes)
+{
+	std::uint32_t crc = 0xFFFFFFFFU;
+	for (std::byte byte : bytes)
+	{
+		crc ^= std::to_integer<std::uint8_t>(byte);
+		for (int bit = 0; bit < 8; ++bit)
+			crc = (crc >> 1U) ^ (0xEDB88320U & (0U - (crc & 1U)));
+	}
+	return ~crc;
+}
 
 bool ValidateHomeBoxLayout(HomeBoxLayout const& layout, std::string& error)
 {
@@ -226,7 +381,7 @@ bool ValidateHomeBoxLayout(HomeBoxLayout const& layout, std::string& error)
 	return true;
 }
 
-bool EncodeHomeBox(HomeBoxData const& data, std::vector<std::byte>& encoded, std::string& error)
+bool EncodeHomeBoxVersion1(HomeBoxData const& data, std::vector<std::byte>& encoded, std::string& error)
 {
 	encoded.clear();
 	error.clear();
@@ -256,10 +411,15 @@ bool EncodeHomeBox(HomeBoxData const& data, std::vector<std::byte>& encoded, std
 	}
 
 	std::size_t fileSize = 0;
-	(void)CalculateFileSize(data.dimensions, fileSize);
+	(void)CalculateFileSize(data.dimensions, false, fileSize);
 	encoded.reserve(fileSize);
-	AppendLittle(encoded, HeaderMagic);
+	encoded.insert(encoded.end(), Version1Magic.begin(), Version1Magic.end());
 	AppendLittle(encoded, HomeBoxFormatVersion);
+	AppendLittle(encoded, std::uint16_t{0});
+	AppendLittle(encoded, data.dimensions.romAssistantApi);
+	encoded.push_back(static_cast<std::byte>(data.dimensions.edition));
+	encoded.insert(encoded.end(), 3, std::byte{0});
+	AppendLittle(encoded, data.dimensions.trainerId);
 	AppendLittle(encoded, data.dimensions.remoteBoxCount);
 	AppendLittle(encoded, data.dimensions.metadataSize);
 	AppendLittle(encoded, data.dimensions.pokemonDataSize);
@@ -267,16 +427,19 @@ bool EncodeHomeBox(HomeBoxData const& data, std::vector<std::byte>& encoded, std
 	for (std::uint32_t recordIndex = 0; recordIndex < data.dimensions.remoteBoxCount; ++recordIndex)
 	{
 		HomeBoxRecord const& record = *recordsByIndex[recordIndex];
+		std::size_t const recordStart = encoded.size();
+		AppendLittle(encoded, record.remoteBoxIndex);
 		AppendBytes(encoded, record.metadata);
 		AppendBytes(encoded, record.pokemonData);
-		AppendLittle(encoded, RecordChecksum(record));
+		AppendLittle(encoded,
+					 Crc32(std::span<std::byte const>(encoded).subspan(recordStart, encoded.size() - recordStart)));
 	}
-	AppendLittle(encoded, FooterMagic);
+	AppendLittle(encoded, Crc32(encoded));
 	return encoded.size() == fileSize;
 }
 
 bool DecodeHomeBox(std::span<std::byte const> encoded, HomeBoxDimensions const& expected, HomeBoxData& data,
-				   std::string& error)
+				   HomeBoxFileFormat& format, std::string& error)
 {
 	error.clear();
 	if (!ValidateDimensions(expected, error))
@@ -291,19 +454,32 @@ bool DecodeHomeBox(std::span<std::byte const> encoded, HomeBoxDimensions const& 
 		error = "Home Box file is truncated";
 		return false;
 	}
+	if (std::equal(Version1Magic.begin(), Version1Magic.end(), encoded.begin()))
+	{
+		format = HomeBoxFileFormat::Version1;
+		return DecodeVersion1(encoded, expected, data, error);
+	}
 	std::uint32_t magic = 0;
-	if (!endian::ReadLittle(encoded, 0, magic) || magic != HeaderMagic)
+	if (!endian::ReadLittle(encoded, 0, magic) || magic != LegacyHeaderMagic)
 	{
 		error = "Home Box file has an unknown magic value";
 		return false;
 	}
-	return DecodeRecords(encoded, expected, data, error);
+	format = HomeBoxFileFormat::LegacyVersion0;
+	return DecodeLegacy(encoded, expected, data, error);
 }
 
 std::filesystem::path HomeBoxBackupPath(std::filesystem::path const& primary)
 {
 	auto path = primary;
 	path += ".bak";
+	return path;
+}
+
+std::filesystem::path HomeBoxLegacyBackupPath(std::filesystem::path const& primary)
+{
+	auto path = primary;
+	path += ".v0.bak";
 	return path;
 }
 
@@ -328,10 +504,11 @@ HomeBoxLoadResult LoadHomeBoxFile(std::filesystem::path const& primary, HomeBoxD
 	std::string primaryError;
 	std::vector<std::byte> bytes;
 	HomeBoxData loaded;
+	HomeBoxFileFormat format = HomeBoxFileFormat::Version1;
 	std::filesystem::path loadedPath;
 	if (primaryExists)
 	{
-		if (ReadCandidate(primary, expected, bytes, loaded, primaryError))
+		if (ReadCandidate(primary, expected, bytes, loaded, format, primaryError))
 		{
 			result.source = HomeBoxLoadSource::Primary;
 			loadedPath = primary;
@@ -355,7 +532,7 @@ HomeBoxLoadResult LoadHomeBoxFile(std::filesystem::path const& primary, HomeBoxD
 		if (backupExists)
 		{
 			std::string backupError;
-			if (ReadCandidate(backup, expected, bytes, loaded, backupError))
+			if (ReadCandidate(backup, expected, bytes, loaded, format, backupError))
 			{
 				result.source = HomeBoxLoadSource::Backup;
 				loadedPath = backup;
@@ -382,14 +559,26 @@ HomeBoxLoadResult LoadHomeBoxFile(std::filesystem::path const& primary, HomeBoxD
 		}
 	}
 
+	result.format = format;
 	result.data = std::move(loaded);
+	if (format == HomeBoxFileFormat::LegacyVersion0)
+	{
+		std::string backupError;
+		result.legacyBackupPreserved = PreserveLegacyBackup(primary, bytes, backupError);
+		if (!result.legacyBackupPreserved)
+		{
+			if (!result.warning.empty())
+				result.warning += ' ';
+			result.warning += "Legacy format 0 was loaded, but .v0.bak could not be preserved: " + backupError;
+		}
+	}
 	return result;
 }
 
 bool SaveHomeBoxFile(std::filesystem::path const& primary, HomeBoxData const& data, std::string& error)
 {
 	std::vector<std::byte> replacement;
-	if (!EncodeHomeBox(data, replacement, error))
+	if (!EncodeHomeBoxVersion1(data, replacement, error))
 		return false;
 
 	std::error_code ec;
@@ -403,9 +592,15 @@ bool SaveHomeBoxFile(std::filesystem::path const& primary, HomeBoxData const& da
 	{
 		std::vector<std::byte> previous;
 		HomeBoxData decoded;
-		if (!ReadCandidate(primary, data.dimensions, previous, decoded, error))
+		HomeBoxFileFormat previousFormat = HomeBoxFileFormat::Version1;
+		if (!ReadCandidate(primary, data.dimensions, previous, decoded, previousFormat, error))
 		{
 			error = "refusing to replace an invalid Home Box primary: " + error;
+			return false;
+		}
+		if (previousFormat == HomeBoxFileFormat::LegacyVersion0 && !PreserveLegacyBackup(primary, previous, error))
+		{
+			error = "cannot preserve legacy Home Box source: " + error;
 			return false;
 		}
 		if (!platform::WriteFileAtomically(HomeBoxBackupPath(primary), previous, error))

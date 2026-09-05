@@ -153,24 +153,3 @@ exist. It does not remove the old files.
 Delete the app or the extracted package. User files remain in the folders
 listed above. Back up any Home Box files that you want to keep before you
 delete those folders.
-
-## Move Home Box data
-
-This app reads and writes the same Home Box file format as the original
-Windows assistant. It does not convert your files to a new format.
-
-The apps use separate data folders. The first-run Windows import described
-above copies existing files; it does not keep the folders in sync.
-
-To move data between apps or computers:
-
-1. Finish any storage transfer and leave Extended Storage in the game.
-2. Close both assistant apps.
-3. Back up the game save and both assistant data folders.
-4. Copy the latest `<edition>/<trainer ID>/boxes.dat` to the same relative
-   path in the destination app's data folder. Keep the edition and trainer
-   folders unchanged.
-
-The original Windows app's data folder is
-`%APPDATA%\.pokabbie\rogue_assistant`. This app's folders are listed under
-[User files](#user-files). Use the matching game save and ROM edition.
