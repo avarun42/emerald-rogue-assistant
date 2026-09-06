@@ -11,8 +11,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Catch2)
 
-# Keep diagnostics in Catch2's implementation from being attributed to the
-# Emerald Rogue Assistant tests that include its assertion macros.
+# Do not treat warnings from Catch2's macros as errors in our test code.
 set_target_properties(Catch2 Catch2WithMain PROPERTIES SYSTEM TRUE)
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)

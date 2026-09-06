@@ -51,8 +51,7 @@ FetchContent_MakeAvailable(SFML ENET)
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME ${ROGUE_SAVED_DEFAULT_INSTALL_COMPONENT})
 unset(ROGUE_SAVED_DEFAULT_INSTALL_COMPONENT)
 
-# Treat SFML's public headers as third-party so dependency diagnostics do not
-# become Emerald Rogue Assistant project errors.
+# Do not treat warnings from SFML's headers as errors in our code.
 set_target_properties(sfml-system sfml-window sfml-graphics PROPERTIES SYSTEM TRUE)
 
 FetchContent_GetProperties(SFML SOURCE_DIR ROGUE_SFML_SOURCE_DIR)

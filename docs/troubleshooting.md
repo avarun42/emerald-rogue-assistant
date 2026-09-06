@@ -12,8 +12,9 @@ Check these items:
 6. Make sure only one Emerald Rogue Assistant app uses that port and only one mGBA
    script is connected.
 
-If you changed the bridge port, press `E` in Emerald Rogue Assistant to export the
-script again. Reload that new script in mGBA.
+If you changed the port, press `E` in Emerald Rogue Assistant to export the
+script again. Load that copy in mGBA. Reload the script after an assistant
+update too; mGBA may still be running the old copy.
 
 ## The port is already in use
 
@@ -36,11 +37,9 @@ have just updated the game, check for an update to Emerald Rogue Assistant too.
 
 ## Storage transfer stopped
 
-This message can appear if Emerald Rogue Assistant reconnects while Extended Storage
-is already open in the game. Do not continue the old transfer. Press B. Then
-open Extended Storage again.
-
-This state stops Emerald Rogue Assistant from changing data from an old connection.
+This message can appear if the assistant reconnects while Extended Storage is
+already open in the game. Do not continue the old transfer. Press B, then open
+Extended Storage again. This lets the game start a new storage connection.
 
 ## Home Box could not load or save
 
@@ -53,11 +52,9 @@ Copy the complete trainer folder before you try to repair anything. See
 ## macOS blocks the app
 
 An app without an Apple Developer ID signature can show an unknown developer
-warning. Follow the macOS
-steps in [Install Emerald Rogue Assistant](installation.md#macos).
+warning. Follow the [macOS installation steps](installation.md#macos).
 
-The current macOS package is for Apple silicon. Do not start it through Rosetta
-or force the `x86_64` architecture.
+The macOS app requires Apple silicon. It does not run on an Intel Mac.
 
 ## Find the log
 

@@ -114,8 +114,8 @@ class MultiplayerBehaviour : public IGameConnectionBehaviour
 
 	[[nodiscard]] bool SendMultiplayerConfirmationToGame(GameConnection& game);
 
-	// SessionWorker owns all behavior state. The UI receives value snapshots and
-	// sends value commands rather than accessing this object.
+	// SessionWorker owns all behavior state. The UI receives copies of this
+	// state and sends commands; it does not access this object.
 	u16 m_Port;
 	ConnectionState m_ConnState;
 	std::string m_ConnectionAddressRaw;

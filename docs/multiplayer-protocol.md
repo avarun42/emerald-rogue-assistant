@@ -1,8 +1,9 @@
 # Multiplayer protocol 1.0
 
-Emerald Rogue Assistant uses ENet for multiplayer. It does not interpret the game's
-handshake, game state, player profiles, or player state. It moves those values
-as fixed byte blocks whose sizes come from the ROM.
+Emerald Rogue Assistant uses the ENet network library to send multiplayer
+data. It copies the game's setup messages, game state, player profiles, and
+player state as byte blocks. It checks these blocks against the layout and
+sizes given by the ROM. It does not recreate the game's multiplayer logic.
 
 Before game data can move, both apps exchange a compatibility message. The
 original Windows assistant does not send this message, so it cannot connect to
@@ -18,6 +19,11 @@ version 1.0.
 | 3 | Player state | Unreliable fragment |
 | 4 | Player profiles | Reliable |
 
+Reliable delivery retries lost packets. Unreliable fragments allow a message
+to be split into packets without retrying those that are lost. The ROM
+handshake is the exchange of setup messages between the games. A peer is
+another connected assistant.
+
 The app does not process game data until the sender passes the compatibility
 check. The host sends game data only to a peer that also finished the ROM
 handshake.
@@ -25,7 +31,9 @@ handshake.
 ## Compatibility message
 
 The first channel 0 message is exactly 40 bytes. All integers use unsigned
-little-endian byte order.
+little-endian byte order, with the least significant byte first. The ROM
+Assistant API is the version of the interface that the game provides to the
+app.
 
 | Offset | Size | Field |
 | ---: | ---: | --- |
@@ -63,7 +71,8 @@ Emerald Rogue Assistant disconnects a peer that sends:
 - A message with a bad size or field value
 - More than one compatibility message
 - Values that do not match the local game
-- Game data before the compatibility check or ROM handshake
+- Game data before the compatibility check or ROM handshake, except for the
+  early handshake described below
 - A message on the wrong channel or from the wrong side
 - A player ID outside the ROM player table
 - A payload larger than the matching ROM structure

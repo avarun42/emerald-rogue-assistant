@@ -93,7 +93,7 @@ namespace rogue::platform
 			fs::path path = fs::weakly_canonical(PathFromUtf8(buffer.data()), ec);
 			if (ec)
 			{
-				error = "cannot canonicalize the executable path: " + ec.message();
+				error = "cannot resolve the executable path: " + ec.message();
 				return {};
 			}
 			return path;
@@ -123,14 +123,14 @@ namespace rogue::platform
 			fs::recursive_directory_iterator const end;
 			if (ec)
 			{
-				error = "cannot enumerate legacy data: " + ec.message();
+				error = "cannot list files in the old data folder: " + ec.message();
 				return false;
 			}
 			for (; it != end; it.increment(ec))
 			{
 				if (ec)
 				{
-					error = "cannot enumerate legacy data: " + ec.message();
+					error = "cannot list files in the old data folder: " + ec.message();
 					return false;
 				}
 

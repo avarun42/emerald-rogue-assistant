@@ -7,8 +7,9 @@ Files are stored at `<data folder>/<edition>/<trainer ID>/boxes.dat`. The
 edition and trainer ID come from the folder path, not the file contents. Keep
 that path when copying a file. The ROM API is not stored in the file either.
 
-All integers are unsigned and use little-endian byte order. Pokémon and box
-metadata are copied as bytes without changing the game's data.
+All integers are unsigned and use little-endian byte order, with the least
+significant byte first. Pokémon data and box metadata (such as the box name)
+are copied as bytes without changing the game's data.
 
 ## Header
 
@@ -30,25 +31,28 @@ Each stored box has one record. Records appear in box order and contain:
 
 | Size | Field |
 | --- | --- |
-| Header value | Metadata bytes |
-| Header value | Pokémon bytes |
+| Metadata bytes per box, from the header | Metadata bytes |
+| Pokémon bytes per box, from the header | Pokémon bytes |
 | 4 | Sum of all metadata and Pokémon bytes in this record |
 
-The checksum is an unsigned 32-bit sum. It is the same checksum used by the
-original assistant. It detects some changes to the bytes, but not all changes.
+The checksum is an unsigned 32-bit sum of the record's data bytes. The reader
+uses it to check for file damage. It is the same checksum used by the original
+assistant. It detects some changes to the bytes, but not all changes.
 There is no stored box index or whole-file checksum.
 
 The final four bytes are the footer marker, `7893612`.
 
-The reader rejects a wrong marker, unknown version, mismatched dimensions,
-incorrect checksum, truncated file, or trailing data. It also limits files
-to 64 MiB and box counts to 255 before allocating storage.
+The reader rejects a wrong marker, unknown version, wrong box count or byte
+size, incorrect checksum, incomplete file, or extra bytes after the footer.
+It also limits files to 64 MiB and box counts to 255 before reserving memory
+for the data.
 
 ## Save and recovery
 
 The app writes a temporary file beside `boxes.dat`, then replaces `boxes.dat`
-with an atomic rename. It keeps the previous valid file as `boxes.dat.bak`.
-These safeguards do not change the file format.
+with an atomic rename: readers see either the old file or the new file, not
+a partly written file. It keeps the previous valid file as `boxes.dat.bak`.
+These checks and save steps do not change the file format.
 
 If `boxes.dat` is missing, the app can load `boxes.dat.bak` and shows a warning.
 If `boxes.dat` is damaged, the app stops the connection before enabling storage

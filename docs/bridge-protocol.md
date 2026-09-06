@@ -1,11 +1,14 @@
 # Bridge protocol 1.0
 
 The mGBA Lua script and Emerald Rogue Assistant use one TCP connection. The app
-is the server. It listens only on `127.0.0.1`.
+is the server. It listens only on `127.0.0.1`, so both programs must run on the
+same computer. This page defines the messages they exchange.
 
-All integers use little-endian byte order. Both programs keep incomplete data
-until a full frame is ready. They also handle several frames in one receive and
-keep any bytes that a partial send did not write.
+All integers use little-endian byte order: the least significant byte comes
+first. Each message is sent as a frame, with a length, header, and payload
+(the message data). Both programs keep incomplete data until a full frame is
+ready. They also handle several frames in one receive and keep any bytes that
+a partial send did not write.
 
 ## Frame format
 
@@ -31,14 +34,16 @@ A decoder rejects:
 - A queue that is already full
 
 The receive queue and send queue can each hold at most 256 frames and 4 MiB of
-wire data. These limits keep memory use fixed. They are not flow control
-messages.
+encoded messages. These limits put an upper bound on queue memory use. Neither
+side sends a separate message to tell the other how much queue space is left.
 
 A `ReadResult` can hold at most 1,048,568 memory bytes. A `WriteRequest` can
 hold at most 1,048,560 memory bytes because its payload also has address and
 size fields.
 
 ## Messages
+
+`u8`, `u16`, and `u32` mean unsigned integers of 8, 16, and 32 bits.
 
 | ID | Name | Request ID | Payload |
 | ---: | --- | --- | --- |
@@ -76,9 +81,9 @@ Protocol major versions must match. A server can accept an older minor version
 only when it supports every feature used by that version. This release accepts
 only protocol 1.0.
 
-The `ServerHello` contains the three numeric parts of the app version. A beta
-name is not sent in this fixed field. The full version still appears in the UI,
-log, and command output.
+The `ServerHello` contains the three numeric parts of the app version. Labels
+such as `alpha.0`, `beta.1`, or a development commit ID are not sent in this
+field. The full version still appears in the UI, log, and command output.
 
 The app accepts one script. It sends a rejected hello, error code 2, and
 `Close` to another script while the first one is connected. It sends `Close`
@@ -92,7 +97,7 @@ then waits for a new connection.
 
 During one emulated frame, the script:
 
-- Receives and sends at most 256 KiB
+- Receives at most 256 KiB and sends at most 256 KiB
 - Starts or moves forward at most 64 memory operations
 - Reads or writes at most 256 KiB of memory
 
@@ -106,8 +111,8 @@ video memory, and ROM regions. Writes can use only EWRAM or IWRAM.
 
 mGBA controls socket event checks. The script stores received bytes until a
 full frame is ready. It also stores the unsent part reported by `socket:send`.
-Pausing mGBA does no work and does not cause a time limit error. The queue
-limits stop work from growing without a bound.
+While mGBA is paused, frame callbacks do not run. Neither side closes the
+bridge because it is idle. Queue limits keep pending work within a fixed bound.
 
 ## Shared test data
 

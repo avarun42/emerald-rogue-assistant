@@ -95,9 +95,9 @@ struct AssetCollection
 
 	sf::Text& CreateText(sf::RenderWindow const& gfx, std::string const& msg, int fontSize)
 	{
-		// UI positions are authored in a 256x192 view. Rasterize glyphs near the
-		// framebuffer resolution, then scale their geometry back into view units.
-		// The cap bounds the font pages cached while a window is being resized.
+		// Layout uses a 256x192 view. Draw text near the window's pixel size, then
+		// scale it back to view units. Limit font sizes to keep the font cache
+		// from growing too large while the window is resized.
 		sf::Vector2u const framebufferSize = gfx.getSize();
 		sf::Vector2f const viewSize = gfx.getView().getSize();
 		float rasterScale = 1.0F;
@@ -173,15 +173,13 @@ bool PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 
 	sf::RenderWindow& gfx = *window.GetHandle();
 
-	// Keep the window at the authored aspect ratio.
+	// Keep the window's width-to-height ratio fixed.
 	{
 		sf::Vector2u currentWindowSize = gfx.getSize();
 
 		// Use the width as the source dimension while the user resizes the window.
 		sf::Vector2u snappedWindowSize(
 			currentWindowSize.x, (u32)std::max(1.0, std::round(currentWindowSize.x / c_ViewAspectW) * c_ViewAspectH)
-			//(u32)std::max(1.0, std::round(currentWindowSize.y / c_ViewAspectH) * c_ViewAspectW),
-			// currentWindowSize.y
 		);
 
 		if (currentWindowSize != snappedWindowSize)

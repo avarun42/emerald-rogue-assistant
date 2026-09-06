@@ -10,7 +10,7 @@
 
 class GameConnection;
 
-// A validated snapshot of one game-memory region.
+// A copy of one game-memory region, marked valid after a complete read.
 
 class ObservedBlob
 {
@@ -33,7 +33,7 @@ protected:
 	std::vector<u8> m_Data;
 };
 
-// A validated snapshot decoded into a fixed-layout structure.
+// A copy of game memory decoded into a structure with a fixed layout.
 
 template<typename T>
 class ObservedStruct : public ObservedBlob

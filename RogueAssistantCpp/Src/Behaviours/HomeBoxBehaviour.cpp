@@ -109,7 +109,7 @@ void HomeBoxBehaviour::LoadOfflineData(GameConnection& game, std::uint32_t train
 		LOG_WARN("Home Box load warning: %s", loaded.warning.c_str());
 		if (loaded.primaryInvalid)
 		{
-			// Saving refuses to replace a damaged primary. Do not enable transfers
+			// Saving will not replace a damaged main file. Do not enable transfers
 			// that could remove Pokémon from the game without saving them to disk.
 			game.ReportError("Home Box needs recovery.\nBack up its files before continuing.");
 			game.Disconnect();
@@ -151,9 +151,9 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 	case State::OpenOfflineFile: {
 		// The ROM initializes the final order entry to 255 when Extended Storage
 		// opens. A different value before this behaviour has written anything
-		// means another assistant session already initialized this screen. The ROM
-		// latches a disconnect while that screen is active, so the safe recovery is
-		// to leave it and open it again instead of modifying the stale session.
+		// means another assistant session already set up this screen. After a
+		// disconnect, the game stays disconnected until the player leaves this
+		// screen and opens it again. Do not change storage before that happens.
 		if (homeBoxState[header.homeRemoteIndexOrderOffset + header.homeTotalBoxCount - 1] != 255)
 		{
 			LOG_WARN("Extended Storage was already initialized when this assistant session connected");
@@ -354,7 +354,7 @@ void HomeBoxBehaviour::HandlePendingFileWrite(GameConnection& game, bool force)
 	if (!rogue::storage::SaveHomeBoxFile(m_WriteFilePath, data, error))
 	{
 		LOG_ERROR("Home Box save failed: %s", error.c_str());
-		game.ReportError("Could not save Home Box.\nThe existing files were not changed.");
+		game.ReportError("Could not save Home Box.\nThe main file was not changed.");
 		m_NextSaveAttempt = std::chrono::steady_clock::now() + std::chrono::seconds(5);
 		return;
 	}

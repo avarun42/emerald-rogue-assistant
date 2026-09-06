@@ -86,7 +86,7 @@ bool ParsePort(std::string_view text, std::uint16_t& port)
 } // namespace
 
 // The ROM supplies every offset and size below, and the network supplies every
-// packet size. Validate the complete layout before any code indexes the observed
+// packet size. Check the whole layout before reading fields from the copied
 // multiplayer state.
 static bool ValidateMultiplayerLayout(GameConnection& game)
 {
@@ -374,8 +374,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 		return;
 
 	// Validate before accepting a host or client address. Opening ENet uses ROM-
-	// supplied sizes and counts, so waiting for the first network update would be
-	// too late for malformed metadata.
+	// supplied sizes and counts, so check them before the connection starts.
 	if (!ValidateMultiplayerLayout(game))
 	{
 		game.ReportError("Cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
@@ -424,7 +423,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 	}
 
 	// Poll ENet while the ROM prepares a handshake response so disconnects and
-	// queued compatibility messages continue to progress.
+	// waiting compatibility messages are still handled.
 	if (!m_ClientState.m_PendingHandshakeData.empty())
 		(void)TrySubmitClientHandshake(game);
 	if (!m_ClientState.m_PendingPlayerProfiles.empty())
@@ -436,7 +435,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 	PollConnection(game);
 
 	// A handshake received by PollConnection cannot use ROM state from the current
-	// update. Wait for the next observed-memory cycle.
+	// update. Wait for the next game-memory read.
 	if (!hadPendingHandshakeData && pendingBeforePoll != nullptr &&
 		m_ServerState.m_PendingHandshake == pendingBeforePoll && m_ServerState.m_PendingHandshakeData.empty())
 	{
@@ -994,9 +993,9 @@ void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent
 			RejectPeer(game, netEvent.peer, "player-profile payload size differs");
 		else
 		{
-			// Profiles are complete snapshots and the host only sends them after a
-			// change. Retain the latest snapshot until the bounded bridge accepts
-			// it; a newer snapshot safely supersedes an older pending one.
+			// Each message contains all profiles, and the host only sends it after a
+			// change. Keep the latest copy until the bridge has room to accept it.
+			// A newer copy can replace an older one that is still waiting.
 			m_ClientState.m_PendingPlayerProfiles.assign(packet->data, packet->data + packet->dataLength);
 			(void)TrySubmitClientPlayerProfiles(game);
 		}

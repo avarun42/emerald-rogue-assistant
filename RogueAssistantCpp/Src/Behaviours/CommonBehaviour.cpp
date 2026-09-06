@@ -38,9 +38,9 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 	}
 
 	// Notify the game that the assistant is connected by repeatedly writing zero
-	// to the ROM-provided confirmation field. The field is scalar in API 3; do
-	// not trust malformed ROM metadata to read beyond this local value or wrap
-	// the destination address before transport validation sees it.
+	// to the ROM-provided confirmation field. API 3 uses one integer. Check the
+	// ROM's size and address before making a request, so invalid values cannot
+	// cause a read past this local value or an address overflow.
 	if (rogueHeader.assistantConfirmSize == 0 || rogueHeader.assistantConfirmSize > sizeof(u32) ||
 		rogueHeader.assistantState > std::numeric_limits<GameAddress>::max() - rogueHeader.assistantConfirmOffset)
 	{

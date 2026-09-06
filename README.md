@@ -1,16 +1,18 @@
 # Emerald Rogue Assistant
 
-Emerald Rogue Assistant is a companion app for Pokémon Emerald Rogue. It adds
-two features while the game runs in mGBA:
+Emerald Rogue Assistant lets you use these Pokémon Emerald Rogue features
+while playing in mGBA:
 
-- Home Box storage that remains available between runs
-- Multiplayer data sharing between supported games
+- Store Pokémon outside your game save with Home Box (Extended Storage).
+- Connect to other players through the game's multiplayer features.
 
-The app reads and writes emulated Game Boy Advance memory through a small Lua
-script in mGBA. It does not include, open, or change a ROM file.
+The app connects to mGBA through a Lua script, a small program that runs inside
+the emulator. It reads and writes the running game's memory. It does not
+include a ROM or change your ROM file.
 
-This project is a cross-platform port of
+This project adapts
 [Pokabbie's original Windows app](https://github.com/Pokabbie/pokeemerald-rogue-assistant).
+It builds for Windows, macOS, and Linux.
 
 ## Supported systems
 
@@ -20,13 +22,14 @@ This project is a cross-platform port of
 - macOS 11 or later on Apple silicon
 - Linux x86_64
 
-The port has been tested in the game on Apple silicon with mGBA 0.10.5
+The app has been tested during play on Apple silicon with mGBA 0.10.5
 and Emerald Rogue 2.2.0 Vanilla. Windows, Linux, EX, Home Box recovery, and
 cross-platform multiplayer still need more live testing.
 
-Both players must use this port for multiplayer. It cannot connect to the
-original Windows assistant. Home Box files keep the original format and can
-be moved between the apps; see [Move Home Box data](docs/installation.md#move-home-box-data).
+Both players must use this version of the assistant for multiplayer. It cannot
+connect to the original Windows assistant. Home Box files keep the original
+format and can be moved between the apps; see
+[Move Home Box data](docs/installation.md#move-home-box-data).
 
 ## Get started
 
@@ -39,8 +42,9 @@ be moved between the apps; see [Move Home Box data](docs/installation.md#move-ho
 6. In mGBA, select **Tools > Scripting**, then load
    `RogueAssistant_mGBA.lua` from that folder.
 
-The app exports the script when it starts. The script connects only to the
-local computer. Port `30125` is used by default.
+The app saves a copy of the script in its data folder each time it starts.
+The script connects only to an assistant on the same computer. The default
+connection port is `30125`; you normally do not need to change it.
 
 If the app does not connect, see [Troubleshooting](docs/troubleshooting.md).
 
@@ -54,9 +58,8 @@ cmake --build --preset dev-debug --parallel
 ctest --preset dev-debug
 ```
 
-See [Development](docs/development.md) for platform packages and other test
-presets. See [Architecture](docs/architecture.md) for the main parts of the
-app.
+See [Development](docs/development.md) for required software and build options.
+See [Architecture](docs/architecture.md) for the main parts of the app.
 
 ## Technical documents
 

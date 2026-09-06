@@ -1,5 +1,5 @@
 -- Emerald Rogue Assistant mGBA bridge protocol 1.0
--- This file is portable across every host supported by mGBA 0.10.5 or later.
+-- Connects mGBA 0.10.5 or later to the assistant on the same computer.
 
 local BRIDGE_HOST = "127.0.0.1"
 local BRIDGE_PORT = 30125 -- ROGUE_ASSISTANT_BRIDGE_PORT
@@ -226,11 +226,10 @@ end
 
 local function detachSocketCallbacks(connection)
     if connection then
-        -- mGBA 0.10.5's explicit close leaves the native descriptor stored in
-        -- the Lua socket object. Its garbage collector later closes that same
-        -- descriptor a second time, potentially after the OS has reused it for
-        -- our replacement connection. Remove the wrapper callbacks and let the
-        -- object finalizer perform the native close exactly once instead.
+        -- In mGBA 0.10.5, close() leaves the socket's OS number (descriptor) in
+        -- the Lua object. When Lua later frees the object, it closes that number
+        -- again. The OS may have reused it for our next connection by then.
+        -- Remove callbacks and let Lua free the object, closing it only once.
         if connection._onframecb then
             callbacks:remove(connection._onframecb)
             connection._onframecb = nil
@@ -590,8 +589,8 @@ local function connect(state)
     end)
     local ok, err = connection:connect(BRIDGE_HOST, BRIDGE_PORT)
     if not ok then
-        -- Failed connection wrappers have the same double-close hazard as
-        -- established sockets. Let mGBA's finalizer close the descriptor.
+        -- Failed connections can also close the same socket number twice.
+        -- Let mGBA close it when Lua frees the object.
         detachSocketCallbacks(connection)
         connection = nil
         collectgarbage("collect")

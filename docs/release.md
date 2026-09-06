@@ -13,8 +13,9 @@ chosen when CMake runs:
   version `1.0.0-alpha.0`.
 
 Local changes add a `dirty` label. Source files without Git history use an
-`unknown` label. Use a clean Git checkout for packages that you share with
-testers. Named releases require a clean checkout of the specified tag.
+`unknown` label. Build packages for testers from a Git checkout with no
+uncommitted changes. Named releases require this too, and the checked-out
+commit must match the specified tag.
 
 CMake uses the full version in the UI, logs, and command output. Package names
 use the release version or development label.
@@ -40,7 +41,8 @@ Windows and Linux packages also include the notices, licenses, and guides.
 
 ## Local package builds
 
-Use only the preset for the current system.
+Use only the preset for the current system. Each preset is a saved set of
+build options. These commands also require Ninja, the tool that runs the build.
 
 On Windows:
 
@@ -88,7 +90,8 @@ The output must be `arm64`.
 The `Build packages` workflow supports two ways to run:
 
 - Start it by hand from a branch to build development packages. Their names
-  include the commit ID. This creates workflow artifacts but no GitHub release.
+  include the commit ID. The files appear under **Artifacts** on the workflow
+  run page. This does not create a GitHub release.
 - Push a version tag, such as `v1.0.0-alpha.0`, to build a named release. This
   also creates or updates a draft GitHub release.
 
@@ -98,18 +101,20 @@ the source. Without that option, even a tagged commit builds as a development
 version. To build a named release locally, check out the tag and add
 `-DROGUE_RELEASE_TAG=v1.0.0-alpha.0` to the configure command.
 
-The workflow builds and tests all three systems, checks each installed file
-set, creates package files, and
-writes `SHA256SUMS`. A version with a prerelease name becomes a GitHub
-prerelease. The workflow always leaves the GitHub release as a draft. A person
-must check and publish it. A rerun can replace files in a draft, but it refuses
-to replace files in a published release.
+The workflow builds and tests all three systems, checks the installed files,
+creates packages, and writes `SHA256SUMS`. An alpha, beta, or release-candidate
+version becomes a GitHub prerelease. The workflow always leaves the GitHub
+release as a draft. A person must check and publish it. A rerun can replace
+files in a draft, but it refuses to replace files in a published release.
 
 ## macOS signing
 
-The macOS job always signs the app. Without Apple credentials, it uses an ad
-hoc signature. A Developer ID signature and notarization need these repository
-secrets:
+The macOS job always signs the app. Without Apple credentials, it uses an
+ad hoc signature. This is a local signature, not proof of the developer's
+identity. Users may need to approve the app in macOS settings before opening it.
+
+To sign with a Developer ID and send the app to Apple for its automated security
+check (notarization), add these repository secrets:
 
 - `MACOS_CERTIFICATE_P12`
 - `MACOS_CERTIFICATE_PASSWORD`
@@ -118,9 +123,9 @@ secrets:
 - `APPLE_TEAM_ID`
 - `APPLE_APP_PASSWORD`
 
-The three certificate values must be present together. The three notarization
-values must also be present together. Notarization also requires the complete
-certificate set. The job fails if only part of a set is present.
+The three `MACOS_` values must be present together. The three `APPLE_` values
+must also be present together and require all three `MACOS_` values. The job
+fails if only part of a set is present.
 
 The job uses a temporary keychain and deletes it at the end. It checks the app
 signature and DMG before it uploads them.
@@ -141,7 +146,7 @@ Before you create the release tag:
 After the release workflow finishes:
 
 1. Confirm that every job passed.
-2. Download the complete release artifact.
+2. Download `SHA256SUMS` and all package files from the draft release.
 3. Check every file against `SHA256SUMS`.
 4. Install and start the package for the system you can test.
 5. Check its version, CPU type, resources, and package contents. On macOS, also
@@ -150,21 +155,22 @@ After the release workflow finishes:
 7. Publish alpha, beta, and release-candidate drafts as prereleases. Publish a
    final version without the prerelease marker.
 
-Do not call an untested system or ROM edition verified. Beta releases exist so
-other users can help close those gaps.
+State which systems and ROM editions still need testing. Alpha and beta
+releases let other users help test those combinations.
 
 ## Tests required for final 1.0.0
 
 The normal test suite must pass with MSVC x64, Apple Clang, GCC, and Clang.
-The sanitizer and Lua jobs must also pass. The Clang build includes static
-analysis.
+The memory and C++ runtime checks and the Lua job must also pass. The Clang
+build includes source checks with `clang-tidy`.
 
 Automated tests cover:
 
 - ROM Assistant API 3 checks for Vanilla and EX
 - ROM headers, changing state, confirmation writes, Home Box, and multiplayer
 - Request IDs, bad results, queue limits, and paused mGBA
-- Split and joined bridge frames, partial sends, rejected peers, and reconnects
+- Bridge messages split across reads or joined in one read, partial sends,
+  rejected connections, and reconnects
 - Original Home Box file compatibility, file damage, backups, and interrupted
   writes
 - Multiplayer compatibility and ROM layout checks
@@ -190,27 +196,12 @@ operating system, CPU type, and result for each release candidate. Do not tag
 the final release if a required check fails, mGBA crashes, data can be lost
 without a warning, or a queue can grow without a limit.
 
-## Current live test record
-
-The September 2, 2026 macOS test used mGBA 0.10.5 and Emerald Rogue 2.2.0
-Vanilla with ROM Assistant API 3. It checked both start orders, the ROM header
-and confirmation write, a ten-second pause, reset, script reload, app restart,
-mGBA shutdown, and app shutdown.
-
-That test found an mGBA 0.10.5 Lua callback error. The script now returns no
-top-level value, guards callbacks with `xpcall`, and handles start, reset,
-shutdown, and stop events. Lua tests cover this fix.
-
-The live test did not cover EX, Windows, Linux, Home Box file recovery, or
-cross-platform multiplayer.
-
 ## Work after 1.0
 
 These changes are outside the 1.0 release:
 
 - Automatic local pairing for more than one mGBA session
 - Tested support for ROM Assistant APIs 1 and 2
-- A defined test process for future ROM Assistant API versions
 - Linux arm64 packages
 - Windows x86 packages if users need them
 - Optional update checks
