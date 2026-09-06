@@ -1,3 +1,4 @@
+#include "UI/RefreshState.h"
 #include "UI/TextCache.h"
 #include "UI/TextEncoding.h"
 
@@ -44,4 +45,66 @@ TEST_CASE("UI text objects are reused across frames and changing messages", "[ui
 		REQUIRE(status->getCharacterSize() == size);
 		REQUIRE(&status->getFont() == &font);
 	}
+}
+
+TEST_CASE("unchanged UI snapshots do not trigger redraws", "[ui][refresh]")
+{
+	rogue::ui::RefreshState refresh;
+	rogue::app::UiSnapshot snapshot;
+	snapshot.connections.emplace_back();
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+	for (unsigned int tick = 1; tick < 1000; ++tick)
+	{
+		snapshot.revision = tick;
+		REQUIRE_FALSE(refresh.ShouldDraw(snapshot, false, tick % 4, 0, false));
+	}
+	REQUIRE(refresh.ShouldDraw(snapshot, true, 0, 0, false));
+	REQUIRE_FALSE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+	snapshot.error = "Connection lost";
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+	snapshot.connections.emplace_back();
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 1, false));
+	snapshot.connections.clear();
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, true));
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+}
+
+TEST_CASE("UI redraws only visible animation changes", "[ui][refresh]")
+{
+	rogue::ui::RefreshState refresh;
+	rogue::app::UiSnapshot snapshot;
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+	REQUIRE_FALSE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 1, 0, false));
+	REQUIRE_FALSE(refresh.ShouldDraw(snapshot, false, 1, 0, false));
+
+	snapshot.connections.emplace_back();
+	auto& connection = snapshot.connections.back();
+	connection.page = rogue::app::UiPage::HomeBox;
+	connection.homeBox.loading = true;
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 1, 0, false));
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 2, 0, false));
+	connection.homeBox.loading = false;
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 2, 0, false));
+	REQUIRE_FALSE(refresh.ShouldDraw(snapshot, false, 3, 0, false));
+	connection.homeBox.saving = true;
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 3, 0, false));
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+	connection.homeBox.requiresReopen = true;
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
+	REQUIRE_FALSE(refresh.ShouldDraw(snapshot, false, 1, 0, false));
+
+	connection.page = rogue::app::UiPage::Multiplayer;
+	connection.multiplayer.connected = true;
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 1, 0, false));
+	REQUIRE_FALSE(refresh.ShouldDraw(snapshot, false, 2, 0, false));
+	connection.multiplayer.awaitingAddress = true;
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 2, 0, false));
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 3, 0, false));
+	connection.multiplayer.awaitingAddress = false;
+	connection.multiplayer.connected = false;
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 3, 0, false));
+	REQUIRE(refresh.ShouldDraw(snapshot, false, 0, 0, false));
 }

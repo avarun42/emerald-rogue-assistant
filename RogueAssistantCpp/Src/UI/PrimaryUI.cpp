@@ -60,9 +60,6 @@ static bool LoadFrame(sf::Texture& output, std::filesystem::path const& resource
 
 struct AssetCollection
 {
-	double m_DeltaTimeS = 0.0;
-	double m_FramesS = 0.0;
-	double m_FramesRemainderS = 0.0;
 	std::string m_LoadingSpinnerAnimText;
 	std::string m_CursorPosAnimText;
 
@@ -150,7 +147,6 @@ struct AssetCollection
 PrimaryUI::PrimaryUI(std::filesystem::path const& resourceDirectory)
 	: m_Assets(std::make_unique<AssetCollection>(resourceDirectory)), m_CurrentPage(rogue::app::UiPage::Awaiting)
 {
-	m_LastDrawTime = UpdateTimer::GetCurrentClock();
 }
 
 PrimaryUI::~PrimaryUI() = default;
@@ -163,32 +159,17 @@ void PrimaryUI::SetToStubTheme()
 	m_Assets->m_ErrorFontColour = sf::Color(196, 24, 24);
 }
 
-void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand)
+bool PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand)
 {
+	unsigned int const animationFrame = static_cast<unsigned int>((UpdateTimer::GetCurrentClock() / 250000000) % 4);
+	if (!m_Refresh.ShouldDraw(snapshot, window.HadVisualEvent(), animationFrame,
+							static_cast<std::size_t>(m_CurrentConnectionIdx), m_EditingBridgePort))
+	{
+		return false;
+	}
 	m_Assets->m_Text.BeginFrame();
-	// Calculate the elapsed frame time.
-	TimeDurationNS deltaTimeNS = UpdateTimer::GetCurrentClock() - m_LastDrawTime;
-	m_Assets->m_DeltaTimeS = (float)((double)deltaTimeNS / 1000000000.0);
-	m_Assets->m_FramesS += m_Assets->m_DeltaTimeS;
-	m_Assets->m_FramesRemainderS = std::fmod(m_Assets->m_FramesRemainderS + m_Assets->m_DeltaTimeS, 1.0);
-
-	// Update the loading indicator.
-	m_Assets->m_LoadingSpinnerAnimText = "";
-	if (m_Assets->m_FramesRemainderS >= 0.25)
-		m_Assets->m_LoadingSpinnerAnimText += ".";
-	if (m_Assets->m_FramesRemainderS >= 0.5)
-		m_Assets->m_LoadingSpinnerAnimText += ".";
-	if (m_Assets->m_FramesRemainderS >= 0.75)
-		m_Assets->m_LoadingSpinnerAnimText += ".";
-
-	// Update the blinking text cursor.
-	m_Assets->m_CursorPosAnimText = "";
-	if (m_Assets->m_FramesRemainderS >= 0.25)
-		m_Assets->m_CursorPosAnimText = "|";
-	if (m_Assets->m_FramesRemainderS >= 0.5)
-		m_Assets->m_CursorPosAnimText = "";
-	if (m_Assets->m_FramesRemainderS >= 0.75)
-		m_Assets->m_CursorPosAnimText = "|";
+	m_Assets->m_LoadingSpinnerAnimText.assign(animationFrame, '.');
+	m_Assets->m_CursorPosAnimText = animationFrame % 2 == 0 ? "" : "|";
 
 	sf::RenderWindow& gfx = *window.GetHandle();
 
@@ -312,7 +293,7 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 	// Restore the default view.
 	gfx.setView(gfx.getDefaultView());
 
-	m_LastDrawTime = UpdateTimer::GetCurrentClock();
+	return true;
 }
 
 void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot const& snapshot,

@@ -28,13 +28,13 @@ struct DesktopLoop
 	PrimaryUI& ui;
 };
 
-bool RenderDesktopFrame(Window* window, void* userData)
+WindowFrame RenderDesktopFrame(Window* window, void* userData)
 {
 	auto& loop = *static_cast<DesktopLoop*>(userData);
 	auto const snapshot = loop.application.Snapshot();
-	loop.ui.Render(*window, snapshot,
-				   [&loop](rogue::app::UiCommand command) { return loop.application.Submit(std::move(command)); });
-	return true;
+	bool const rendered = loop.ui.Render(
+		*window, snapshot, [&loop](rogue::app::UiCommand command) { return loop.application.Submit(std::move(command)); });
+	return rendered ? WindowFrame::Rendered : WindowFrame::Idle;
 }
 } // namespace
 
