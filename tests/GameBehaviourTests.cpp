@@ -7,7 +7,9 @@
 #include "GameConnectionManager.h"
 #include "GameData.h"
 #include "ObservedGameMemory.h"
+#include "Platform/FileSystem.h"
 #include "Timer.h"
+#include "UserData.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -17,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <memory>
 #include <span>
@@ -26,6 +29,32 @@
 
 namespace
 {
+class TemporaryWorkingDirectory
+{
+  public:
+	TemporaryWorkingDirectory() : m_Previous(std::filesystem::current_path())
+	{
+		auto const id = std::chrono::steady_clock::now().time_since_epoch().count();
+		m_Path = std::filesystem::temp_directory_path() / ("rogue-behaviour-test-" + std::to_string(id));
+		std::filesystem::create_directories(m_Path);
+		std::filesystem::current_path(m_Path);
+	}
+
+	~TemporaryWorkingDirectory()
+	{
+		std::error_code ignored;
+		std::filesystem::current_path(m_Previous, ignored);
+		std::filesystem::remove_all(m_Path, ignored);
+	}
+
+	TemporaryWorkingDirectory(TemporaryWorkingDirectory const&) = delete;
+	TemporaryWorkingDirectory& operator=(TemporaryWorkingDirectory const&) = delete;
+
+  private:
+	std::filesystem::path m_Previous;
+	std::filesystem::path m_Path;
+};
+
 class FakeGameTransport final : public IGameMemoryTransport
 {
   public:
@@ -504,6 +533,48 @@ TEST_CASE("Home Box reports an initialized screen from an earlier assistant sess
 	REQUIRE(homeBox->RequiresReopen());
 	REQUIRE_FALSE(homeBox->IsSaving());
 	REQUIRE(harness.transport->submitted.empty());
+}
+
+TEST_CASE("Home Box stops before enabling transfers when its primary file is damaged", "[home-box][recovery]")
+{
+	// This harness does not initialize real user paths. All files stay in its temporary directory.
+	REQUIRE(UserData::GetDataDirectory().empty());
+	TemporaryWorkingDirectory temporary;
+	std::filesystem::path const primary = "0/3735928559/boxes.dat";
+	std::string error;
+	REQUIRE(rogue::platform::WriteTextFileAtomically(primary, "damaged file", error));
+	SECTION("without a backup")
+	{
+	}
+	SECTION("with a valid backup")
+	{
+		rogue::storage::HomeBoxData backup;
+		backup.dimensions = {3, 0, 0xDEADBEEF, 1, 2, 5};
+		backup.records = {{0, {7, 8}, {9, 10, 11, 12, 13}}};
+		REQUIRE(rogue::storage::SaveHomeBoxFile(rogue::storage::HomeBoxBackupPath(primary), backup, error));
+	}
+
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	header.homeLocalBoxCount = 1;
+	header.homeTotalBoxCount = 2;
+	harness.AcceptHeaders(header);
+	harness.AcceptFeatureState(header, 0x02001000, 0x02002000);
+	harness.transport->submitted.clear();
+	harness.game.FindBehaviour<CommonBehaviour>()->OnUpdate(harness.game);
+	auto homeBox = harness.game.FindBehaviour<HomeBoxBehaviour>();
+	REQUIRE(homeBox != nullptr);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 header.assistantState + header.assistantConfirmOffset);
+	homeBox->OnUpdate(harness.game);
+	REQUIRE(harness.game.HasDisconnected());
+	REQUIRE(harness.transport->submitted.empty());
+	REQUIRE_FALSE(homeBox->IsSaving());
+	REQUIRE(harness.manager.Snapshot().error.find("recovery") != std::string::npos);
+	std::string unchanged;
+	REQUIRE(rogue::platform::ReadTextFile(primary, 100, unchanged, error));
+	REQUIRE(unchanged == "damaged file");
 }
 
 TEST_CASE("Home Box retries a rejected transfer chunk without skipping bytes", "[home-box][backpressure]")

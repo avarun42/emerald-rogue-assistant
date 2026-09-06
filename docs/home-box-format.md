@@ -50,9 +50,24 @@ The app writes a temporary file beside `boxes.dat`, then replaces `boxes.dat`
 with an atomic rename. It keeps the previous valid file as `boxes.dat.bak`.
 These safeguards do not change the file format.
 
-If `boxes.dat` is missing or invalid, the app tries `boxes.dat.bak`. It shows
-a warning when it loads the backup and does not overwrite an invalid main
-file. Copy the complete trainer folder before attempting recovery.
+If `boxes.dat` is missing, the app can load `boxes.dat.bak` and shows a warning.
+If `boxes.dat` is damaged, the app stops the connection before enabling storage
+transfers. It does not overwrite the damaged file, even if the backup is valid.
+This prevents a transfer that the app cannot save.
+
+To recover a damaged main file:
+
+1. Leave Extended Storage in the game and close the assistant.
+2. Copy the complete trainer folder to a safe place.
+3. Keep the damaged file by renaming it to `boxes.dat.damaged`.
+4. If `boxes.dat.bak` is available, copy it to `boxes.dat`. Keep the backup too.
+5. Restart the assistant and reload its script in mGBA. Check the stored Pokémon
+   before making another transfer.
+
+The backup may not contain the most recent transfer. Keep your game saves and
+the copied trainer folder until you have checked the result. If no valid backup
+is available, keep the files and report the problem instead of replacing them
+with empty storage.
 
 The original assistant uses a different data folder. See
 [Move Home Box data](installation.md#move-home-box-data) before switching apps.

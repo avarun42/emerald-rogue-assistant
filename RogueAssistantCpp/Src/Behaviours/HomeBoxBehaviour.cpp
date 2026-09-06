@@ -99,14 +99,22 @@ void HomeBoxBehaviour::LoadOfflineData(GameConnection& game, std::uint32_t train
 	else if (!loaded.NotFound())
 	{
 		LOG_ERROR("Home Box load failed: %s", loaded.error.c_str());
-		game.ReportError("The Home Box file is invalid.\nIt was not changed.");
+		game.ReportError("Cannot load Home Box.\nBack up its files before recovery.");
+		game.Disconnect();
+		return;
 	}
 
 	if (!loaded.warning.empty())
 	{
 		LOG_WARN("Home Box load warning: %s", loaded.warning.c_str());
 		if (loaded.primaryInvalid)
-			game.ReportError("Loaded the Home Box backup.\nThe invalid file was not changed.");
+		{
+			// Saving refuses to replace a damaged primary. Do not enable transfers
+			// that could remove Pokémon from the game without saving them to disk.
+			game.ReportError("Home Box needs recovery.\nBack up its files before continuing.");
+			game.Disconnect();
+			return;
+		}
 		else
 			game.ReportError("Loaded Home Box with a warning.\nSee RogueAssistant.log for details.");
 	}
