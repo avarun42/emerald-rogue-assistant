@@ -17,8 +17,15 @@ script again. Reload that new script in mGBA.
 
 ## The port is already in use
 
-Press `P` on the waiting screen. Enter a port from 1 to 65535, then press
-Enter. Emerald Rogue Assistant keeps the old port if it cannot open the new one.
+If the app reports "Cannot listen on port", close any other copies of Emerald
+Rogue Assistant and restart it. Port changes in the window do not work after
+this startup error. If another program needs that port, start the assistant
+with a different `--bridge-port` value. See
+[Command line](installation.md#command-line).
+
+Once the app is listening, press `P` on the waiting screen to change the port.
+Enter a port from 1 to 65535, then press Enter. The app keeps the old port if it
+cannot open the new one.
 
 Export and reload the Lua script after the port changes.
 
@@ -37,15 +44,16 @@ This state stops Emerald Rogue Assistant from changing data from an old connecti
 
 ## Home Box could not load or save
 
-Do not delete the Home Box files. Emerald Rogue Assistant leaves an invalid main file
-unchanged and tries its backup. The app shows a warning when it loads a backup.
+Do not delete the Home Box files. If the main file is damaged, the assistant
+stops storage access so it cannot accept a transfer that it cannot save.
 
 Copy the complete trainer folder before you try to repair anything. See
 [Home Box file format](home-box-format.md) for file names and recovery rules.
 
 ## macOS blocks the app
 
-An ad hoc signed beta can show an unknown developer warning. Follow the macOS
+An app without an Apple Developer ID signature can show an unknown developer
+warning. Follow the macOS
 steps in [Install Emerald Rogue Assistant](installation.md#macos).
 
 The current macOS package is for Apple silicon. Do not start it through Rosetta
@@ -65,7 +73,6 @@ When you report a problem, include:
 - Your operating system and CPU type
 - The versions of Emerald Rogue Assistant, mGBA, and Emerald Rogue
 - The Vanilla or EX edition
-- The ROM Assistant API version
 - What you expected
 - What happened
 - The relevant log lines, after you check them for private data

@@ -24,9 +24,14 @@ The port has been tested in the game on Apple silicon with mGBA 0.10.5
 and Emerald Rogue 2.2.0 Vanilla. Windows, Linux, EX, Home Box recovery, and
 cross-platform multiplayer still need more live testing.
 
+Both players must use this port for multiplayer. It cannot connect to the
+original Windows assistant. Home Box files keep the original format and can
+be moved between the apps; see [Move Home Box data](docs/installation.md#move-home-box-data).
+
 ## Get started
 
-1. Download the package for your system from GitHub Releases.
+1. Download the package for your system from
+   [GitHub Releases](https://github.com/avarun42/emerald-rogue-assistant/releases).
 2. Follow the steps in [Install Emerald Rogue Assistant](docs/installation.md).
 3. Start Emerald Rogue Assistant.
 4. Open Emerald Rogue in mGBA.

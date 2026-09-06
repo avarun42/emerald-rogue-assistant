@@ -146,7 +146,7 @@ CompatibilityResult CheckCompatibility(Hello const& local, Hello const& remote)
 	if (!ValidateHello(remote, validationError))
 	{
 		if (remote.romAssistantApi != RequiredRomAssistantApi)
-			result.error = "The other player does not use ROM Assistant API 3.";
+			result.error = "The other game version\nis not supported.";
 		else if (!rom::IsSupportedEdition(remote.edition))
 			result.error = "The other player uses a different ROM edition.";
 		else
@@ -154,9 +154,9 @@ CompatibilityResult CheckCompatibility(Hello const& local, Hello const& remote)
 		return result;
 	}
 	if (local.protocolMajor != remote.protocolMajor)
-		result.error = "The other player uses a different multiplayer protocol.";
+		result.error = "Use the same assistant version\non both computers.";
 	else if (local.romAssistantApi != remote.romAssistantApi)
-		result.error = "The other player does not use ROM Assistant API 3.";
+		result.error = "The other game version\nis not supported.";
 	else if (local.edition != remote.edition)
 		result.error = "The other player uses a different ROM edition.";
 	else if (local.playerCount != remote.playerCount)
@@ -164,7 +164,7 @@ CompatibilityResult CheckCompatibility(Hello const& local, Hello const& remote)
 	else if (local.multiplayerStateSize != remote.multiplayerStateSize || local.handshakeSize != remote.handshakeSize ||
 			 local.gameStateSize != remote.gameStateSize || local.playerProfileSize != remote.playerProfileSize ||
 			 local.playerStateSize != remote.playerStateSize)
-		result.error = "The games use different multiplayer data sizes.";
+		result.error = "The game versions do not match.";
 	else
 	{
 		result.compatible = true;

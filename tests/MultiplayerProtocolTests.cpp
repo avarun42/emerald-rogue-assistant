@@ -91,21 +91,21 @@ TEST_CASE("multiplayer compatibility gates protocol, ROM API, edition, and layou
 	remote.protocolMajor = 2;
 	compatibility = CheckCompatibility(local, remote);
 	REQUIRE_FALSE(compatibility.compatible);
-	REQUIRE(compatibility.error.find("multiplayer protocol") != std::string::npos);
+	REQUIRE(compatibility.error.find("assistant version") != std::string::npos);
 
 	remote = local;
 	remote.edition = 0;
 	REQUIRE(CheckCompatibility(local, remote).error.find("edition") != std::string::npos);
 	remote = local;
 	remote.romAssistantApi = 2;
-	REQUIRE(CheckCompatibility(local, remote).error.find("API 3") != std::string::npos);
+	REQUIRE(CheckCompatibility(local, remote).error.find("game version") != std::string::npos);
 	remote = local;
 	remote.playerCount++;
 	REQUIRE(CheckCompatibility(local, remote).error.find("numbers of players") != std::string::npos);
 	remote = local;
 	remote.handshakeSize++;
-	REQUIRE(CheckCompatibility(local, remote).error.find("data sizes") != std::string::npos);
+	REQUIRE(CheckCompatibility(local, remote).error.find("game versions") != std::string::npos);
 	remote = local;
 	remote.multiplayerStateSize++;
-	REQUIRE(CheckCompatibility(local, remote).error.find("data sizes") != std::string::npos);
+	REQUIRE(CheckCompatibility(local, remote).error.find("game versions") != std::string::npos);
 }

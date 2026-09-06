@@ -347,7 +347,7 @@ TEST_CASE("CommonBehaviour accepts only ROM Assistant API 3 and keeps Vanilla an
 		REQUIRE(common != nullptr);
 		common->OnUpdate(harness.game);
 		REQUIRE(harness.game.HasDisconnected());
-		REQUIRE(harness.manager.Snapshot().error.find("API 3") != std::string::npos);
+		REQUIRE(harness.manager.Snapshot().error.find("game version") != std::string::npos);
 	}
 
 	for (std::uint8_t edition : std::array<std::uint8_t, 2>{0, 1})

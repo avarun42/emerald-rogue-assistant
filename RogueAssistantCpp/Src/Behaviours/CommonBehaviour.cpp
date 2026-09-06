@@ -25,7 +25,8 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 
 	if (rogueHeader.rogueAssistantCompatVersion != rogue::rom::RequiredAssistantApi)
 	{
-		game.ReportError("This ROM is not compatible.\nUse a ROM with Assistant API 3.");
+		LOG_WARN("Unsupported ROM Assistant API: %u", rogueHeader.rogueAssistantCompatVersion);
+		game.ReportError("This game version is not supported.\nCheck for an assistant update.");
 		game.Disconnect();
 		return;
 	}
