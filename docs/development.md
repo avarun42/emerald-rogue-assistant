@@ -99,24 +99,6 @@ changes.
 - Keep all supported builds working after each commit.
 - Add or update tests when behavior changes.
 
-## Writing rules
-
-Use clear US English in documentation, app text, command output, logs, code
-comments, and commit messages.
-
-- Use common words and short sentences.
-- Use one term for each idea.
-- Use active voice and present tense.
-- Tell the reader what happened and what to do next.
-- Keep internal design terms out of app messages unless they help solve a
-  problem.
-- Define a needed special term the first time you use it.
-- Keep detailed protocol and file errors in the log. Show a short error and a
-  useful next step in the app.
-- Write `on port 30125` instead of the less clear `:30125`.
-
-Do not edit third-party license text.
-
 ## Release packages
 
 The release presets are `release-windows-x64`, `release-macos-arm64`, and
