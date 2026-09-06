@@ -12,6 +12,7 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <string_view>
 
 namespace fs = std::filesystem;
 using namespace rogue::platform;
@@ -230,6 +231,17 @@ TEST_CASE("bridge script export substitutes only the configured port and writes 
 	REQUIRE_FALSE(exported.Succeeded());
 	REQUIRE(ReadText(temporary.Path() / "data" / "scripts" / "RogueAssistant_mGBA.lua").find("41234") !=
 			std::string::npos);
+}
+
+TEST_CASE("UTF-8 paths preserve bytes and respect string view bounds", "[platform][paths][utf8]")
+{
+	REQUIRE(PathFromUtf8({}).empty());
+	std::string const text = "Pok\xC3\xA9mon/\xE6\x97\xA5\xE6\x9C\xAC/\xF0\x9F\x8E\xAE.dat";
+	REQUIRE(PathToUtf8(PathFromUtf8(text)) == text);
+
+	std::string const padded = "prefix" + text + "suffix";
+	std::string_view const slice(padded.data() + 6, text.size());
+	REQUIRE(PathToUtf8(PathFromUtf8(slice)) == text);
 }
 
 TEST_CASE("portable logging writes UTF-8 diagnostics to the configured data path", "[platform][logging]")

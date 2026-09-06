@@ -65,7 +65,7 @@ namespace rogue::platform
 
 	std::filesystem::path PathFromUtf8(std::string_view text)
 	{
-		std::u8string const encoded(reinterpret_cast<char8_t const*>(text.data()), text.size());
+		std::u8string const encoded(text.begin(), text.end());
 		return std::filesystem::path(encoded);
 	}
 
