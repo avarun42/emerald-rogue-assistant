@@ -5,7 +5,7 @@
 Check these items:
 
 1. Use mGBA 0.10.5 or later.
-2. Start an Emerald Rogue ROM with Assistant API 3.
+2. Start Emerald Rogue 2.2.0 or later, in either the Vanilla or EX edition.
 3. Press `R` in Emerald Rogue Assistant to open the exported script folder.
 4. Open **Tools > Scripting** in mGBA.
 5. Load `RogueAssistant_mGBA.lua` from the exported script folder.
@@ -24,11 +24,8 @@ Export and reload the Lua script after the port changes.
 
 ## The ROM is not compatible
 
-Emerald Rogue Assistant 1.0 requires ROM Assistant API 3. It accepts both the Vanilla
-and EX editions. It rejects older APIs and unknown future APIs.
-
-The ROM reports its API and memory layout after it starts. Emerald Rogue Assistant does
-not inspect the `.gba` file itself.
+Use Emerald Rogue 2.2.0 or later, in either the Vanilla or EX edition. If you
+have just updated the game, check for an update to Emerald Rogue Assistant too.
 
 ## Storage transfer stopped
 

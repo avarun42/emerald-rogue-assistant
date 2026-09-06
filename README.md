@@ -15,13 +15,12 @@ This project is a cross-platform port of
 ## Supported systems
 
 - mGBA 0.10.5 or later
-- Emerald Rogue with ROM Assistant API 3
-- Vanilla and EX editions
+- Emerald Rogue 2.2.0 or later (Vanilla or EX)
 - Windows x64
 - macOS 11 or later on Apple silicon
 - Linux x86_64
 
-The current beta has been tested in the game on Apple silicon with mGBA 0.10.5
+The port has been tested in the game on Apple silicon with mGBA 0.10.5
 and Emerald Rogue 2.2.0 Vanilla. Windows, Linux, EX, Home Box recovery, and
 cross-platform multiplayer still need more live testing.
 

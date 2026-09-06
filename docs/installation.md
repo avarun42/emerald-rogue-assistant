@@ -8,7 +8,7 @@ packages do not include a ROM.
 You need:
 
 - mGBA 0.10.5 or later with Lua support
-- Emerald Rogue Vanilla or EX with ROM Assistant API 3
+- Emerald Rogue 2.2.0 or later (Vanilla or EX)
 - Windows x64, macOS 11 or later on Apple silicon, or Linux x86_64
 - A free local TCP port; the default is `30125`
 
@@ -18,24 +18,26 @@ The host might need to allow this port through a firewall.
 ## Check the download
 
 Each release includes `SHA256SUMS`. Use it to check that your download is
-complete and unchanged.
+complete and unchanged. In the commands below, replace `<build>` with the
+label in your downloaded filename. Development packages use `dev-` followed
+by a commit ID; named releases use a version such as `1.0.0-alpha.0`.
 
 On Windows PowerShell:
 
 ```powershell
-Get-FileHash .\RogueAssistant-1.0.0-beta.1-windows-x64.zip -Algorithm SHA256
+Get-FileHash '.\RogueAssistant-<build>-windows-x64.zip' -Algorithm SHA256
 ```
 
 On macOS:
 
 ```sh
-shasum -a 256 RogueAssistant-1.0.0-beta.1-macos-arm64.dmg
+shasum -a 256 'RogueAssistant-<build>-macos-arm64.dmg'
 ```
 
 On Linux:
 
 ```sh
-sha256sum RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage
+sha256sum 'RogueAssistant-<build>-linux-x86_64.AppImage'
 ```
 
 Compare the full value with the matching line in `SHA256SUMS`. Do not use the
@@ -43,7 +45,7 @@ file if the values differ.
 
 ## Windows
 
-Extract `RogueAssistant-1.0.0-beta.1-windows-x64.zip` to a folder where you can
+Extract `RogueAssistant-<build>-windows-x64.zip` to a folder where you can
 write files. Run `bin\RogueAssistant.exe`.
 
 Keep the `resources` folder beside the app. The app cannot start if you move
@@ -51,10 +53,10 @@ only the `.exe` file.
 
 ## macOS
 
-Open `RogueAssistant-1.0.0-beta.1-macos-arm64.dmg`. Drag
+Open `RogueAssistant-<build>-macos-arm64.dmg`. Drag
 `RogueAssistant.app` to Applications.
 
-The beta package runs only on Apple silicon. A package from GitHub Actions uses
+The macOS package runs only on Apple silicon. A package from GitHub Actions uses
 an ad hoc signature unless the release job has Apple signing details. macOS
 can show an unknown developer warning for an ad hoc signed build.
 
@@ -72,12 +74,12 @@ Settings > Privacy & Security** and select **Open Anyway**.
 To use the AppImage:
 
 ```sh
-chmod +x RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage
-./RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage
+chmod +x 'RogueAssistant-<build>-linux-x86_64.AppImage'
+'./RogueAssistant-<build>-linux-x86_64.AppImage'
 ```
 
 You can also extract
-`RogueAssistant-1.0.0-beta.1-linux-x86_64.tar.gz`. Run
+`RogueAssistant-<build>-linux-x86_64.tar.gz`. Run
 `bin/RogueAssistant` from the extracted files. Keep `bin/resources` beside the
 app.
 
