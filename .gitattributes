@@ -1,5 +1,8 @@
 * text=auto eol=lf
 
+# Hide line-by-line diffs for bundled third-party code.
+RogueAssistantCpp/External/** -diff
+
 *.png binary
 *.ico binary
 *.icns binary
