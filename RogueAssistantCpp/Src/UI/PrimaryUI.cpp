@@ -5,6 +5,7 @@
 #include "Platform/ResourceLocator.h"
 #include "Platform/Utf8.h"
 #include "RogueAssistantVersion.h"
+#include "UI/TextCache.h"
 #include "UI/TextEncoding.h"
 #include "UI/Window.h"
 
@@ -71,6 +72,7 @@ struct AssetCollection
 	sf::Color m_ErrorFontColour;
 	sf::Font m_Font;
 	sf::Texture m_PoketchOverlay;
+	rogue::ui::TextCache m_Text{m_Font};
 
 	explicit AssetCollection(std::filesystem::path const& resourceDirectory)
 	{
@@ -94,7 +96,7 @@ struct AssetCollection
 		m_PoketchOverlay.setSmooth(false);
 	}
 
-	sf::Text CreateText(sf::RenderWindow const& gfx, std::string const& msg, int fontSize)
+	sf::Text& CreateText(sf::RenderWindow const& gfx, std::string const& msg, int fontSize)
 	{
 		// UI positions are authored in a 256x192 view. Rasterize glyphs near the
 		// framebuffer resolution, then scale their geometry back into view units.
@@ -109,7 +111,7 @@ struct AssetCollection
 		}
 
 		unsigned int const rasterSize = static_cast<unsigned int>(std::ceil(fontSize * rasterScale));
-		sf::Text text(m_Font, rogue::ui::DecodeUtf8(msg), rasterSize);
+		sf::Text& text = m_Text.Get(rogue::ui::DecodeUtf8(msg), rasterSize);
 		text.setScale(sf::Vector2f(1.0F / rasterScale, 1.0F / rasterScale));
 		return text;
 	}
@@ -117,7 +119,7 @@ struct AssetCollection
 	void DrawCenteredText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
 						  sf::Color const& colour)
 	{
-		sf::Text text = CreateText(gfx, msg, fontSize);
+		sf::Text& text = CreateText(gfx, msg, fontSize);
 		text.setFillColor(colour);
 		text.setOrigin(sf::Vector2f(text.getLocalBounds().size.x / 2, 0));
 		text.setPosition(pos);
@@ -127,7 +129,7 @@ struct AssetCollection
 	void DrawLeftAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
 							 sf::Color const& colour)
 	{
-		sf::Text text = CreateText(gfx, msg, fontSize);
+		sf::Text& text = CreateText(gfx, msg, fontSize);
 		text.setFillColor(colour);
 		text.setOrigin(sf::Vector2f(0, 0));
 		text.setPosition(pos);
@@ -137,7 +139,7 @@ struct AssetCollection
 	void DrawRightAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
 							  sf::Color const& colour)
 	{
-		sf::Text text = CreateText(gfx, msg, fontSize);
+		sf::Text& text = CreateText(gfx, msg, fontSize);
 		text.setFillColor(colour);
 		text.setOrigin(sf::Vector2f(text.getLocalBounds().size.x, 0));
 		text.setPosition(pos);
@@ -163,6 +165,7 @@ void PrimaryUI::SetToStubTheme()
 
 void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand)
 {
+	m_Assets->m_Text.BeginFrame();
 	// Calculate the elapsed frame time.
 	TimeDurationNS deltaTimeNS = UpdateTimer::GetCurrentClock() - m_LastDrawTime;
 	m_Assets->m_DeltaTimeS = (float)((double)deltaTimeNS / 1000000000.0);

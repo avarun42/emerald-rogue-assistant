@@ -43,7 +43,9 @@ bool Window::Create()
 	m_WindowHandle->create(
 		sf::VideoMode({static_cast<unsigned int>(m_Config.width), static_cast<unsigned int>(m_Config.height)}),
 		m_Config.title, style);
-	m_WindowHandle->setVerticalSyncEnabled(true);
+	// This status window does not need to redraw at the monitor's refresh rate.
+	m_WindowHandle->setVerticalSyncEnabled(false);
+	m_WindowHandle->setFramerateLimit(30);
 
 	sf::Image icon;
 	if (LoadWindowIcon(icon, m_Config.resourceDirectory))
