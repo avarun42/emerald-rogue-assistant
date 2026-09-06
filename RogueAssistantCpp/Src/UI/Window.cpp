@@ -143,5 +143,5 @@ void Window::EnterMainLoop(WindowCallback const& callback, void* userData)
 		}
 	}
 
-	Destroy();
+	// The caller stops the session worker before this Window leaves scope.
 }
