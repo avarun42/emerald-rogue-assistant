@@ -61,20 +61,6 @@ if [[ "$(lipo -archs "$executable")" != arm64 ]]; then
   exit 1
 fi
 
-doc_dir="$app/Contents/Resources/Documentation"
-for document in README.md THIRD_PARTY_NOTICES.md; do
-  if [[ ! -f "$doc_dir/$document" ]]; then
-    echo "installed package is missing documentation: $document" >&2
-    exit 1
-  fi
-  cmake -E copy "$doc_dir/$document" "$stage_root/$document"
-done
-if [[ ! -f "$doc_dir/docs/installation.md" ]]; then
-  echo "installed package is missing documentation: docs/installation.md" >&2
-  exit 1
-fi
-cmake -E copy "$doc_dir/docs/installation.md" "$stage_root/installation.md"
-cmake -E copy_directory "$doc_dir/docs" "$stage_root/docs"
 ln -s /Applications "$stage_root/Applications"
 
 signing_identity="${APPLE_SIGNING_IDENTITY:-}"
@@ -105,10 +91,9 @@ else
 fi
 codesign --verify --deep --strict --verbose=2 "$app"
 
-zip_output="$output_dir/RogueAssistant-$build_label-macos-arm64.zip"
 dmg_output="$output_dir/RogueAssistant-$build_label-macos-arm64.dmg"
 notary_zip="$output_dir/.RogueAssistant-$build_label-notarization.zip"
-cmake -E rm -f "$zip_output" "$dmg_output" "$notary_zip"
+cmake -E rm -f "$dmg_output" "$notary_zip"
 
 if [[ $notary_value_count -eq 3 ]]; then
   ditto -c -k --sequesterRsrc --keepParent "$app" "$notary_zip"
@@ -121,7 +106,6 @@ if [[ $notary_value_count -eq 3 ]]; then
   cmake -E rm -f "$notary_zip"
 fi
 
-ditto -c -k --sequesterRsrc --keepParent "$app" "$zip_output"
 hdiutil create \
   -quiet \
   -format UDZO \
@@ -142,22 +126,34 @@ if [[ $notary_value_count -eq 3 ]]; then
   xcrun stapler staple "$dmg_output"
 fi
 
-test -s "$zip_output"
 test -s "$dmg_output"
 
 hdiutil verify -quiet "$dmg_output"
-zip_verify_root="$build_dir/macos-zip-verify"
-cmake -E rm -rf "$zip_verify_root"
-cmake -E make_directory "$zip_verify_root"
-ditto -x -k "$zip_output" "$zip_verify_root"
+dmg_verify_root="$(mktemp -d "$build_dir/macos-dmg-verify.XXXXXX")"
+dmg_mounted=false
+cleanup_mount() {
+  if [[ "$dmg_mounted" == true ]]; then
+    hdiutil detach -quiet "$dmg_verify_root" || return
+  fi
+  rmdir "$dmg_verify_root"
+}
+trap cleanup_mount EXIT
+hdiutil attach -quiet -readonly -nobrowse -mountpoint "$dmg_verify_root" "$dmg_output"
+dmg_mounted=true
+for entry in "$dmg_verify_root"/*; do
+  case "$(basename "$entry")" in
+    RogueAssistant.app|Applications) ;;
+    *) echo "unexpected installer item: $entry" >&2; exit 1 ;;
+  esac
+done
+test "$(readlink "$dmg_verify_root/Applications")" = /Applications
 cmake \
-  "-DROGUE_INSTALL_ROOT=$zip_verify_root" \
+  "-DROGUE_INSTALL_ROOT=$dmg_verify_root" \
   -DROGUE_INSTALL_PLATFORM=macos \
   "-DROGUE_EXPECTED_VERSION=$version" \
   -P "$repo_root/cmake/VerifyInstall.cmake"
-codesign --verify --deep --strict --verbose=2 "$zip_verify_root/RogueAssistant.app"
-if [[ "$(lipo -archs "$zip_verify_root/RogueAssistant.app/Contents/MacOS/RogueAssistant")" != arm64 ]]; then
-  echo "archived application executable is not arm64-only" >&2
+codesign --verify --deep --strict --verbose=2 "$dmg_verify_root/RogueAssistant.app"
+if [[ "$(lipo -archs "$dmg_verify_root/RogueAssistant.app/Contents/MacOS/RogueAssistant")" != arm64 ]]; then
+  echo "installer application executable is not arm64-only" >&2
   exit 1
 fi
-cmake -E rm -rf "$zip_verify_root"

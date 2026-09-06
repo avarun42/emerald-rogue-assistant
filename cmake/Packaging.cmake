@@ -59,8 +59,7 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 if(WIN32)
   set(CPACK_GENERATOR ZIP)
 elseif(APPLE)
-  # package.sh creates the signed ZIP and DMG. This CPack ZIP is only for
-  # checking a local install tree.
+  # Releases use the DMG from package.sh. This archive is for local install checks.
   set(CPACK_GENERATOR ZIP)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CPACK_GENERATOR TGZ)

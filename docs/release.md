@@ -27,16 +27,16 @@ release version or development label. Do not rename packages to change their
 version; that would leave the version inside the app unchanged.
 
 - `RogueAssistant-<build>-windows-x64.zip`
-- `RogueAssistant-<build>-macos-arm64.zip`
 - `RogueAssistant-<build>-macos-arm64.dmg`
 - `RogueAssistant-<build>-linux-x86_64.AppImage`
 - `RogueAssistant-<build>-linux-x86_64.tar.gz`
 - `THIRD_PARTY_NOTICES.md`
 - `SHA256SUMS`
 
-The macOS ZIP contains the same `.app` as the DMG. Every system package also
-contains the README, public guides, third-party notices, and dependency license
-files.
+The macOS DMG contains the app and an Applications shortcut. Third-party
+notices, dependency licenses, and guides are inside the app, under
+`Contents/Resources/Documentation`. There is no separate macOS app ZIP.
+Windows and Linux packages also include the notices, licenses, and guides.
 
 ## Local package builds
 
@@ -144,7 +144,8 @@ After the release workflow finishes:
 2. Download the complete release artifact.
 3. Check every file against `SHA256SUMS`.
 4. Install and start the package for the system you can test.
-5. Check its version, CPU type, resources, signature, ZIP, and installer image.
+5. Check its version, CPU type, resources, and package contents. On macOS, also
+   check the signature and installer image.
 6. Read the draft notes and state all live test gaps.
 7. Publish alpha, beta, and release-candidate drafts as prereleases. Publish a
    final version without the prerelease marker.

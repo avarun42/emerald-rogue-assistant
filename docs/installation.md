@@ -56,6 +56,11 @@ only the `.exe` file.
 Open `RogueAssistant-<build>-macos-arm64.dmg`. Drag
 `RogueAssistant.app` to Applications.
 
+The DMG contains only the app and an Applications shortcut. You do not need a
+second ZIP download. GitHub Actions wraps development artifacts in a ZIP;
+extract that download and open the DMG inside. Named GitHub releases provide
+the DMG directly.
+
 The macOS package runs only on Apple silicon. A package from GitHub Actions uses
 an ad hoc signature unless the release job has Apple signing details. macOS
 can show an unknown developer warning for an ad hoc signed build.
