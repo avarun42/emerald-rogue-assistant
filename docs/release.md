@@ -4,21 +4,33 @@ This page explains how to build, test, and publish Emerald Rogue Assistant packa
 
 ## Version
 
-`cmake/Version.cmake` is the only source for the app version. It contains a
-three-part number and an optional prerelease name.
+`cmake/Version.cmake` sets the three-part version number. The full version is
+chosen when CMake runs:
 
-CMake uses the full version in the UI, logs, command output, and package names.
+- A development build includes the commit ID, such as
+  `1.0.0-dev.g5c742bbe54fe`. Its package label is `dev-5c742bbe54fe`.
+- A named release uses its Git tag. For example, `v1.0.0-alpha.0` produces
+  version `1.0.0-alpha.0`.
+
+Local changes add a `dirty` label. Source files without Git history use an
+`unknown` label. Use a clean Git checkout for packages that you share with
+testers. Named releases require a clean checkout of the specified tag.
+
+CMake uses the full version in the UI, logs, and command output. Package names
+use the release version or development label.
 Windows and macOS system fields use the three-part number when they require a
 number. The bridge protocol, multiplayer protocol, Home Box format, and ROM
 Assistant API have their own versions.
 
-For version 1.0.0 beta 1, the release set is:
+Package names are generated automatically. In this list, `<build>` is the
+release version or development label. Do not rename packages to change their
+version; that would leave the version inside the app unchanged.
 
-- `RogueAssistant-1.0.0-beta.1-windows-x64.zip`
-- `RogueAssistant-1.0.0-beta.1-macos-arm64.zip`
-- `RogueAssistant-1.0.0-beta.1-macos-arm64.dmg`
-- `RogueAssistant-1.0.0-beta.1-linux-x86_64.AppImage`
-- `RogueAssistant-1.0.0-beta.1-linux-x86_64.tar.gz`
+- `RogueAssistant-<build>-windows-x64.zip`
+- `RogueAssistant-<build>-macos-arm64.zip`
+- `RogueAssistant-<build>-macos-arm64.dmg`
+- `RogueAssistant-<build>-linux-x86_64.AppImage`
+- `RogueAssistant-<build>-linux-x86_64.tar.gz`
 - `THIRD_PARTY_NOTICES.md`
 - `SHA256SUMS`
 
@@ -45,7 +57,7 @@ On macOS:
 cmake --preset release-macos-arm64 --fresh -G Ninja
 cmake --build --preset release-macos-arm64 --parallel
 ctest --preset release-macos-arm64
-bash packaging/macos/package.sh build/release-macos-arm64 dist 1.0.0-beta.1
+bash packaging/macos/package.sh build/release-macos-arm64 dist
 ```
 
 On Linux:
@@ -73,18 +85,25 @@ The output must be `arm64`.
 
 ## GitHub Actions
 
-The `Release packages` workflow supports two ways to run:
+The `Build packages` workflow supports two ways to run:
 
-- Start it by hand to build test packages. This creates workflow artifacts but
-  no GitHub release.
-- Push a tag that matches `v<app version>`, such as `v1.0.0-beta.1`. This also
-  creates or updates a draft GitHub release.
+- Start it by hand from a branch to build development packages. Their names
+  include the commit ID. This creates workflow artifacts but no GitHub release.
+- Push a version tag, such as `v1.0.0-alpha.0`, to build a named release. This
+  also creates or updates a draft GitHub release.
 
-The workflow checks that the tag and CMake version match. It builds and tests
-all three systems, checks each installed file set, creates package files, and
+The workflow passes the tag to CMake through `ROGUE_RELEASE_TAG`. CMake checks
+that the tag points to the current commit and its three-part number matches
+the source. Without that option, even a tagged commit builds as a development
+version. To build a named release locally, check out the tag and add
+`-DROGUE_RELEASE_TAG=v1.0.0-alpha.0` to the configure command.
+
+The workflow builds and tests all three systems, checks each installed file
+set, creates package files, and
 writes `SHA256SUMS`. A version with a prerelease name becomes a GitHub
 prerelease. The workflow always leaves the GitHub release as a draft. A person
-must check and publish it.
+must check and publish it. A rerun can replace files in a draft, but it refuses
+to replace files in a published release.
 
 ## macOS signing
 
@@ -106,15 +125,18 @@ certificate set. The job fails if only part of a set is present.
 The job uses a temporary keychain and deletes it at the end. It checks the app
 signature and DMG before it uploads them.
 
-## Publish a beta
+## Publish a release
 
-Before you create the beta tag:
+Before you create the release tag:
 
-1. Update `cmake/Version.cmake` and the release notes.
+1. Choose the release version. Update the three-part number in
+   `cmake/Version.cmake` only if that number changes. The tag supplies labels
+   such as `alpha.0`, `beta.1`, or `rc.1`.
 2. Confirm that the change is on the intended default-branch commit.
 3. Confirm that normal hosted CI passes on that commit.
 4. Complete the live mGBA checks that are possible on the current system.
-5. Create and push a signed tag that exactly matches the app version.
+5. Create and push a signed tag for the chosen version, such as
+   `v1.0.0-alpha.0`.
 
 After the release workflow finishes:
 
@@ -124,7 +146,8 @@ After the release workflow finishes:
 4. Install and start the package for the system you can test.
 5. Check its version, CPU type, resources, signature, ZIP, and installer image.
 6. Read the draft notes and state all live test gaps.
-7. Publish the draft as a prerelease.
+7. Publish alpha, beta, and release-candidate drafts as prereleases. Publish a
+   final version without the prerelease marker.
 
 Do not call an untested system or ROM edition verified. Beta releases exist so
 other users can help close those gaps.

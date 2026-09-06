@@ -2,22 +2,17 @@
 
 set -euo pipefail
 
-if [[ $# -ne 4 ]]; then
-  echo "usage: build-appimage.sh BUILD_DIR OUTPUT_DIR LINUXDEPLOY VERSION" >&2
+if [[ $# -ne 3 ]]; then
+  echo "usage: build-appimage.sh BUILD_DIR OUTPUT_DIR LINUXDEPLOY" >&2
   exit 2
 fi
 
 build_dir="$1"
 output_dir="$2"
 linuxdeploy="$3"
-version="$4"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 repo_root="$(cd "$script_dir/../.." && pwd -P)"
 
-if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
-  echo "invalid application version: $version" >&2
-  exit 2
-fi
 if [[ ! -d "$build_dir" ]]; then
   echo "build directory does not exist: $build_dir" >&2
   exit 2
@@ -32,6 +27,13 @@ if [[ "$(uname -s)" != Linux || "$(uname -m)" != x86_64 ]]; then
 fi
 
 build_dir="$(cd "$build_dir" && pwd -P)"
+version="$(sed -n '1p' "$build_dir/RogueAssistant-build.txt")"
+build_label="$(sed -n '2p' "$build_dir/RogueAssistant-build.txt")"
+if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ||
+      ! "$build_label" =~ ^[0-9A-Za-z.-]+$ ]]; then
+  echo "invalid build version; configure and build the app again" >&2
+  exit 2
+fi
 mkdir -p "$output_dir"
 output_dir="$(cd "$output_dir" && pwd -P)"
 
@@ -64,7 +66,7 @@ for required_file in "$executable" "$desktop_file" "$icon_file"; do
   fi
 done
 
-output="$output_dir/RogueAssistant-$version-linux-x86_64.AppImage"
+output="$output_dir/RogueAssistant-$build_label-linux-x86_64.AppImage"
 cmake -E rm -f "$output"
 
 export ARCH=x86_64

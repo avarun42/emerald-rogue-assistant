@@ -73,9 +73,14 @@ affects packaging or when you prepare a release.
 
 ## Versions
 
-`cmake/Version.cmake` is the only source for the app version. It stores a
-three-part number and an optional prerelease name. The window, logs, command
-line, and package names use the full version.
+`cmake/Version.cmake` sets the three-part version number. Development builds
+add the current commit ID, such as `1.0.0-dev.g5c742bbe54fe`. Local changes add
+`.dirty`. Without Git history, the build reports `dev.gunknown`.
+
+Named releases get their full version from a Git tag, such as
+`v1.0.0-alpha.0`. They require a clean checkout of that tag. See
+[Release process](release.md) for the build option. Run CMake again after
+changing commits so that the build records the current version.
 
 The bridge protocol, multiplayer protocol, Home Box format, and ROM Assistant
 API have separate versions. Do not change one only because the app version

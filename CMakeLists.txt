@@ -11,6 +11,8 @@ project(
 
 set(ROGUE_ASSISTANT_APPLICATION_ID "assistant.emerald.rogue")
 set(ROGUE_ASSISTANT_DISPLAY_NAME "Emerald Rogue Assistant")
+file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/RogueAssistant-build.txt"
+    CONTENT "${ROGUE_ASSISTANT_VERSION}\n${ROGUE_ASSISTANT_BUILD_LABEL}\n")
 
 if(MSVC)
     # Use the static runtime so the ZIP works without a separate Visual C++

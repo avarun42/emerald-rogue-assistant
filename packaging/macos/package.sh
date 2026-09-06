@@ -2,21 +2,16 @@
 
 set -euo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "usage: package.sh BUILD_DIR OUTPUT_DIR VERSION" >&2
+if [[ $# -ne 2 ]]; then
+  echo "usage: package.sh BUILD_DIR OUTPUT_DIR" >&2
   exit 2
 fi
 
 build_dir="$1"
 output_dir="$2"
-version="$3"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 repo_root="$(cd "$script_dir/../.." && pwd -P)"
 
-if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
-  echo "invalid application version: $version" >&2
-  exit 2
-fi
 if [[ ! -d "$build_dir" ]]; then
   echo "build directory does not exist: $build_dir" >&2
   exit 2
@@ -27,6 +22,13 @@ if [[ "$(uname -s)" != Darwin ]]; then
 fi
 
 build_dir="$(cd "$build_dir" && pwd -P)"
+version="$(sed -n '1p' "$build_dir/RogueAssistant-build.txt")"
+build_label="$(sed -n '2p' "$build_dir/RogueAssistant-build.txt")"
+if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ||
+      ! "$build_label" =~ ^[0-9A-Za-z.-]+$ ]]; then
+  echo "invalid build version; configure and build the app again" >&2
+  exit 2
+fi
 mkdir -p "$output_dir"
 output_dir="$(cd "$output_dir" && pwd -P)"
 
@@ -103,9 +105,9 @@ else
 fi
 codesign --verify --deep --strict --verbose=2 "$app"
 
-zip_output="$output_dir/RogueAssistant-$version-macos-arm64.zip"
-dmg_output="$output_dir/RogueAssistant-$version-macos-arm64.dmg"
-notary_zip="$output_dir/.RogueAssistant-$version-notarization.zip"
+zip_output="$output_dir/RogueAssistant-$build_label-macos-arm64.zip"
+dmg_output="$output_dir/RogueAssistant-$build_label-macos-arm64.dmg"
+notary_zip="$output_dir/.RogueAssistant-$build_label-notarization.zip"
 cmake -E rm -f "$zip_output" "$dmg_output" "$notary_zip"
 
 if [[ $notary_value_count -eq 3 ]]; then
@@ -124,7 +126,7 @@ hdiutil create \
   -quiet \
   -format UDZO \
   -fs HFS+ \
-  -volname "Emerald Rogue Assistant $version" \
+  -volname "Emerald Rogue Assistant $build_label" \
   -srcfolder "$stage_root" \
   "$dmg_output"
 
