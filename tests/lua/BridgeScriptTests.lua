@@ -3,9 +3,10 @@ local goldenPath = assert(arg[2], "expected golden-vector path")
 
 ROGUE_ASSISTANT_TEST = true
 local consoleErrors = {}
+local consoleMessages = {}
 console = {
-    log = function() end,
-    error = function(message) table.insert(consoleErrors, message) end,
+    log = function(_, message) table.insert(consoleMessages, message) end,
+    error = function(_, message) table.insert(consoleErrors, message) end,
 }
 socket = {ERRORS = {AGAIN = "temporary failure"}}
 
@@ -43,6 +44,13 @@ assert(frames[2].messageType == Bridge.message.CLOSE)
 local malformed = Bridge.newDecoder()
 assert(not Bridge.feedDecoder(malformed, string.pack("<I4", 7)))
 assert(malformed.error)
+
+local helloState = Bridge.newState()
+helloState.phase = "awaiting_hello"
+Bridge.processReceivedBytes(helloState, assert(Bridge.encodeFrame(
+    Bridge.message.SERVER_HELLO, 0, string.pack("<I1I1I2I2I2I2I2", 0, 0, 1, 0, 1, 0, 0))))
+assert(helloState.phase == "connected")
+assert(consoleMessages[#consoleMessages] == "Emerald Rogue Assistant connected.")
 
 local sent = {}
 local fakeSocket = {}

@@ -290,22 +290,20 @@ local function processServerHello(state, frame)
         beginProtocolClose(state, "invalid ServerHello payload")
         return
     end
-    local status, reserved, major, minor, appMajor, appMinor, appPatch =
+    local status, reserved, major, minor =
         string.unpack("<I1I1I2I2I2I2I2", frame.payload)
     if reserved ~= 0 then
         beginProtocolClose(state, "invalid ServerHello reserved byte")
         return
     end
     if status ~= 0 or major ~= PROTOCOL_MAJOR or minor ~= PROTOCOL_MINOR then
-        console:error(string.format(
-            "Emerald Rogue Assistant did not accept the connection. Application version: %d.%d.%d.",
-            appMajor, appMinor, appPatch))
+        console:error("Emerald Rogue Assistant did not accept the connection.")
         state.phase = "closing"
         return
     end
     state.phase = "connected"
     state.lastConnectionError = nil
-    console:log(string.format("Emerald Rogue Assistant %d.%d.%d connected.", appMajor, appMinor, appPatch))
+    console:log("Emerald Rogue Assistant connected.")
 end
 
 local function processIncomingFrame(state, frame)
