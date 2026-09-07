@@ -3,6 +3,7 @@
 #include "GameConnectionMessage.h"
 #include "GameData.h"
 #include "RogueAssistantVersion.h"
+#include "RomCompatibility.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -94,4 +95,8 @@ TEST_CASE("application versioning is independent from ROM compatibility", "[char
 	STATIC_REQUIRE(ROGUE_ASSISTANT_VERSION_MINOR == 0);
 	STATIC_REQUIRE(ROGUE_ASSISTANT_VERSION_PATCH == 0);
 	REQUIRE(std::string_view(ROGUE_ASSISTANT_VERSION_STRING) == "1.0.0");
+	STATIC_REQUIRE(rogue::rom::RequiredAssistantApi == 3);
+	STATIC_REQUIRE(rogue::rom::IsSupportedEdition(0));
+	STATIC_REQUIRE(rogue::rom::IsSupportedEdition(1));
+	STATIC_REQUIRE_FALSE(rogue::rom::IsSupportedEdition(2));
 }

@@ -206,7 +206,8 @@ void GameConnection::OnMemoryResult(GameMessageID messageId, MemoryResult result
 	OnRecieveMessage(messageId, bytes.data(), bytes.size());
 }
 
-bool GameConnection::WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size)
+bool GameConnection::WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size,
+								  std::function<void()> onSuccess)
 {
 	ASSERT_MSG(IsReady(), "Attempting to write data, but not ready");
 	if (!m_GameSession || size > std::numeric_limits<std::uint32_t>::max() || (size != 0 && data == nullptr))
@@ -218,8 +219,13 @@ bool GameConnection::WriteRequest(GameMessageID messageId, GameAddress addr, voi
 
 	auto const* bytes = static_cast<std::byte const*>(data);
 	std::span<std::byte const> const payload(bytes, size);
-	return m_GameSession->Write(
-		addr, payload, [this, messageId](MemoryResult result) { OnMemoryResult(messageId, std::move(result)); });
+	return m_GameSession->Write(addr, payload,
+		[this, messageId, onSuccess = std::move(onSuccess)](MemoryResult result) {
+			bool const succeeded = result.status == MemoryResult::Status::Ok;
+			OnMemoryResult(messageId, std::move(result));
+			if (succeeded && IsReady() && onSuccess)
+				onSuccess();
+		});
 }
 
 bool GameConnection::ReadRequest(GameMessageID messageId, GameAddress addr, size_t size)
