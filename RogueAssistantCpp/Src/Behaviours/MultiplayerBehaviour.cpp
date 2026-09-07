@@ -90,13 +90,13 @@ static bool IsValidClientPlayerId(GameStructures::RogueAssistantHeader const& ro
 
 MultiplayerBehaviour::MultiplayerBehaviour()
 	: m_Port(c_DefaultPort)
-	, m_RequestFlags(0)
-	, m_PlayerId(0)
-	, m_NetServer(nullptr)
-	, m_NetClient(nullptr)
-	, m_NetPeer(nullptr)
 	, m_ConnState(ConnectionState::Default)
 	, m_HasAttemptedConnection(false)
+	, m_RequestFlags(0)
+	, m_NetServer(nullptr)
+	, m_PlayerId(0)
+	, m_NetClient(nullptr)
+	, m_NetPeer(nullptr)
 {
 }
 
@@ -106,12 +106,11 @@ void MultiplayerBehaviour::OnAttach(GameConnection& game)
 
 	if (game.GetObservedGameMemory().IsMultiplayerStateValid() && ValidateMultiplayerLayout(game))
 	{
-		GameAddress multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
 		u8 const* multiplayerBlob = game.GetObservedGameMemory().GetMultiplayerStateBlob();
 
 		u8 requestFlags = multiplayerBlob[rogueHeader.netRequestStateOffset];
-		m_RequestFlags.store(requestFlags, std::memory_order_relaxed);
-		m_HasAttemptedConnection.store(false, std::memory_order_release);
+		m_RequestFlags = requestFlags;
+		m_HasAttemptedConnection = false;
 	}
 }
 
@@ -122,15 +121,12 @@ void MultiplayerBehaviour::OnDetach(GameConnection& game)
 
 bool MultiplayerBehaviour::IsRequestingHostConnection() const
 {
-	return m_RequestFlags.load(std::memory_order_relaxed) & NET_STATE_HOST;
+	return m_RequestFlags & NET_STATE_HOST;
 }
 
-// Called on the window thread
 void MultiplayerBehaviour::ProvideConnectionAddress(std::string const& address)
 {
-	std::lock_guard<std::mutex> lock(m_ConnectionAddressMutex);
-
-	if (!m_HasAttemptedConnection.load(std::memory_order_acquire))
+	if (!m_HasAttemptedConnection)
 		m_ConnectionAddressRaw = address;
 }
 
@@ -160,24 +156,17 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 {
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
 
-	if (!m_HasAttemptedConnection.load(std::memory_order_relaxed))
+	if (!m_HasAttemptedConnection)
 	{
-		bool hasAddress;
-		{
-			std::lock_guard<std::mutex> lock(m_ConnectionAddressMutex);
-			hasAddress = !m_ConnectionAddressRaw.empty();
-
-			// Latching the flag under the lock stops the window thread rewriting
-			// the address while we're parsing it below.
-			if (hasAddress)
-				m_HasAttemptedConnection.store(true, std::memory_order_release);
-		}
+		bool const hasAddress = !m_ConnectionAddressRaw.empty();
+		if (hasAddress)
+			m_HasAttemptedConnection = true;
 
 		if (hasAddress)
 		{
 			if (IsRequestingHostConnection())
 			{
-				m_Port.store((u16)std::stoi(m_ConnectionAddressRaw), std::memory_order_relaxed);
+				m_Port = static_cast<u16>(std::stoi(m_ConnectionAddressRaw));
 				OpenHostConnection(game);
 			}
 			else
@@ -203,7 +192,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 
 	u8 requestFlags = multiplayerBlob[rogueHeader.netRequestStateOffset];
 
-	if (m_RequestFlags.load(std::memory_order_relaxed) != requestFlags)
+	if (m_RequestFlags != requestFlags)
 	{
 		// Restart multiplayer as we're not valid anymore :(
 		game.RemoveBehaviour(this);
@@ -228,6 +217,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 			}
 
 			size_t value = playerId;
+			// NOLINTNEXTLINE(performance-no-int-to-ptr): ENet reserves this pointer for application data.
 			m_ServerState.m_PendingHandshake->data = reinterpret_cast<void*>(value);
 
 			ENetPacket* packet = enet_packet_create(
@@ -251,8 +241,17 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 
 	// Handle handshake
 	//
-	switch (m_ConnState.load(std::memory_order_relaxed))
+	switch (m_ConnState)
 	{
+	case MultiplayerBehaviour::ConnectionState::Connecting:
+		if (std::chrono::steady_clock::now() >= m_ConnectDeadline)
+		{
+			LOG_ERROR("ENet: Failed to connect.");
+			game.ReportError("Failed to connect to multiplayer host.");
+			game.RemoveBehaviour(this);
+		}
+		break;
+
 	case MultiplayerBehaviour::ConnectionState::AwaitingHandshake:
 		{
 			u8 handshakeState = multiplayerBlob[rogueHeader.netHandshakeOffset + rogueHeader.netHandshakeStateOffset];
@@ -264,7 +263,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 					ENET_PACKET_FLAG_RELIABLE
 				);
 				enet_peer_send(m_NetPeer, RogueNetChannel::Handshake, packet);
-				m_ConnState.store(ConnectionState::AwaitingResponse, std::memory_order_relaxed);
+				m_ConnState = ConnectionState::AwaitingResponse;
 			}
 		}
 		break;
@@ -274,7 +273,7 @@ void MultiplayerBehaviour::OnUpdate(GameConnection& game)
 
 	case MultiplayerBehaviour::ConnectionState::ConnectionConfirmed:
 		SendMultiplayerConfirmationToGame(game);
-		m_ConnState.store(ConnectionState::Connected, std::memory_order_relaxed);
+		m_ConnState = ConnectionState::Connected;
 		break;
 
 	case MultiplayerBehaviour::ConnectionState::Connected:
@@ -298,7 +297,7 @@ void MultiplayerBehaviour::OpenHostConnection(GameConnection& game)
 
 	ENetAddress address;
 	address.host = ENET_HOST_ANY;
-	address.port = m_Port.load(std::memory_order_relaxed);
+	address.port = m_Port;
 
 	ENetHost* netServer = enet_host_create(&address,
 		rogueHeader.netPlayerCount - 1, // client count
@@ -306,7 +305,7 @@ void MultiplayerBehaviour::OpenHostConnection(GameConnection& game)
 		0,  // assumed incoming bandwidth
 		0   // assumed outgoing bandwidth
 	);
-	m_NetServer.store(netServer, std::memory_order_relaxed);
+	m_NetServer = netServer;
 
 	if (netServer == nullptr)
 	{
@@ -315,7 +314,7 @@ void MultiplayerBehaviour::OpenHostConnection(GameConnection& game)
 		return;
 	}
 
-	m_ConnState.store(ConnectionState::ConnectionConfirmed, std::memory_order_relaxed);
+	m_ConnState = ConnectionState::ConnectionConfirmed;
 }
 
 static void SetPeerTimeouts(ENetPeer* netPeer)
@@ -370,17 +369,17 @@ void MultiplayerBehaviour::OpenClientConnection(GameConnection& game)
 	{
 		// Has succeeded so remove the port
 		m_ConnectionAddressRaw = m_ConnectionAddressRaw.substr(0, m_ConnectionAddressRaw.size() - rawPort.size() - 1);
-		m_Port.store(desiredPort, std::memory_order_relaxed);
+		m_Port = desiredPort;
 	}
 	else
 	{
 		// Coun't find port so assume default
-		m_Port.store(c_DefaultPort, std::memory_order_relaxed);
+		m_Port = c_DefaultPort;
 	}
 
 	ENetAddress address;
 	enet_address_set_host(&address, m_ConnectionAddressRaw.c_str());
-	address.port = m_Port.load(std::memory_order_relaxed);
+	address.port = m_Port;
 
 	m_NetPeer = enet_host_connect(m_NetClient, &address, RogueNetChannel::Num, 0);
 
@@ -391,34 +390,17 @@ void MultiplayerBehaviour::OpenClientConnection(GameConnection& game)
 		return;
 	}
 
-	// Attempt to connect
-	ENetEvent netEvent;
-	if (enet_host_service(m_NetClient, &netEvent, 5000) > 0 && netEvent.type == ENET_EVENT_TYPE_CONNECT)
-	{
-		LOG_INFO("ENet: Connected successfully!");
-	}
-	else
-	{
-		enet_peer_reset(m_NetPeer);
-		m_NetPeer = nullptr;
-
-		LOG_ERROR("ENet: Failed to connect.");
-		game.RemoveBehaviour(this);
-		return;
-	}
-
-	SetPeerTimeouts(m_NetPeer);
-
-	m_ConnState.store(ConnectionState::AwaitingHandshake, std::memory_order_relaxed);
+	m_ConnectDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+	m_ConnState = ConnectionState::Connecting;
 }
 
-void MultiplayerBehaviour::CloseConnection(GameConnection& game)
+void MultiplayerBehaviour::CloseConnection(GameConnection&)
 {
-	if (ENetHost* netServer = m_NetServer.load(std::memory_order_relaxed))
+	if (ENetHost* netServer = m_NetServer)
 	{
 		LOG_INFO("ENet: Closing Host");
 
-		m_NetServer.store(nullptr, std::memory_order_relaxed);
+		m_NetServer = nullptr;
 		enet_host_destroy(netServer);
 		enet_deinitialize();
 	}
@@ -440,7 +422,7 @@ void MultiplayerBehaviour::CloseConnection(GameConnection& game)
 
 void MultiplayerBehaviour::PollConnection(GameConnection& game)
 {
-	ENetHost* netServer = m_NetServer.load(std::memory_order_relaxed);
+	ENetHost* netServer = m_NetServer;
 	ENetHost* conn = netServer != nullptr ? netServer : m_NetClient;
 
 	if (conn != nullptr)
@@ -453,6 +435,8 @@ void MultiplayerBehaviour::PollConnection(GameConnection& game)
 			case ENET_EVENT_TYPE_CONNECT:
 				LOG_INFO("ENet: Connected %x:%u", netEvent.peer->address.host, netEvent.peer->address.port);
 				SetPeerTimeouts(netEvent.peer);
+				if (m_NetClient != nullptr && m_ConnState == ConnectionState::Connecting)
+					m_ConnState = ConnectionState::AwaitingHandshake;
 				break;
 
 			case ENET_EVENT_TYPE_RECEIVE:
@@ -461,6 +445,8 @@ void MultiplayerBehaviour::PollConnection(GameConnection& game)
 
 			case ENET_EVENT_TYPE_DISCONNECT:
 				LOG_INFO("ENet: Disconnected %x:%u", netEvent.peer->address.host, netEvent.peer->address.port);
+				game.ReportError("Multiplayer peer disconnected.");
+				game.RemoveBehaviour(this);
 				break;
 
 			default:
@@ -512,7 +498,7 @@ void MultiplayerBehaviour::ConnectedUpdate(GameConnection& game)
 				m_ServerState.m_PlayerProfiles.size(),
 				ENET_PACKET_FLAG_RELIABLE
 			);
-			enet_host_broadcast(m_NetServer.load(std::memory_order_relaxed), RogueNetChannel::PlayerProfiles, packet);
+			enet_host_broadcast(m_NetServer, RogueNetChannel::PlayerProfiles, packet);
 		}
 
 		// Broadcast out the game state every now and then
@@ -523,7 +509,7 @@ void MultiplayerBehaviour::ConnectedUpdate(GameConnection& game)
 				rogueHeader.netGameStateSize,
 				ENET_PACKET_FLAG_RELIABLE
 			);
-			enet_host_broadcast(m_NetServer.load(std::memory_order_relaxed), RogueNetChannel::GameState, packet);
+			enet_host_broadcast(m_NetServer, RogueNetChannel::GameState, packet);
 		}
 
 		// Broadcast out the player states every now and then
@@ -534,7 +520,7 @@ void MultiplayerBehaviour::ConnectedUpdate(GameConnection& game)
 				rogueHeader.netPlayerStateSize * rogueHeader.netPlayerCount,
 				ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT
 			);
-			enet_host_broadcast(m_NetServer.load(std::memory_order_relaxed), RogueNetChannel::PlayerState, packet);
+			enet_host_broadcast(m_NetServer, RogueNetChannel::PlayerState, packet);
 		}
 	}
 	else
@@ -558,24 +544,11 @@ void MultiplayerBehaviour::ConnectedUpdate(GameConnection& game)
 	}
 }
 
-static void WriteBlobIfDifferent(GameConnection& game, u32 gameOffset, u8 const* data, size_t size)
-{
-	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
-	GameAddress multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
-	u8 const* multiplayerBlob = game.GetObservedGameMemory().GetMultiplayerStateBlob();
-
-	if (memcmp(&multiplayerBlob[gameOffset], data, size) != 0)
-	{
-		game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + gameOffset, data, size);
-	}
-}
-
 void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent& netEvent)
 {
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
 	ASSERT_MSG(game.GetObservedGameMemory().IsMultiplayerStateValid(), "Multiplayer state invalid");
 
-	u8 const* multiplayerBlob = game.GetObservedGameMemory().GetMultiplayerStateBlob();
 	GameAddress multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
 
 	switch (netEvent.channelID)
@@ -595,7 +568,7 @@ void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent
 			}
 			else
 			{
-				if (m_ConnState.load(std::memory_order_relaxed) == ConnectionState::AwaitingResponse)
+				if (m_ConnState == ConnectionState::AwaitingResponse)
 				{
 					u8 const playerId = netEvent.packet->data[rogueHeader.netHandshakePlayerIdOffset];
 
@@ -612,10 +585,11 @@ void MultiplayerBehaviour::HandleIncomingMessage(GameConnection& game, ENetEvent
 					m_PlayerId = playerId;
 
 					size_t value = m_PlayerId;
+					// NOLINTNEXTLINE(performance-no-int-to-ptr): ENet reserves this pointer for application data.
 					netEvent.peer->data = reinterpret_cast<void*>(value);
 
 					// Client recieved handshake response so confirm connection
-					m_ConnState.store(ConnectionState::ConnectionConfirmed, std::memory_order_relaxed);
+					m_ConnState = ConnectionState::ConnectionConfirmed;
 				}
 			}
 		}
@@ -725,6 +699,6 @@ void MultiplayerBehaviour::SendMultiplayerConfirmationToGame(GameConnection& gam
 	GameStructures::RogueAssistantHeader const& rogueHeader = game.GetObservedGameMemory().GetRogueHeader();
 	GameAddress multiplayerAddress = game.GetObservedGameMemory().GetMultiplayerStatePtr();
 
-	u8 const requestFlags = m_RequestFlags.load(std::memory_order_relaxed);
+	u8 const requestFlags = m_RequestFlags;
 	game.WriteRequest(CreateAnonymousMessageId(), multiplayerAddress + rogueHeader.netCurrentStateOffset, &requestFlags, sizeof(requestFlags));
 }

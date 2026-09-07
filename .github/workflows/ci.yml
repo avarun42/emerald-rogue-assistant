@@ -95,5 +95,5 @@ jobs:
       - name: Test portable mGBA adapter
         run: >-
           lua5.4 tests/lua/BridgeScriptTests.lua
-          RogueAssistantCpp/Assets/RogueAssistant_mGBA_TCP.lua
+          RogueAssistantCpp/Assets/RogueAssistant_mGBA.lua
           tests/fixtures/bridge_protocol_1.golden

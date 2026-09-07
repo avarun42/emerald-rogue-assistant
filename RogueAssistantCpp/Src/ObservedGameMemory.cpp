@@ -227,7 +227,6 @@ bool ObservedGameMemory::RequestPokemonStorageData(u32 boxId)
 	if (IsHomeBoxStateValid())
 	{
 		GameStructures::RogueAssistantHeader const& rogueHeader = m_Game.GetObservedGameMemory().GetRogueHeader();
-		u8 const* homeBoxState = GetHomeBoxStateBlob();
 
 		GameMessageID messageId = CreateMessageId(GameMessageChannel::CommonRead, ObservedMemoryID::GamePokemonStorageData);
 

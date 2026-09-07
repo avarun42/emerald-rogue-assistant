@@ -2,6 +2,7 @@ add_executable(
     rogue_tests
     BridgeProtocolTests.cpp
     CharacterizationTests.cpp
+    CommandLineTests.cpp
     LifecycleTests.cpp
     PlatformTests.cpp
     TcpLuaTransportTests.cpp
