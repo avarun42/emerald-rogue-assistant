@@ -1,9 +1,15 @@
 add_executable(
     rogue_tests
+    BridgeProtocolTests.cpp
     CharacterizationTests.cpp
     LifecycleTests.cpp
     PlatformTests.cpp
     TransportTests.cpp
+)
+
+target_compile_definitions(
+    rogue_tests
+    PRIVATE ROGUE_TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 
 target_link_libraries(
