@@ -84,3 +84,16 @@ jobs:
         run: cmake --build --preset ci-sanitizers --parallel
       - name: Test
         run: ctest --preset ci-sanitizers --output-on-failure
+
+  lua-bridge:
+    name: Lua 5.4 bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Lua 5.4
+        run: sudo apt-get update && sudo apt-get install --yes lua5.4
+      - name: Test portable mGBA adapter
+        run: >-
+          lua5.4 tests/lua/BridgeScriptTests.lua
+          RogueAssistantCpp/Assets/RogueAssistant_mGBA_TCP.lua
+          tests/fixtures/bridge_protocol_1.golden
