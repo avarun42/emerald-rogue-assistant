@@ -394,5 +394,10 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
+# CMake build trees and per-developer presets
+/build/
+/out/
+CMakeUserPresets.json
+
 # JetBrains Rider
 *.sln.iml

@@ -5,6 +5,8 @@
 #include "Log.h"
 #include "Behaviours/CommonBehaviour.h"
 
+#include <cstring>
+
 std::string const GameConnection::c_FirstHandshake = "3to8UEaoManH7wB4lKlLRgywSHHKmI0g";
 std::string const GameConnection::c_SecondHandshake = "Em68TrzBAFlyhBCOm4XQIjGWbdNhuplY";
 
@@ -230,7 +232,7 @@ void GameConnection::OnRecieveData(u8* data, size_t size)
 
 void GameConnection::OnRecieveMessage(GameMessageID messageId, u8 const* data, size_t size)
 {
-	switch (messageId.Channel)
+	switch (messageId.GetChannel())
 	{
 	case GameMessageChannel::CommonRead:
 		m_ObservedGameMemory->OnRecieveMessage(messageId, data, size);
@@ -265,7 +267,7 @@ bool GameConnection::HandleExpectedHandshake(std::string const& expectedHandshak
 }
 
 
-void GameConnection::WriteRequest(GameMessageID messageId, size_t addr, void const* data, size_t size)
+void GameConnection::WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size)
 {
 	ASSERT_MSG(IsReady(), "Attempting to write data, but not ready");
 
@@ -280,13 +282,14 @@ void GameConnection::WriteRequest(GameMessageID messageId, size_t addr, void con
 		};
 
 	req.m_Data.resize(size);
-	memcpy_s(req.m_Data.data(), req.m_Data.size(), data, size);
+	if (size != 0)
+		std::memcpy(req.m_Data.data(), data, size);
 
 	req.m_Owner = weak_from_this();
 	GameConnectionManager::Instance().EnqueueGameDataRequest(req);
 }
 
-void GameConnection::ReadRequest(GameMessageID messageId, size_t addr, size_t size)
+void GameConnection::ReadRequest(GameMessageID messageId, GameAddress addr, size_t size)
 {
 	ASSERT_MSG(IsReady(), "Attempting to write data, but not ready");
 

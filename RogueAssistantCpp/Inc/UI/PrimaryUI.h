@@ -30,7 +30,7 @@ private:
 
 	AssetCollection* m_Assets;
 
-	int m_CurrentConnectionIdx;
+	int m_CurrentConnectionIdx = 0;
 	TimeDurationNS m_LastDrawTime;
 	PageUI m_CurrentPage;
 };

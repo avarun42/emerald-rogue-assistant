@@ -1,6 +1,7 @@
 #include "Behaviours/CommonBehaviour.h"
 #include "Behaviours/HomeBoxBehaviour.h"
 #include "DataStream.h"
+#include "Endian.h"
 #include "GameConnection.h"
 #include "GameData.h"
 #include "Log.h"
@@ -32,7 +33,14 @@ void HomeBoxBehaviour::OnUpdate(GameConnection& game)
 		{
 		case HomeBoxBehaviour::State::OpenOfflineFile:
 		{
-			u32 trainerId = *((u32*)&homeBoxState[rogueHeader.homeTrainerIdOffset]);
+			u32 trainerId = 0;
+			std::span<u8 const> const state(homeBoxState, game.GetObservedGameMemory().GetHomeBoxStateBlobSize());
+			if (!rogue::endian::ReadLittle(state, rogueHeader.homeTrainerIdOffset, trainerId))
+			{
+				LOG_WARN("Home Box trainer ID is outside the observed state");
+				game.Disconnect();
+				return;
+			}
 
 			std::wstring filePath = std::to_wstring(rogueHeader.rogueVersion) + L"/" + std::to_wstring(trainerId) + L"/boxes.dat";
 

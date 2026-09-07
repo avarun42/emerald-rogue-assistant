@@ -1,0 +1,97 @@
+cmake_minimum_required(VERSION 3.25)
+
+project(
+    RogueAssistant
+    VERSION 1.0.0
+    DESCRIPTION "Cross-platform companion application for Pokémon Emerald Rogue"
+    LANGUAGES CXX
+)
+
+set(ROGUE_ASSISTANT_APPLICATION_ID "assistant.emerald.rogue")
+set(ROGUE_ASSISTANT_DISPLAY_NAME "Emerald Rogue Assistant")
+
+include(CTest)
+
+option(ROGUE_BUILD_TESTS "Build Emerald Rogue Assistant tests" ${BUILD_TESTING})
+option(ROGUE_WARNINGS_AS_ERRORS "Treat Emerald Rogue Assistant warnings as errors" OFF)
+option(ROGUE_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+option(ROGUE_ENABLE_CLANG_TIDY "Run clang-tidy on Emerald Rogue Assistant targets" OFF)
+
+add_library(rogue_project_options INTERFACE)
+target_compile_features(rogue_project_options INTERFACE cxx_std_20)
+
+add_library(rogue_project_warnings INTERFACE)
+if(MSVC)
+    target_compile_options(rogue_project_warnings INTERFACE /W4 /permissive-)
+    if(ROGUE_WARNINGS_AS_ERRORS)
+        target_compile_options(rogue_project_warnings INTERFACE /WX)
+    endif()
+else()
+    target_compile_options(rogue_project_warnings INTERFACE -Wall -Wextra -Wpedantic)
+    if(ROGUE_WARNINGS_AS_ERRORS)
+        target_compile_options(rogue_project_warnings INTERFACE -Werror)
+    endif()
+endif()
+
+add_library(rogue_sanitizers INTERFACE)
+if(ROGUE_ENABLE_SANITIZERS)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(
+            rogue_sanitizers
+            INTERFACE
+                -fno-omit-frame-pointer
+                -fsanitize=address,undefined
+        )
+        target_link_options(rogue_sanitizers INTERFACE -fsanitize=address,undefined)
+    else()
+        message(FATAL_ERROR "ROGUE_ENABLE_SANITIZERS requires GCC or Clang")
+    endif()
+endif()
+
+if(ROGUE_ENABLE_CLANG_TIDY)
+    find_program(ROGUE_CLANG_TIDY_EXECUTABLE NAMES clang-tidy REQUIRED)
+endif()
+
+function(rogue_enable_clang_tidy target)
+    if(ROGUE_ENABLE_CLANG_TIDY)
+        set_property(
+            TARGET ${target}
+            PROPERTY CXX_CLANG_TIDY
+                "${ROGUE_CLANG_TIDY_EXECUTABLE};--config-file=${PROJECT_SOURCE_DIR}/.clang-tidy"
+        )
+    endif()
+endfunction()
+
+configure_file(
+    cmake/RogueAssistantVersion.h.in
+    generated/RogueAssistantVersion.h
+    @ONLY
+)
+
+add_library(
+    rogue_core
+    STATIC
+        RogueAssistantCpp/Src/DataStream.cpp
+        RogueAssistantCpp/Src/GameData.cpp
+        RogueAssistantCpp/Src/Timer.cpp
+)
+target_include_directories(
+    rogue_core
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/RogueAssistantCpp/Inc
+        ${CMAKE_CURRENT_BINARY_DIR}/generated
+)
+target_link_libraries(
+    rogue_core
+    PUBLIC
+        rogue_project_options
+        rogue_sanitizers
+    PRIVATE
+        rogue_project_warnings
+)
+rogue_enable_clang_tidy(rogue_core)
+
+if(ROGUE_BUILD_TESTS)
+    include(cmake/Dependencies.cmake)
+    add_subdirectory(tests)
+endif()
