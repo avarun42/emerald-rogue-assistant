@@ -59,6 +59,13 @@ void CommonBehaviour::OnUpdate(GameConnection& game)
 		if (m_MultiplayerBehaviour.expired())
 		{
 			u8 const* multiplayerBlob = game.GetObservedGameMemory().GetMultiplayerStateBlob();
+			if (rogueHeader.netRequestStateOffset >=
+				game.GetObservedGameMemory().GetMultiplayerStateBlobSize())
+			{
+				game.ReportError("Cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
+				game.Disconnect();
+				return;
+			}
 
 			u8 requestFlags = multiplayerBlob[rogueHeader.netRequestStateOffset];
 

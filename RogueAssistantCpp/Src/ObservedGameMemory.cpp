@@ -85,6 +85,13 @@ void ObservedGameMemory::Update()
 
 		if (m_MultiplayerStatePtr.IsValid() && m_MultiplayerStatePtr.Get() != 0)
 		{
+			if (m_RogueHeader->netMultiplayerSize == 0 || m_RogueHeader->netMultiplayerSize > MaximumObservedReadSize)
+			{
+				LOG_ERROR("Multiplayer state size must be from 1 through %zu bytes", MaximumObservedReadSize);
+				m_Game.ReportError("Cannot start multiplayer.\nThe ROM multiplayer data is invalid.");
+				m_Game.Disconnect();
+				return;
+			}
 			if (m_MultiplayerState.GetSize() != m_RogueHeader->netMultiplayerSize)
 				m_MultiplayerState.Resize(m_RogueHeader->netMultiplayerSize);
 

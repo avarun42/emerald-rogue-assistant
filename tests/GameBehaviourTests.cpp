@@ -401,6 +401,113 @@ TEST_CASE("CommonBehaviour rejects malformed assistant confirmation layouts", "[
 	}
 }
 
+TEST_CASE("multiplayer metadata is validated before it is indexed or used", "[multiplayer][layout]")
+{
+	SECTION("request-state offset outside the observed blob")
+	{
+		GameHarness harness;
+		auto header = BaseHeader();
+		ConfigureFeatureLayouts(header);
+		header.netRequestStateOffset = header.netMultiplayerSize;
+		harness.AcceptHeaders(header);
+
+		auto& observed = harness.game.GetObservedGameMemory();
+		constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+		constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+		auto const multiplayerAddressBytes = LittleAddress(MultiplayerStateAddress);
+		auto const homeBoxAddressBytes = LittleAddress(HomeBoxStateAddress);
+		observed.Update();
+		harness.transport->CompleteRead(header.multiplayerPtr, multiplayerAddressBytes);
+		harness.transport->CompleteRead(header.homeBoxPtr, homeBoxAddressBytes);
+		harness.game.Update();
+
+		std::vector<std::byte> multiplayerState(header.netMultiplayerSize, std::byte{0});
+		std::vector<std::byte> homeBoxState(header.homeBoxSize, std::byte{0});
+		observed.Update();
+		harness.transport->CompleteRead(header.multiplayerPtr, multiplayerAddressBytes);
+		harness.transport->CompleteRead(MultiplayerStateAddress, multiplayerState);
+		harness.transport->CompleteRead(header.homeBoxPtr, homeBoxAddressBytes);
+		harness.transport->CompleteRead(HomeBoxStateAddress, homeBoxState);
+		harness.game.Update();
+
+		auto common = harness.game.FindBehaviour<CommonBehaviour>();
+		REQUIRE(common != nullptr);
+		common->OnUpdate(harness.game);
+
+		REQUIRE(harness.game.HasDisconnected());
+		REQUIRE(harness.manager.Snapshot().error.find("multiplayer data") != std::string::npos);
+	}
+
+	SECTION("invalid player count before an address is accepted")
+	{
+		GameHarness harness;
+		auto header = BaseHeader();
+		ConfigureFeatureLayouts(header);
+		header.netPlayerCount = 0;
+		harness.AcceptHeaders(header);
+		constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+		constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+		harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress);
+
+		auto common = harness.game.FindBehaviour<CommonBehaviour>();
+		REQUIRE(common != nullptr);
+		common->OnUpdate(harness.game);
+		auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+		REQUIRE(multiplayer != nullptr);
+
+		multiplayer->OnUpdate(harness.game);
+
+		REQUIRE(harness.manager.Snapshot().error.find("multiplayer data") != std::string::npos);
+		REQUIRE(multiplayer->IsAwaitingAddress());
+	}
+}
+
+TEST_CASE("observed dynamic state activates multiplayer and advances Home Box initialization",
+		  "[characterization][behaviour]")
+{
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress);
+
+	harness.transport->submitted.clear();
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	common->OnUpdate(harness.game);
+
+	auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	auto homeBox = harness.game.FindBehaviour<HomeBoxBehaviour>();
+	REQUIRE(multiplayer != nullptr);
+	REQUIRE(homeBox != nullptr);
+	REQUIRE(multiplayer->IsAwaitingAddress());
+	REQUIRE(multiplayer->IsRequestingHostConnection());
+	REQUIRE(multiplayer->SanitiseConnectionAddress(" 30x025 ") == "30025");
+	REQUIRE(homeBox->IsLoading());
+
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+										 header.assistantState + header.assistantConfirmOffset);
+	homeBox->OnUpdate(harness.game);
+	homeBox->OnUpdate(harness.game);
+	homeBox->OnUpdate(harness.game);
+
+	MemoryRequest const metadata = harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+																  HomeBoxStateAddress + header.homeMinimalBoxOffset);
+	REQUIRE(metadata.data == std::vector<std::byte>(header.homeMinimalBoxSize, std::byte{0}));
+	MemoryRequest const order = harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+															   HomeBoxStateAddress + header.homeRemoteIndexOrderOffset);
+	REQUIRE(order.data == std::vector<std::byte>{std::byte{0}});
+	std::array<std::uint8_t, 1> const readyOrder{0};
+	harness.RefreshHomeBoxOrder(header, MultiplayerStateAddress, HomeBoxStateAddress, readyOrder);
+	homeBox->OnUpdate(harness.game);
+	REQUIRE_FALSE(homeBox->IsLoading());
+	REQUIRE_FALSE(homeBox->IsSaving());
+	REQUIRE_FALSE(homeBox->RequiresReopen());
+	REQUIRE(harness.transport->submitted.empty());
+}
+
 TEST_CASE("Home Box reports an initialized screen from an earlier assistant session", "[home-box][reconnect]")
 {
 	GameHarness harness;
@@ -669,3 +776,371 @@ TEST_CASE("Home Box saves withdrawals only after mGBA confirms every write", "[h
 	}
 }
 
+TEST_CASE("Multiplayer retries a rejected ROM confirmation write", "[multiplayer][backpressure]")
+{
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress);
+
+	harness.transport->submitted.clear();
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	common->OnUpdate(harness.game);
+	auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	REQUIRE(multiplayer != nullptr);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 header.assistantState + header.assistantConfirmOffset);
+
+	multiplayer->ProvideConnectionAddress("30025");
+	multiplayer->OnUpdate(harness.game);
+	REQUIRE(!multiplayer->IsConnected());
+
+	harness.transport->acceptRequests = false;
+	multiplayer->OnUpdate(harness.game);
+	REQUIRE(!multiplayer->IsConnected());
+	REQUIRE(harness.transport->submitted.empty());
+
+	harness.transport->acceptRequests = true;
+	multiplayer->OnUpdate(harness.game);
+	REQUIRE(multiplayer->IsConnected());
+	MemoryRequest const confirmation = harness.transport->TakeRequest(
+		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netCurrentStateOffset);
+	REQUIRE(confirmation.data == std::vector<std::byte>{std::byte{2}});
+	harness.game.Disconnect();
+}
+
+TEST_CASE("Multiplayer retries a rejected host ROM handshake write", "[multiplayer][backpressure]")
+{
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress);
+
+	harness.transport->submitted.clear();
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	common->OnUpdate(harness.game);
+	auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	REQUIRE(multiplayer != nullptr);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 header.assistantState + header.assistantConfirmOffset);
+
+	multiplayer->ProvideConnectionAddress("30025");
+	multiplayer->OnUpdate(harness.game);
+	multiplayer->OnUpdate(harness.game);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 MultiplayerStateAddress + header.netCurrentStateOffset);
+
+	auto client = std::unique_ptr<ENetHost, decltype(&enet_host_destroy)>(
+		enet_host_create(nullptr, 1, 5, 0, 0), &enet_host_destroy);
+	REQUIRE(client != nullptr);
+	ENetAddress address{};
+	REQUIRE(enet_address_set_host_ip(&address, "127.0.0.1") == 0);
+	address.port = 30025;
+	ENetPeer* peer = enet_host_connect(client.get(), &address, 5, 0);
+	REQUIRE(peer != nullptr);
+
+	bool connected = false;
+	auto const connectDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (!connected && std::chrono::steady_clock::now() < connectDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		ENetEvent event{};
+		while (enet_host_service(client.get(), &event, 0) > 0)
+		{
+			if (event.type == ENET_EVENT_TYPE_CONNECT)
+				connected = true;
+			if (event.type == ENET_EVENT_TYPE_RECEIVE)
+				enet_packet_destroy(event.packet);
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(connected);
+
+	rogue::multiplayer::Hello hello;
+	hello.edition = header.rogueVersion;
+	hello.playerCount = header.netPlayerCount;
+	hello.multiplayerStateSize = header.netMultiplayerSize;
+	hello.handshakeSize = header.netHandshakeSize;
+	hello.gameStateSize = header.netGameStateSize;
+	hello.playerProfileSize = header.netPlayerProfileSize;
+	hello.playerStateSize = header.netPlayerStateSize;
+	std::vector<std::byte> encodedHello;
+	std::string error;
+	REQUIRE(rogue::multiplayer::EncodeHello(hello, encodedHello, error));
+	ENetPacket* helloPacket =
+		enet_packet_create(encodedHello.data(), encodedHello.size(), ENET_PACKET_FLAG_RELIABLE);
+	REQUIRE(helloPacket != nullptr);
+	REQUIRE(enet_peer_send(peer, 0, helloPacket) == 0);
+
+	std::array<std::uint8_t, 4> const handshake{1, 0, 0xA5, 0x5A};
+	ENetPacket* handshakePacket = enet_packet_create(handshake.data(), handshake.size(), ENET_PACKET_FLAG_RELIABLE);
+	REQUIRE(handshakePacket != nullptr);
+	REQUIRE(enet_peer_send(peer, 1, handshakePacket) == 0);
+	enet_host_flush(client.get());
+
+	harness.transport->acceptRequests = false;
+	for (int attempt = 0; attempt < 100; ++attempt)
+	{
+		multiplayer->OnUpdate(harness.game);
+		ENetEvent event{};
+		while (enet_host_service(client.get(), &event, 0) > 0)
+		{
+			if (event.type == ENET_EVENT_TYPE_RECEIVE)
+				enet_packet_destroy(event.packet);
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(harness.transport->submitted.empty());
+
+	harness.transport->acceptRequests = true;
+	multiplayer->OnUpdate(harness.game);
+	MemoryRequest const retried = harness.transport->TakeRequest(
+		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netHandshakeOffset);
+	REQUIRE(retried.data == std::vector<std::byte>(AsBytes(handshake)));
+
+	client.reset();
+	harness.game.Disconnect();
+}
+
+TEST_CASE("Multiplayer host remains available after a client disconnects", "[multiplayer][disconnect]")
+{
+	GameHarness harness(UpdateTimer::c_60UPS);
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress);
+
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	if (!multiplayer)
+	{
+		common->OnUpdate(harness.game);
+		multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	}
+	REQUIRE(multiplayer != nullptr);
+	multiplayer->ProvideConnectionAddress("30025");
+	multiplayer->OnUpdate(harness.game);
+	multiplayer->OnUpdate(harness.game);
+	REQUIRE(multiplayer->IsHost());
+
+	auto client = std::unique_ptr<ENetHost, decltype(&enet_host_destroy)>(
+		enet_host_create(nullptr, 1, 5, 0, 0), &enet_host_destroy);
+	REQUIRE(client != nullptr);
+	ENetAddress address{};
+	REQUIRE(enet_address_set_host_ip(&address, "127.0.0.1") == 0);
+	address.port = 30025;
+	ENetPeer* peer = enet_host_connect(client.get(), &address, 5, 0);
+	REQUIRE(peer != nullptr);
+
+	bool connected = false;
+	auto const connectDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (!connected && std::chrono::steady_clock::now() < connectDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		ENetEvent event{};
+		while (enet_host_service(client.get(), &event, 0) > 0)
+		{
+			if (event.type == ENET_EVENT_TYPE_CONNECT)
+				connected = true;
+			if (event.type == ENET_EVENT_TYPE_RECEIVE)
+				enet_packet_destroy(event.packet);
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(connected);
+
+	enet_peer_disconnect(peer, 0);
+	enet_host_flush(client.get());
+	bool disconnected = false;
+	auto const disconnectDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (!disconnected && std::chrono::steady_clock::now() < disconnectDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		ENetEvent event{};
+		while (enet_host_service(client.get(), &event, 0) > 0)
+		{
+			if (event.type == ENET_EVENT_TYPE_DISCONNECT)
+				disconnected = true;
+			if (event.type == ENET_EVENT_TYPE_RECEIVE)
+				enet_packet_destroy(event.packet);
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(disconnected);
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	harness.game.Update();
+	REQUIRE(harness.game.FindBehaviour<MultiplayerBehaviour>() == multiplayer);
+	harness.game.Disconnect();
+}
+
+TEST_CASE("Multiplayer retries rejected client ROM writes", "[multiplayer][backpressure]")
+{
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	std::array<std::uint8_t, 4> const clientHandshake{1, 0, 0x11, 0x22};
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress, {}, 1, clientHandshake);
+
+	harness.transport->submitted.clear();
+	auto common = harness.game.FindBehaviour<CommonBehaviour>();
+	REQUIRE(common != nullptr);
+	common->OnUpdate(harness.game);
+	auto multiplayer = harness.game.FindBehaviour<MultiplayerBehaviour>();
+	REQUIRE(multiplayer != nullptr);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 header.assistantState + header.assistantConfirmOffset);
+
+	multiplayer->ProvideConnectionAddress("127.0.0.1:30026");
+	multiplayer->OnUpdate(harness.game);
+
+	ENetAddress address{};
+	address.host = ENET_HOST_ANY;
+	address.port = 30026;
+	auto server = std::unique_ptr<ENetHost, decltype(&enet_host_destroy)>(
+		enet_host_create(&address, 1, 5, 0, 0), &enet_host_destroy);
+	REQUIRE(server != nullptr);
+
+	rogue::multiplayer::Hello hello;
+	hello.edition = header.rogueVersion;
+	hello.playerCount = header.netPlayerCount;
+	hello.multiplayerStateSize = header.netMultiplayerSize;
+	hello.handshakeSize = header.netHandshakeSize;
+	hello.gameStateSize = header.netGameStateSize;
+	hello.playerProfileSize = header.netPlayerProfileSize;
+	hello.playerStateSize = header.netPlayerStateSize;
+	std::vector<std::byte> encodedHello;
+	std::string error;
+	REQUIRE(rogue::multiplayer::EncodeHello(hello, encodedHello, error));
+
+	std::array<std::uint8_t, 4> const serverHandshake{2, 1, 0xA5, 0x5A};
+	bool responseSent = false;
+	ENetPeer* serverPeer = nullptr;
+	auto const responseDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+	while (harness.transport->rejected.empty() && std::chrono::steady_clock::now() < responseDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		ENetEvent event{};
+		while (enet_host_service(server.get(), &event, 0) > 0)
+		{
+			if (event.type == ENET_EVENT_TYPE_CONNECT)
+			{
+				serverPeer = event.peer;
+				ENetPacket* helloPacket =
+					enet_packet_create(encodedHello.data(), encodedHello.size(), ENET_PACKET_FLAG_RELIABLE);
+				REQUIRE(helloPacket != nullptr);
+				REQUIRE(enet_peer_send(event.peer, 0, helloPacket) == 0);
+				enet_host_flush(server.get());
+			}
+			if (event.type == ENET_EVENT_TYPE_RECEIVE)
+			{
+				if (event.channelID == 1 && !responseSent)
+				{
+					harness.transport->acceptRequests = false;
+					ENetPacket* response =
+						enet_packet_create(serverHandshake.data(), serverHandshake.size(), ENET_PACKET_FLAG_RELIABLE);
+					REQUIRE(response != nullptr);
+					REQUIRE(enet_peer_send(event.peer, 1, response) == 0);
+					enet_host_flush(server.get());
+					responseSent = true;
+				}
+				enet_packet_destroy(event.packet);
+			}
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(responseSent);
+
+	auto const rejected = std::find_if(
+		harness.transport->rejected.begin(), harness.transport->rejected.end(), [&](MemoryRequest const& request) {
+			return request.operation == MemoryRequest::Operation::Write &&
+				   request.address == MultiplayerStateAddress + header.netHandshakeOffset;
+		});
+	REQUIRE(rejected != harness.transport->rejected.end());
+	REQUIRE(rejected->data == std::vector<std::byte>(AsBytes(serverHandshake)));
+	REQUIRE(!multiplayer->IsConnected());
+
+	harness.transport->rejected.clear();
+	harness.transport->acceptRequests = true;
+	multiplayer->OnUpdate(harness.game);
+	MemoryRequest const retried = harness.transport->TakeRequest(
+		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netHandshakeOffset);
+	REQUIRE(retried.data == std::vector<std::byte>(AsBytes(serverHandshake)));
+	MemoryRequest const confirmation = harness.transport->TakeRequest(
+		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netCurrentStateOffset);
+	REQUIRE(confirmation.data == std::vector<std::byte>{std::byte{1}});
+	REQUIRE(multiplayer->IsConnected());
+	REQUIRE(serverPeer != nullptr);
+
+	std::array<std::uint8_t, 4> const playerProfiles{0x10, 0x11, 0x20, 0x21};
+	harness.transport->acceptRequests = false;
+	ENetPacket* profilesPacket =
+		enet_packet_create(playerProfiles.data(), playerProfiles.size(), ENET_PACKET_FLAG_RELIABLE);
+	REQUIRE(profilesPacket != nullptr);
+	REQUIRE(enet_peer_send(serverPeer, 4, profilesPacket) == 0);
+	enet_host_flush(server.get());
+
+	auto const profilesDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (harness.transport->rejected.empty() && std::chrono::steady_clock::now() < profilesDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	auto const rejectedProfiles = std::find_if(
+		harness.transport->rejected.begin(), harness.transport->rejected.end(), [&](MemoryRequest const& request) {
+			return request.operation == MemoryRequest::Operation::Write &&
+				   request.address == MultiplayerStateAddress + header.netPlayerProfileOffset;
+		});
+	REQUIRE(rejectedProfiles != harness.transport->rejected.end());
+	REQUIRE(rejectedProfiles->data == std::vector<std::byte>(AsBytes(playerProfiles)));
+
+	std::array<std::uint8_t, 4> const newerPlayerProfiles{0x30, 0x31, 0x40, 0x41};
+	ENetPacket* newerProfilesPacket =
+		enet_packet_create(newerPlayerProfiles.data(), newerPlayerProfiles.size(), ENET_PACKET_FLAG_RELIABLE);
+	REQUIRE(newerProfilesPacket != nullptr);
+	REQUIRE(enet_peer_send(serverPeer, 4, newerProfilesPacket) == 0);
+	enet_host_flush(server.get());
+
+	auto const expectedNewerProfiles = AsBytes(newerPlayerProfiles);
+	auto rejectedNewerProfiles = harness.transport->rejected.end();
+	auto const newerProfilesDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (rejectedNewerProfiles == harness.transport->rejected.end() &&
+		   std::chrono::steady_clock::now() < newerProfilesDeadline)
+	{
+		multiplayer->OnUpdate(harness.game);
+		rejectedNewerProfiles =
+			std::find_if(harness.transport->rejected.begin(), harness.transport->rejected.end(),
+						 [&](MemoryRequest const& request) {
+							 return request.operation == MemoryRequest::Operation::Write &&
+									request.address ==
+										MultiplayerStateAddress + header.netPlayerProfileOffset &&
+									request.data == expectedNewerProfiles;
+						 });
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	REQUIRE(rejectedNewerProfiles != harness.transport->rejected.end());
+
+	harness.transport->rejected.clear();
+	harness.transport->acceptRequests = true;
+	multiplayer->OnUpdate(harness.game);
+	MemoryRequest const retriedProfiles = harness.transport->TakeRequest(
+		MemoryRequest::Operation::Write, MultiplayerStateAddress + header.netPlayerProfileOffset);
+	REQUIRE(retriedProfiles.data == expectedNewerProfiles);
+
+	server.reset();
+	harness.game.Disconnect();
+}

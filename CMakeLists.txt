@@ -139,6 +139,7 @@ add_library(
     rogue_multiplayer
     OBJECT
         RogueAssistantCpp/Src/Behaviours/MultiplayerBehaviour.cpp
+        RogueAssistantCpp/Src/Multiplayer/MultiplayerProtocol.cpp
 )
 target_include_directories(
     rogue_multiplayer

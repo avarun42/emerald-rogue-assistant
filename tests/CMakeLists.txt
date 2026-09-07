@@ -6,6 +6,7 @@ add_executable(
     GameBehaviourTests.cpp
     HomeBoxFileTests.cpp
     LifecycleTests.cpp
+    MultiplayerProtocolTests.cpp
     PlatformTests.cpp
     TcpLuaTransportTests.cpp
     TransportTests.cpp
