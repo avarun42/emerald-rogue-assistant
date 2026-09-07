@@ -32,3 +32,8 @@ rogue_enable_clang_tidy(rogue_tests)
 
 include(Catch)
 catch_discover_tests(rogue_tests)
+add_test(NAME "Build version labels"
+    COMMAND "${CMAKE_COMMAND}"
+        "-DROGUE_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+        "-DROGUE_TEST_PARENT=${CMAKE_CURRENT_BINARY_DIR}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/VersionTests.cmake")
