@@ -8,12 +8,27 @@ set(SFML_BUILD_DOC OFF CACHE BOOL "" FORCE)
 set(SFML_BUILD_TEST_SUITE OFF CACHE BOOL "" FORCE)
 set(SFML_USE_SYSTEM_DEPS OFF CACHE BOOL "" FORCE)
 
+set(ROGUE_SFML_PATCH_ARGUMENTS)
+if(APPLE)
+    # SFML 3.1.0 has Retina coordinate conversion internally but disables the
+    # high-resolution OpenGL surface that Emerald Rogue Assistant's scaled UI needs.
+    list(
+        APPEND ROGUE_SFML_PATCH_ARGUMENTS
+        PATCH_COMMAND
+            "${CMAKE_COMMAND}"
+            "-DSOURCE_DIR=<SOURCE_DIR>"
+            -P "${CMAKE_CURRENT_LIST_DIR}/patches/EnableSfmlMacosHighDpi.cmake"
+    )
+endif()
+
 FetchContent_Declare(
     SFML
-    URL https://github.com/SFML/SFML/archive/refs/tags/2.6.2.tar.gz
-    URL_HASH SHA256=15ff4d608a018f287c6a885db0a2da86ea389e516d2323629e4d4407a7ce047f
+    URL https://github.com/SFML/SFML/archive/refs/tags/3.1.0.tar.gz
+    URL_HASH SHA256=91209a112c2bd0bc6f4ce0d5f3e413cfb48b57c0de59f5507dc81f71b1ad7a5c
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    ${ROGUE_SFML_PATCH_ARGUMENTS}
 )
+unset(ROGUE_SFML_PATCH_ARGUMENTS)
 
 # ENet 1.3.17 still advertises compatibility with CMake 2.6. CMake 4 needs an
 # explicit policy floor while evaluating that third-party project.
@@ -27,6 +42,5 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SFML ENET)
 
-# Treat SFML 2.6 public headers as third-party. Warnings in those headers
-# must not become Emerald Rogue Assistant project errors.
+# Do not treat warnings from SFML's headers as errors in our code.
 set_target_properties(sfml-system sfml-window sfml-graphics PROPERTIES SYSTEM TRUE)

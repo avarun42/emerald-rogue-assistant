@@ -204,7 +204,6 @@ if(ROGUE_BUILD_DESKTOP)
             RogueAssistantCpp/Src/UI/PrimaryUI.cpp
             RogueAssistantCpp/Src/UI/Window.cpp
     )
-    target_compile_definitions(RogueAssistant PRIVATE ROGUE_STANDALONE_RESOURCES=1)
     target_link_libraries(
         RogueAssistant
         PRIVATE
