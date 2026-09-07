@@ -78,6 +78,7 @@ class HomeBoxBehaviour : public IGameConnectionBehaviour
 	std::vector<BoxData> m_ActiveBoxData;
 	std::vector<BoxData> m_StoredBoxData;
 	std::queue<BoxWriteRequest> m_BoxWriteRequests;
+	bool m_WaitingForBoxWrite = false;
 	std::uint32_t m_InitialiseBoxWriteIndex = 0;
 
 	std::filesystem::path m_WriteFilePath;

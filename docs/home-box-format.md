@@ -54,6 +54,12 @@ with an atomic rename: readers see either the old file or the new file, not
 a partly written file. It keeps the previous valid file as `boxes.dat.bak`.
 These checks and save steps do not change the file format.
 
+The app waits for mGBA to confirm each Pokémon write before saving the new
+box order. If a disconnect interrupts the transfer, the app keeps the last
+saved file and backup unchanged and reports that the transfer stopped. Some
+game memory may already have changed; the game save and Home Box file are not
+saved together in one step.
+
 If `boxes.dat` is missing, the app can load `boxes.dat.bak` and shows a warning.
 If `boxes.dat` is damaged, the app stops the connection before enabling storage
 transfers. It does not overwrite the damaged file, even if the backup is valid.

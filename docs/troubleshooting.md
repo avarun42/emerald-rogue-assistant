@@ -37,9 +37,15 @@ have just updated the game, check for an update to Emerald Rogue Assistant too.
 
 ## Storage transfer stopped
 
-This message can appear if the assistant reconnects while Extended Storage is
-already open in the game. Do not continue the old transfer. Press B, then open
-Extended Storage again. This lets the game start a new storage connection.
+If the message also says "Home Box file was not changed", the connection ended
+before mGBA confirmed all Pokémon writes. The assistant kept the last saved
+Home Box file and backup. Do not save the game yet: some game memory may have
+changed before the connection ended. Keep your game save and Home Box files,
+and check your Pokémon before trying another transfer.
+
+If the app asks you to reopen Extended Storage, it reconnected while that
+screen was already open. Press B, then open Extended Storage again. This lets
+the game start a new storage connection.
 
 ## Home Box could not load or save
 

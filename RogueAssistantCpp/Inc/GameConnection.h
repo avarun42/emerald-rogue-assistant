@@ -54,7 +54,8 @@ class GameConnection : public std::enable_shared_from_this<GameConnection>
 		return IsReady() && GetObservedGameMemory().AreHeadersValid();
 	}
 
-	bool WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size);
+	bool WriteRequest(GameMessageID messageId, GameAddress addr, void const* data, size_t size,
+					  std::function<void()> onSuccess = {});
 	bool ReadRequest(GameMessageID messageId, GameAddress addr, size_t size);
 	void ReportError(std::string error);
 

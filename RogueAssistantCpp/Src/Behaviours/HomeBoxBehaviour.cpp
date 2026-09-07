@@ -23,6 +23,7 @@ void HomeBoxBehaviour::OnAttach(GameConnection&)
 	m_ActiveBoxData.clear();
 	m_StoredBoxData.clear();
 	m_BoxWriteRequests = {};
+	m_WaitingForBoxWrite = false;
 	m_InitialiseBoxWriteIndex = 0;
 	m_WriteFilePath.clear();
 	m_HasPendingFileWrite = false;
@@ -32,7 +33,18 @@ void HomeBoxBehaviour::OnAttach(GameConnection&)
 
 void HomeBoxBehaviour::OnDetach(GameConnection& game)
 {
-	m_BoxWriteRequests = {};
+	// The last result can arrive just before disconnect, before OnUpdate removes
+	// the completed box. Only completed writes may change the saved box order.
+	while (!m_WaitingForBoxWrite && !m_BoxWriteRequests.empty() && m_BoxWriteRequests.front().bytesRemaining == 0)
+		m_BoxWriteRequests.pop();
+	if (!m_BoxWriteRequests.empty())
+	{
+		LOG_WARN("Home Box transfer interrupted; kept the last saved storage file and backup");
+		game.ReportError("Storage transfer stopped.\nHome Box file was not changed.");
+		m_BoxWriteRequests = {};
+		m_HasPendingFileWrite = false;
+		return;
+	}
 	HandlePendingFileWrite(game, true);
 }
 
@@ -302,6 +314,8 @@ bool HomeBoxBehaviour::PumpWriteMonBox(GameConnection& game)
 {
 	if (m_BoxWriteRequests.empty())
 		return false;
+	if (m_WaitingForBoxWrite)
+		return true;
 
 	BoxWriteRequest& request = m_BoxWriteRequests.front();
 	if (request.bytesRemaining == 0)
@@ -312,10 +326,17 @@ bool HomeBoxBehaviour::PumpWriteMonBox(GameConnection& game)
 	auto const& header = game.GetObservedGameMemory().GetRogueHeader();
 	GameAddress const writeAddress = game.GetObservedGameMemory().GetPokemonStoragePtr();
 	std::size_t const writeSize = std::min<std::size_t>(request.bytesRemaining, 1024);
+	std::weak_ptr<HomeBoxBehaviour> const weakSelf =
+		std::static_pointer_cast<HomeBoxBehaviour>(shared_from_this());
+	m_WaitingForBoxWrite = true;
 	if (!game.WriteRequest(CreateAnonymousMessageId(),
 					   writeAddress + header.homeDestMonSize * request.boxId + static_cast<GameAddress>(request.offset),
-					   request.data + request.offset, writeSize))
+					   request.data + request.offset, writeSize, [weakSelf] {
+						   if (auto self = weakSelf.lock())
+							   self->m_WaitingForBoxWrite = false;
+					   }))
 	{
+		m_WaitingForBoxWrite = false;
 		return true;
 	}
 	request.bytesRemaining -= writeSize;

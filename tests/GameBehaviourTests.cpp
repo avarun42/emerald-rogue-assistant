@@ -634,6 +634,148 @@ TEST_CASE("Home Box retries a rejected transfer chunk without skipping bytes", "
 	REQUIRE(retried.data == std::vector<std::byte>(header.homeDestMonSize, std::byte{0}));
 }
 
+TEST_CASE("Home Box saves withdrawals only after mGBA confirms every write", "[home-box][disconnect]")
+{
+	REQUIRE(UserData::GetDataDirectory().empty());
+	TemporaryWorkingDirectory temporary;
+	std::filesystem::path const primary = "0/3735928559/boxes.dat";
+	std::filesystem::path const backup = rogue::storage::HomeBoxBackupPath(primary);
+	rogue::storage::HomeBoxData original;
+	original.dimensions = {3, 0, 0xDEADBEEF, 1, 2, 2400};
+	original.records = {{0, {7, 8}, std::vector<std::uint8_t>(2400, 0x44)}};
+	std::string error;
+	REQUIRE(rogue::storage::SaveHomeBoxFile(primary, original, error));
+	original.records[0].pokemonData.assign(2400, 0x22);
+	REQUIRE(rogue::storage::SaveHomeBoxFile(primary, original, error));
+	std::vector<std::byte> originalFile;
+	std::vector<std::byte> originalBackup;
+	REQUIRE(rogue::platform::ReadFile(primary, 4096, originalFile, error));
+	REQUIRE(rogue::platform::ReadFile(backup, 4096, originalBackup, error));
+
+	GameHarness harness;
+	auto header = BaseHeader();
+	ConfigureFeatureLayouts(header);
+	header.homeLocalBoxCount = 1;
+	header.homeTotalBoxCount = 2;
+	header.homeDestMonSize = 2400;
+	harness.AcceptHeaders(header);
+	constexpr GameAddress MultiplayerStateAddress = 0x02001000;
+	constexpr GameAddress HomeBoxStateAddress = 0x02002000;
+	constexpr GameAddress PokemonStorageAddress = 0x02003000;
+	harness.AcceptFeatureState(header, MultiplayerStateAddress, HomeBoxStateAddress);
+	harness.transport->submitted.clear();
+	harness.game.FindBehaviour<CommonBehaviour>()->OnUpdate(harness.game);
+	auto homeBox = harness.game.FindBehaviour<HomeBoxBehaviour>();
+	REQUIRE(homeBox != nullptr);
+	(void)harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+									 header.assistantState + header.assistantConfirmOffset);
+	homeBox->OnUpdate(harness.game);
+	homeBox->OnUpdate(harness.game);
+	std::vector<std::byte> const localPokemon(2400, std::byte{0x11});
+	harness.transport->CompleteRead(PokemonStorageAddress, localPokemon);
+	harness.game.Update();
+	homeBox->OnUpdate(harness.game);
+	homeBox->OnUpdate(harness.game);
+	homeBox->OnUpdate(harness.game);
+	std::array<std::uint8_t, 2> const readyOrder{0, 1};
+	harness.RefreshHomeBoxOrder(header, MultiplayerStateAddress, HomeBoxStateAddress, readyOrder);
+	homeBox->OnUpdate(harness.game);
+	std::array<std::uint8_t, 2> const swappedOrder{1, 0};
+	harness.RefreshHomeBoxOrder(header, MultiplayerStateAddress, HomeBoxStateAddress, swappedOrder);
+	homeBox->OnUpdate(harness.game);
+	harness.transport->submitted.clear();
+	REQUIRE(homeBox->IsSaving());
+
+	std::uint32_t confirmedChunks = 0;
+	bool sendUnconfirmed = false;
+	bool rejectSubmit = false;
+	bool failWrite = false;
+	bool saveDuringUpdate = false;
+	SECTION("disconnect before the first write") {}
+	SECTION("disconnect after the bridge refused a write") { rejectSubmit = true; }
+	SECTION("disconnect while the first write waits for a result") { sendUnconfirmed = true; }
+	SECTION("disconnect after only the first chunk was confirmed") { confirmedChunks = 1; }
+	SECTION("disconnect while the last write waits for a result")
+	{
+		confirmedChunks = 2;
+		sendUnconfirmed = true;
+	}
+	SECTION("mGBA reports a failed write")
+	{
+		sendUnconfirmed = true;
+		failWrite = true;
+	}
+	SECTION("disconnect just after the final confirmation") { confirmedChunks = 3; }
+	SECTION("save normally after the final confirmation")
+	{
+		confirmedChunks = 3;
+		saveDuringUpdate = true;
+	}
+
+	auto takeChunk = [&](std::uint32_t index) {
+		homeBox->OnUpdate(harness.game);
+		auto request = harness.transport->TakeRequest(MemoryRequest::Operation::Write,
+			PokemonStorageAddress + index * 1024);
+		std::size_t const expectedSize = index == 2 ? 352 : 1024;
+		REQUIRE(request.data == std::vector<std::byte>(expectedSize, std::byte{0x22}));
+		return request;
+	};
+	for (std::uint32_t index = 0; index < confirmedChunks; ++index)
+	{
+		auto const request = takeChunk(index);
+		harness.transport->results.push_back({request.id, MemoryResult::Status::Ok, {}});
+		harness.game.Update();
+	}
+	if (rejectSubmit)
+	{
+		harness.transport->acceptRequests = false;
+		homeBox->OnUpdate(harness.game);
+		REQUIRE_FALSE(harness.transport->rejected.empty());
+	}
+	if (sendUnconfirmed)
+	{
+		auto const request = takeChunk(confirmedChunks);
+		for (int tick = 0; tick < 4; ++tick)
+			homeBox->OnUpdate(harness.game);
+		REQUIRE(harness.transport->submitted.empty());
+		REQUIRE(homeBox->IsSaving());
+		if (failWrite)
+		{
+			harness.transport->results.push_back({request.id, MemoryResult::Status::InvalidAddress, {}});
+			harness.game.Update();
+			REQUIRE(harness.game.HasDisconnected());
+		}
+	}
+	std::vector<std::byte> beforeDisconnect;
+	REQUIRE(rogue::platform::ReadFile(primary, 4096, beforeDisconnect, error));
+	REQUIRE(beforeDisconnect == originalFile);
+	if (saveDuringUpdate)
+	{
+		homeBox->OnUpdate(harness.game);
+		homeBox->OnUpdate(harness.game);
+		REQUIRE_FALSE(homeBox->IsSaving());
+	}
+	harness.game.Disconnect();
+	std::vector<std::byte> savedFile;
+	std::vector<std::byte> savedBackup;
+	REQUIRE(rogue::platform::ReadFile(primary, 4096, savedFile, error));
+	REQUIRE(rogue::platform::ReadFile(backup, 4096, savedBackup, error));
+	if (confirmedChunks == 3)
+	{
+		auto const saved = rogue::storage::LoadHomeBoxFile(primary, original.dimensions);
+		REQUIRE(saved.Succeeded());
+		REQUIRE(saved.data->records[0].pokemonData == std::vector<std::uint8_t>(2400, 0x11));
+		REQUIRE(savedBackup == originalFile);
+		REQUIRE(harness.manager.Snapshot().error.empty());
+	}
+	else
+	{
+		REQUIRE(savedFile == originalFile);
+		REQUIRE(savedBackup == originalBackup);
+		REQUIRE(harness.manager.Snapshot().error.find("Storage transfer stopped") != std::string::npos);
+	}
+}
+
 TEST_CASE("Multiplayer retries a rejected ROM confirmation write", "[multiplayer][backpressure]")
 {
 	GameHarness harness;
