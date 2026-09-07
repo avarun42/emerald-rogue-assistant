@@ -13,7 +13,14 @@ namespace sf
 class RenderWindow;
 }
 
-typedef std::function<bool(Window*, void*)> WindowCallback;
+enum class WindowFrame
+{
+	Rendered,
+	Idle,
+	Close,
+};
+
+using WindowCallback = std::function<WindowFrame(Window*, void*)>;
 
 struct WindowConfig
 {
@@ -39,6 +46,10 @@ class Window
 	bool Destroy();
 
 	void EnterMainLoop(WindowCallback const& callback, void* userData = nullptr);
+	bool HadVisualEvent() const
+	{
+		return m_HadVisualEvent;
+	}
 
 	inline sf::RenderWindow* GetHandle()
 	{
@@ -84,4 +95,5 @@ class Window
 	std::string m_TextEntered;
 	std::bitset<sf::Keyboard::KeyCount> m_CurrentKeyStates;
 	std::bitset<sf::Keyboard::KeyCount> m_PreviousKeyStates;
+	bool m_HadVisualEvent = true;
 };

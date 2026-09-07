@@ -1,6 +1,7 @@
 #pragma once
 #include "Application/UiModel.h"
 #include "Timer.h"
+#include "UI/RefreshState.h"
 
 #include <filesystem>
 #include <functional>
@@ -19,7 +20,7 @@ public:
 
   using CommandSink = std::function<bool(rogue::app::UiCommand)>;
 
-  void Render(Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand);
+  bool Render(Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand);
   void SetToStubTheme();
 
 private:
@@ -33,7 +34,7 @@ private:
 
 	int m_CurrentConnectionIdx = 0;
 	std::uint64_t m_CurrentConnectionId = 0;
-	TimeDurationNS m_LastDrawTime;
+	rogue::ui::RefreshState m_Refresh;
 	rogue::app::UiPage m_CurrentPage;
 	bool m_EditingBridgePort = false;
 	std::string m_ActionMessage;

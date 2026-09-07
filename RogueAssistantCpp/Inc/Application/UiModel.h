@@ -33,6 +33,7 @@ struct MultiplayerSnapshot
 	bool awaitingAddress = false;
 	bool connected = false;
 	std::uint16_t port = 0;
+	friend bool operator==(MultiplayerSnapshot const&, MultiplayerSnapshot const&) = default;
 };
 
 struct HomeBoxSnapshot
@@ -40,6 +41,7 @@ struct HomeBoxSnapshot
 	bool loading = false;
 	bool saving = false;
 	bool requiresReopen = false;
+	friend bool operator==(HomeBoxSnapshot const&, HomeBoxSnapshot const&) = default;
 };
 
 struct ConnectionSnapshot
@@ -48,6 +50,7 @@ struct ConnectionSnapshot
 	UiPage page = UiPage::Awaiting;
 	MultiplayerSnapshot multiplayer;
 	HomeBoxSnapshot homeBox;
+	friend bool operator==(ConnectionSnapshot const&, ConnectionSnapshot const&) = default;
 };
 
 struct UiSnapshot
@@ -62,6 +65,7 @@ struct UiSnapshot
 	std::uint16_t bridgePort = 30125;
 	std::string bridgeScriptPath;
 	std::string bridgeMessage;
+	friend bool operator==(UiSnapshot const&, UiSnapshot const&) = default;
 };
 
 struct UiCommand

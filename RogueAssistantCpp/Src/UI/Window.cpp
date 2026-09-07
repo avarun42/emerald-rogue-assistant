@@ -29,7 +29,7 @@ Window::Window(WindowConfig const& config) : m_Config(config)
 
 Window::~Window()
 {
-	// The caller stops the session worker before this Window leaves scope.
+	Destroy();
 }
 
 bool Window::Create()
@@ -72,12 +72,21 @@ void Window::EnterMainLoop(WindowCallback const& callback, void* userData)
 	}
 
 	bool continueLoop = true;
+	bool firstFrame = true;
 	while (m_WindowHandle->isOpen() && continueLoop)
 	{
+		m_HadVisualEvent = firstFrame;
+		firstFrame = false;
 		m_PreviousKeyStates = m_CurrentKeyStates;
 
 		while (auto const event = m_WindowHandle->pollEvent())
 		{
+			if (event->is<sf::Event::Resized>() || event->is<sf::Event::FocusGained>() ||
+				event->is<sf::Event::KeyPressed>() || event->is<sf::Event::KeyReleased>() ||
+				event->is<sf::Event::TextEntered>())
+			{
+				m_HadVisualEvent = true;
+			}
 			if (auto const* keyPressed = event->getIf<sf::Event::KeyPressed>();
 				keyPressed != nullptr && keyPressed->code != sf::Keyboard::Key::Unknown)
 			{
@@ -117,11 +126,22 @@ void Window::EnterMainLoop(WindowCallback const& callback, void* userData)
 				continueLoop = false;
 		}
 
-		m_WindowHandle->clear();
-		if (!callback(this, userData))
+		if (!continueLoop)
+			break;
+		switch (callback(this, userData))
+		{
+		case WindowFrame::Rendered:
+			m_WindowHandle->display();
+			break;
+		case WindowFrame::Idle:
+			// Keep input responsive without submitting unchanged frames to OpenGL.
+			sf::sleep(sf::milliseconds(8));
+			break;
+		case WindowFrame::Close:
 			continueLoop = false;
-		m_WindowHandle->display();
+			break;
+		}
 	}
 
-	Destroy();
+	// The caller stops the session worker before this Window leaves scope.
 }

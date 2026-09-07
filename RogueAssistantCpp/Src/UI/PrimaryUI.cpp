@@ -5,6 +5,7 @@
 #include "Platform/ResourceLocator.h"
 #include "Platform/Utf8.h"
 #include "RogueAssistantVersion.h"
+#include "UI/TextCache.h"
 #include "UI/TextEncoding.h"
 #include "UI/Window.h"
 
@@ -59,9 +60,6 @@ static bool LoadFrame(sf::Texture& output, std::filesystem::path const& resource
 
 struct AssetCollection
 {
-	double m_DeltaTimeS = 0.0;
-	double m_FramesS = 0.0;
-	double m_FramesRemainderS = 0.0;
 	std::string m_LoadingSpinnerAnimText;
 	std::string m_CursorPosAnimText;
 
@@ -71,6 +69,7 @@ struct AssetCollection
 	sf::Color m_ErrorFontColour;
 	sf::Font m_Font;
 	sf::Texture m_PoketchOverlay;
+	rogue::ui::TextCache m_Text{m_Font};
 
 	explicit AssetCollection(std::filesystem::path const& resourceDirectory)
 	{
@@ -94,11 +93,11 @@ struct AssetCollection
 		m_PoketchOverlay.setSmooth(false);
 	}
 
-	sf::Text CreateText(sf::RenderWindow const& gfx, std::string const& msg, int fontSize)
+	sf::Text& CreateText(sf::RenderWindow const& gfx, std::string const& msg, int fontSize)
 	{
-		// UI positions are authored in a 256x192 view. Rasterize glyphs near the
-		// framebuffer resolution, then scale their geometry back into view units.
-		// The cap bounds the font pages cached while a window is being resized.
+		// Layout uses a 256x192 view. Draw text near the window's pixel size, then
+		// scale it back to view units. Limit font sizes to keep the font cache
+		// from growing too large while the window is resized.
 		sf::Vector2u const framebufferSize = gfx.getSize();
 		sf::Vector2f const viewSize = gfx.getView().getSize();
 		float rasterScale = 1.0F;
@@ -109,7 +108,7 @@ struct AssetCollection
 		}
 
 		unsigned int const rasterSize = static_cast<unsigned int>(std::ceil(fontSize * rasterScale));
-		sf::Text text(m_Font, rogue::ui::DecodeUtf8(msg), rasterSize);
+		sf::Text& text = m_Text.Get(rogue::ui::DecodeUtf8(msg), rasterSize);
 		text.setScale(sf::Vector2f(1.0F / rasterScale, 1.0F / rasterScale));
 		return text;
 	}
@@ -117,7 +116,7 @@ struct AssetCollection
 	void DrawCenteredText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
 						  sf::Color const& colour)
 	{
-		sf::Text text = CreateText(gfx, msg, fontSize);
+		sf::Text& text = CreateText(gfx, msg, fontSize);
 		text.setFillColor(colour);
 		text.setOrigin(sf::Vector2f(text.getLocalBounds().size.x / 2, 0));
 		text.setPosition(pos);
@@ -127,7 +126,7 @@ struct AssetCollection
 	void DrawLeftAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
 							 sf::Color const& colour)
 	{
-		sf::Text text = CreateText(gfx, msg, fontSize);
+		sf::Text& text = CreateText(gfx, msg, fontSize);
 		text.setFillColor(colour);
 		text.setOrigin(sf::Vector2f(0, 0));
 		text.setPosition(pos);
@@ -137,7 +136,7 @@ struct AssetCollection
 	void DrawRightAlignedText(sf::RenderWindow& gfx, std::string const& msg, sf::Vector2f pos, int fontSize,
 							  sf::Color const& colour)
 	{
-		sf::Text text = CreateText(gfx, msg, fontSize);
+		sf::Text& text = CreateText(gfx, msg, fontSize);
 		text.setFillColor(colour);
 		text.setOrigin(sf::Vector2f(text.getLocalBounds().size.x, 0));
 		text.setPosition(pos);
@@ -148,7 +147,6 @@ struct AssetCollection
 PrimaryUI::PrimaryUI(std::filesystem::path const& resourceDirectory)
 	: m_Assets(std::make_unique<AssetCollection>(resourceDirectory)), m_CurrentPage(rogue::app::UiPage::Awaiting)
 {
-	m_LastDrawTime = UpdateTimer::GetCurrentClock();
 }
 
 PrimaryUI::~PrimaryUI() = default;
@@ -161,43 +159,27 @@ void PrimaryUI::SetToStubTheme()
 	m_Assets->m_ErrorFontColour = sf::Color(196, 24, 24);
 }
 
-void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand)
+bool PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, CommandSink const& submitCommand)
 {
-	// Calculate the elapsed frame time.
-	TimeDurationNS deltaTimeNS = UpdateTimer::GetCurrentClock() - m_LastDrawTime;
-	m_Assets->m_DeltaTimeS = (float)((double)deltaTimeNS / 1000000000.0);
-	m_Assets->m_FramesS += m_Assets->m_DeltaTimeS;
-	m_Assets->m_FramesRemainderS = std::fmod(m_Assets->m_FramesRemainderS + m_Assets->m_DeltaTimeS, 1.0);
-
-	// Update the loading indicator.
-	m_Assets->m_LoadingSpinnerAnimText = "";
-	if (m_Assets->m_FramesRemainderS >= 0.25)
-		m_Assets->m_LoadingSpinnerAnimText += ".";
-	if (m_Assets->m_FramesRemainderS >= 0.5)
-		m_Assets->m_LoadingSpinnerAnimText += ".";
-	if (m_Assets->m_FramesRemainderS >= 0.75)
-		m_Assets->m_LoadingSpinnerAnimText += ".";
-
-	// Update the blinking text cursor.
-	m_Assets->m_CursorPosAnimText = "";
-	if (m_Assets->m_FramesRemainderS >= 0.25)
-		m_Assets->m_CursorPosAnimText = "|";
-	if (m_Assets->m_FramesRemainderS >= 0.5)
-		m_Assets->m_CursorPosAnimText = "";
-	if (m_Assets->m_FramesRemainderS >= 0.75)
-		m_Assets->m_CursorPosAnimText = "|";
+	unsigned int const animationFrame = static_cast<unsigned int>((UpdateTimer::GetCurrentClock() / 250000000) % 4);
+	if (!m_Refresh.ShouldDraw(snapshot, window.HadVisualEvent(), animationFrame,
+							static_cast<std::size_t>(m_CurrentConnectionIdx), m_EditingBridgePort))
+	{
+		return false;
+	}
+	m_Assets->m_Text.BeginFrame();
+	m_Assets->m_LoadingSpinnerAnimText.assign(animationFrame, '.');
+	m_Assets->m_CursorPosAnimText = animationFrame % 2 == 0 ? "" : "|";
 
 	sf::RenderWindow& gfx = *window.GetHandle();
 
-	// Keep the window at the authored aspect ratio.
+	// Keep the window's width-to-height ratio fixed.
 	{
 		sf::Vector2u currentWindowSize = gfx.getSize();
 
 		// Use the width as the source dimension while the user resizes the window.
 		sf::Vector2u snappedWindowSize(
 			currentWindowSize.x, (u32)std::max(1.0, std::round(currentWindowSize.x / c_ViewAspectW) * c_ViewAspectH)
-			//(u32)std::max(1.0, std::round(currentWindowSize.y / c_ViewAspectH) * c_ViewAspectW),
-			// currentWindowSize.y
 		);
 
 		if (currentWindowSize != snappedWindowSize)
@@ -309,7 +291,7 @@ void PrimaryUI::Render(Window& window, rogue::app::UiSnapshot const& snapshot, C
 	// Restore the default view.
 	gfx.setView(gfx.getDefaultView());
 
-	m_LastDrawTime = UpdateTimer::GetCurrentClock();
+	return true;
 }
 
 void PrimaryUI::RenderBridgeControls(Window& window, rogue::app::UiSnapshot const& snapshot,
